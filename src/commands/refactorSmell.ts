@@ -8,9 +8,18 @@ import { FileHighlighter } from "../ui/fileHighlighter";
 async function refactorLine(smell: Smell, filePath: string, context: vscode.ExtensionContext){
     try {
         const backend = new BackendCommunicator();
-        const output = await backend.run("refactor", [filePath, "--smell", JSON.stringify(smell)], context);
-       
-        const parsedOutput = JSON.parse(output);
+        // Serialize the smell object to a JSON string and escape double quotes
+        const smellJson = JSON.stringify(smell).replace(/"/g, '\\"');
+        // Construct the command arguments
+        const commandArgs = [
+            filePath,
+            '--smell',
+            `"${smellJson}"`, // Wrap the escaped JSON string in double quotes
+        ];
+        // Execute the backend command
+        const output = await backend.run('refactor', commandArgs, context);
+        // Parse and return the output
+        const parsedOutput = JSON.parse(output.trim());
         return parsedOutput;
     } catch (error) {
         console.error("Error refactoring smell:", error);

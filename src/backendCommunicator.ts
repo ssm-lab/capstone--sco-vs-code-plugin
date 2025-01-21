@@ -69,7 +69,6 @@ export class BackendCommunicator {
                     console.error("Error:", stderr || error.message);
                     reject(stderr || error.message);
                 } else {
-                    console.log("Output:", stdout);
                     resolve(stdout);
                 }
             });

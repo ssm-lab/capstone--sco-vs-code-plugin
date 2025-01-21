@@ -2,21 +2,30 @@ import * as vscode from "vscode";
 import { BackendCommunicator } from "../backendCommunicator";
 import { FileHighlighter } from "../ui/fileHighlighter";
 import { getEditorAndFilePath } from "../utils/editorUtils";
+import * as fs from "fs"; 
+import { Smell, Data, Confidence } from "../types";
 
+function parseSmell(json: any): Smell{
+    return {
+        ...json,
+        confidence: json.confidence as Confidence, // Type assertion for enums
+        endLine: json.endLine ?? null,            // Handle null values explicitly
+        endColumn: json.endColumn ?? null,
+    };
+}
 
 
 export  async function getSmells(filePath: string, context: vscode.ExtensionContext) {
     try {
         const backend = new BackendCommunicator();
         const output = await backend.run("detect", [filePath], context);
-        console.log("output is", output);
         const smellsResult = JSON.parse(output);
      
-        if (!smellsResult || !smellsResult.smells_data) {
+        if (!smellsResult) {
             throw new Error("Detected smells data not found.");
         }
         
-        return smellsResult;
+        return smellsResult.map(parseSmell);
     } catch(error) {
         console.error("Error detecting smells:", error);
         vscode.window.showErrorMessage(`Eco: Error detecting smells: ${error}`);
