@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { detectSmells } from "./commands/detectSmells";
-import { refactorSmell } from "./commands/refactorSmell";
+import { refactorSelectedSmell } from "./commands/refactorSmell";
 import { getEditor } from "./utils/editorUtils";
 
 interface Smell {
@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext) {
     let refactorSmellCmd = vscode.commands.registerCommand("ecooptimizer-vs-code-plugin.refactorSmell", () => {
         console.log("Command refactorSmells triggered");
         vscode.window.showInformationMessage("Eco: Detecting smells...");
-        refactorSmell(context);
+        refactorSelectedSmell(context);
     });
     context.subscriptions.push(refactorSmellCmd);
 }

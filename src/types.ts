@@ -1,27 +1,23 @@
-// Enum for confidence
-export enum Confidence {
-    UNDEFINED = "UNDEFINED",
-    INFERENCE = "INFERENCE",
-}
-
-// Interface to represent the structure of a smell object
-export interface Smell {
-    type: string;
-    symbol: string;
-    message: string;
-    messageId: string;
-    confidence: Confidence;
-    module: string;
-    obj: string;
+interface Occurrence {
     line: number;
     column: number;
-    endLine: number | null;
-    endColumn: number | null;
-    path: string;
-    absolutePath: string;
+    call_string: string;
 }
 
-// Interface for the root structure
-export interface Data {
-    smells: Smell[];
+export interface Smell {
+    type: string;                   // Type of the smell (e.g., "performance", "convention")
+    symbol: string;                 // Symbolic identifier for the smell (e.g., "cached-repeated-calls")
+    message: string;                // Detailed description of the smell
+    messageId: string;              // Unique ID for the smell
+    line?: number;                  // Optional: Line number where the smell is detected
+    column?: number;                // Optional: Column offset where the smell starts
+    endLine?: number;               // Optional: Ending line for multiline smells
+    endColumn?: number;             // Optional: Ending column for multiline smells
+    confidence: string;             // Confidence level (e.g., "HIGH", "MEDIUM")
+    path?: string;                  // Optional: Relative file path
+    absolutePath?: string;          // Optional: Absolute file pat.
+    module?: string;                // Optional: Module name
+    obj?: string;                   // Optional: Object name associated with the smell (if applicable)
+    repetitions?: number;           // Optional: Number of repeated occurrences
+    occurrences?: Occurrence[];     // Optional: List of occurrences for repeated calls
 }

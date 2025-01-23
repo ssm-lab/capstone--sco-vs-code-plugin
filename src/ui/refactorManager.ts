@@ -3,7 +3,6 @@ import * as vscode from "vscode";
 
 export class RefactorManager {
     static async previewRefactor(editor: vscode.TextEditor, refactoredCode: string) {
-        
         try {
             // Create a new untitled document for preview
             const previewDocument = await vscode.workspace.openTextDocument({

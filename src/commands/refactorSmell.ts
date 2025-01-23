@@ -1,26 +1,15 @@
 import * as vscode from "vscode";
-import { BackendCommunicator } from "../backendCommunicator";
 import { RefactorManager } from "../ui/refactorManager";
 import { getEditorAndFilePath } from "../utils/editorUtils";
-import { getSmells } from "./detectSmells";
 import { FileHighlighter } from "../ui/fileHighlighter";
+import { Smell } from "../types";
+import { fetchSmells, refactorSmell } from "../api/backend";
+
 
 async function refactorLine(smell: Smell, filePath: string, context: vscode.ExtensionContext){
     try {
-        const backend = new BackendCommunicator();
-        // Serialize the smell object to a JSON string and escape double quotes
-        const smellJson = JSON.stringify(smell).replace(/"/g, '\\"');
-        // Construct the command arguments
-        const commandArgs = [
-            filePath,
-            '--smell',
-            `"${smellJson}"`, // Wrap the escaped JSON string in double quotes
-        ];
-        // Execute the backend command
-        const output = await backend.run('refactor', commandArgs, context);
-        // Parse and return the output
-        const parsedOutput = JSON.parse(output.trim());
-        return parsedOutput;
+        const refactorResult = await refactorSmell(filePath, smell);
+        return refactorResult;
     } catch (error) {
         console.error("Error refactoring smell:", error);
         vscode.window.showErrorMessage(`Eco: Error refactoring smell: ${error}`);
@@ -28,7 +17,7 @@ async function refactorLine(smell: Smell, filePath: string, context: vscode.Exte
     }
 }
 
-export async function refactorSmell(context: vscode.ExtensionContext) {
+export async function refactorSelectedSmell(context: vscode.ExtensionContext) {
     const {editor, filePath} = getEditorAndFilePath();
 
     if (!editor) {
@@ -45,7 +34,7 @@ export async function refactorSmell(context: vscode.ExtensionContext) {
     // only account for one selection to be refactored for now
     const selectedLine = editor.selection.start.line + 1; // update to VS code editor indexing
 
-    const smellsData = await getSmells(filePath, context);
+    const smellsData = await fetchSmells(filePath);
     if (!smellsData || smellsData.length === 0) {
         vscode.window.showErrorMessage("Eco: No smells detected in the file for refactoring.");
         console.log("No smells found in the file for refactoring.");
@@ -71,15 +60,17 @@ export async function refactorSmell(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage("Eco: Refactoring failed. See console for details.");
         return;
     }
-    const { refactored_code: refactoredCode, energy_difference: energyDifference, updated_smells: updatedSmells } = refactorResult;
+    const refactoredCode = refactorResult.refactoredCode;
+    const energyDifference = refactorResult.energyDifference;
+    const updatedSmells = refactorResult.updatedSmells;
+
+    await RefactorManager.previewRefactor(editor, refactoredCode);
     vscode.window.showInformationMessage(
         `Eco: Refactoring completed. Energy difference: ${energyDifference.toFixed(4)}`
     );
-
-    await RefactorManager.previewRefactor(editor, refactoredCode);
-
-    if (updatedSmells && updatedSmells.smells_data) {
-        FileHighlighter.highlightSmells(editor, updatedSmells.smells_data);
+    
+    if (updatedSmells) {
+        FileHighlighter.highlightSmells(editor, updatedSmells);
     } else {
         vscode.window.showWarningMessage("Eco: No updated smells detected after refactoring.");
     }

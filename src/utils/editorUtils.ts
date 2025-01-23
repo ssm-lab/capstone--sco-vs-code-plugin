@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 
-
 /**
  * Gets the active editor and its file path if an editor is open.
  * @returns {{ editor: vscode.TextEditor | undefined, filePath: string | undefined }} 

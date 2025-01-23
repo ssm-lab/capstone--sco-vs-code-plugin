@@ -5,21 +5,30 @@ export {};
 
 declare global {
     // Define your global types here
-    interface Smell {
-        absolutePath: string;
-        column: number;
-        confidence: string; // e.g., "UNDEFINED", "INFERENCE"
-        endColumn: number | null;
-        endLine: number | null;
+    interface Occurrence {
         line: number;
-        message: string;
-        messageId: string; // e.g., "R0902", "LMC001"
-        module: string;
-        obj: string;
-        path: string;
-        symbol: string; // e.g., "too-many-instance-attributes"
-        type: string; // e.g., "refactor", "warning", "convention"
+        column: number;
+        call_string: string;
     }
+    
+    interface Smell {
+        type: string;                   // Type of the smell (e.g., "performance", "convention")
+        symbol: string;                 // Symbolic identifier for the smell (e.g., "cached-repeated-calls")
+        message: string;                // Detailed description of the smell
+        messageId: string;              // Unique ID for the smell
+        line?: number;                   // Line number where the smell is detected
+        column?: number;                 // Column offset where the smell starts
+        endLine?: number;               // Optional: Ending line for multiline smells
+        endColumn?: number;             // Optional: Ending column for multiline smells
+        confidence: string;             // Confidence level (e.g., "HIGH", "MEDIUM")
+        path?: string;                   // Relative file path
+        absolutePath?: string;           // Absolute file pat.
+        module?: string;                 // Module name
+        obj?: string;                    // Object name associated with the smell (if applicable)
+        repetitions?: number;           // Optional: Number of repeated occurrences
+        occurrences?: Occurrence[];     // Optional: List of occurrences for repeated calls
+    }
+    
     
 
     interface RefactorOutput {

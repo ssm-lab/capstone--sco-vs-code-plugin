@@ -1,35 +1,22 @@
 import * as vscode from "vscode";
-import { BackendCommunicator } from "../backendCommunicator";
 import { FileHighlighter } from "../ui/fileHighlighter";
 import { getEditorAndFilePath } from "../utils/editorUtils";
 import * as fs from "fs"; 
-import { Smell, Data, Confidence } from "../types";
-
-function parseSmell(json: any): Smell{
-    return {
-        ...json,
-        confidence: json.confidence as Confidence, // Type assertion for enums
-        endLine: json.endLine ?? null,            // Handle null values explicitly
-        endColumn: json.endColumn ?? null,
-    };
-}
-
+import { Smell } from "../types";
+import { fetchSmells } from "../api/backend";
 
 export  async function getSmells(filePath: string, context: vscode.ExtensionContext) {
     try {
-        const backend = new BackendCommunicator();
-        const output = await backend.run("detect", [filePath], context);
-        const smellsResult = JSON.parse(output);
-     
-        if (!smellsResult) {
-            throw new Error("Detected smells data not found.");
+        const smellsList : Smell[] = await fetchSmells(filePath);
+        if (smellsList.length === 0) {
+            throw new Error("Detected smells data is invalid or empty.");
         }
-        
-        return smellsResult.map(parseSmell);
+
+        return smellsList;
     } catch(error) {
         console.error("Error detecting smells:", error);
         vscode.window.showErrorMessage(`Eco: Error detecting smells: ${error}`);
-        return null;
+        return;
     }
 }
 
@@ -52,14 +39,13 @@ export async function detectSmells(context: vscode.ExtensionContext){
     
     const smellsData = await getSmells(filePath, context);
 
-    if (smellsData && smellsData.length === 0){
+    if (!smellsData){
+        console.log("No valid smells data found. Returning.");
         vscode.window.showErrorMessage("Eco: No smells are present in current file.");
-        console.log("No smells detected in current file. Returning back.");
-        return null;
+        return;
     }
 
     console.log("Detected smells data: ", smellsData);
-
     vscode.window.showInformationMessage(`Eco: Detected ${smellsData.length} smells in the file.`);
 
     FileHighlighter.highlightSmells(editor, smellsData);
