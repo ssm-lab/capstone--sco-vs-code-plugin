@@ -14,6 +14,6 @@ export interface Smell {
   path: string; // Optional: absolute file path
   module: string; // Optional: Module name
   obj: string; // Optional: Object name associated with the smell (if applicable)
-  occurrences: Occurrence[]; // Optional: List of occurrences for repeated calls
+  occurences: Occurrence[]; // Optional: List of occurrences for repeated calls
   additionalInfo?: any;
 }

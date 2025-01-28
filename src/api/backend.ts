@@ -1,4 +1,4 @@
-const BASE_URL = "http://127.0.0.1:8000"; // API URL for Python backend
+const BASE_URL = 'http://127.0.0.1:8000'; // API URL for Python backend
 
 // Fetch detected smells for a given file
 export async function fetchSmells(filePath: string): Promise<Smell[]> {
@@ -11,7 +11,7 @@ export async function fetchSmells(filePath: string): Promise<Smell[]> {
     const smellsList = (await response.json()) as Smell[];
     return smellsList;
   } catch (error) {
-    console.error("Error in getSmells:", error);
+    console.error('Error in getSmells:', error);
     throw error;
   }
 }
@@ -24,16 +24,16 @@ export async function refactorSmell(
   const url = `${BASE_URL}/refactor`;
   const payload = {
     file_path: filePath,
-    smell: smell,
+    smell: smell
   };
 
   try {
     const response = await fetch(url, {
-      method: "GET",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -43,7 +43,7 @@ export async function refactorSmell(
     const refactorResult = (await response.json()) as RefactorOutput;
     return refactorResult;
   } catch (error) {
-    console.error("Error in refactorSmell:", error);
+    console.error('Error in refactorSmell:', error);
     throw error;
   }
 }
