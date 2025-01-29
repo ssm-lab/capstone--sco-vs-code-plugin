@@ -3,8 +3,28 @@ import { getEditor } from '../utils/editorUtils';
 
 export class FileHighlighter {
   static highlightSmells(editor: vscode.TextEditor, smells: Smell[]) {
-    const yellowUnderline = vscode.window.createTextEditorDecorationType({
-      textDecoration: 'underline yellow'
+    const underline = vscode.window.createTextEditorDecorationType({
+      textDecoration: 'wavy rgba(76, 245, 96, 0.62) underline 1px'
+    });
+
+    const flashlight = vscode.window.createTextEditorDecorationType({
+      isWholeLine: true,
+      backgroundColor: 'rgba(249, 209, 10, 0.3)'
+    });
+
+    const aLittleExtra = vscode.window.createTextEditorDecorationType({
+      // isWholeLine: true,
+      borderWidth: '1px 2px 1px 0', // Top, Right, Bottom, No Left border
+      borderStyle: 'solid',
+      borderColor: 'rgba(76, 245, 96, 0.62)', // Change as needed
+      after: {
+        contentText: '▶', // Unicode right arrow
+        margin: '0 0 0 5px', // Space between line and arrow
+        color: 'rgba(76, 245, 96, 0.62)',
+        fontWeight: 'bold'
+      },
+      overviewRulerColor: 'rgba(76, 245, 96, 0.62)',
+      overviewRulerLane: vscode.OverviewRulerLane.Right
     });
 
     const decorations: vscode.DecorationOptions[] = smells
@@ -20,7 +40,7 @@ export class FileHighlighter {
           const line_text = editor.document.lineAt(line).text;
           const line_length = line_text.length;
           const indexStart = line_length - line_text.trimStart().length;
-          const indexEnd = line_text.trimEnd().length;
+          const indexEnd = line_text.trimEnd().length + 1;
 
           const range = new vscode.Range(line, indexStart, line, indexEnd);
 
@@ -28,7 +48,7 @@ export class FileHighlighter {
         });
       });
 
-    editor.setDecorations(yellowUnderline, decorations);
+    editor.setDecorations(flashlight, decorations);
     console.log('Updated smell line highlights');
   }
 }

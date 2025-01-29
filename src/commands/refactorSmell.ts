@@ -5,11 +5,12 @@ import { FileHighlighter } from '../ui/fileHighlighter';
 import { Smell } from '../types';
 import { fetchSmells, refactorSmell } from '../api/backend';
 import * as fs from 'fs';
+import { ContextManager } from '../context/contextManager';
 
 async function refactorLine(
   smell: Smell,
   filePath: string,
-  context: vscode.ExtensionContext
+  contextManager: ContextManager
 ) {
   try {
     const refactorResult = await refactorSmell(filePath, smell);
@@ -21,7 +22,7 @@ async function refactorLine(
   }
 }
 
-export async function refactorSelectedSmell(context: vscode.ExtensionContext) {
+export async function refactorSelectedSmell(contextManager: ContextManager) {
   const { editor, filePath } = getEditorAndFilePath();
 
   if (!editor) {
@@ -72,7 +73,7 @@ export async function refactorSelectedSmell(context: vscode.ExtensionContext) {
   const refactorResult = await refactorLine(
     matchingSmells[0],
     filePath,
-    context
+    contextManager
   );
   if (!refactorResult) {
     vscode.window.showErrorMessage(
