@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Smell } from "../types";
-import { refactorSelectedSmell } from "../commands/refactorSmell";
+import { refactorSelectedSmell, refactorAllSmellsOfType } from "../commands/refactorSmell";
 import { ContextManager } from "../context/contextManager";
 
 export class HoverManager {
@@ -69,15 +69,12 @@ export class HoverManager {
                 `**${smell.symbol}:** ${smell.message}\t\t` + 
                 `[Refactor](command:extension.refactorThisSmell?${encodeURIComponent(
                     JSON.stringify(smell)
+                )})\t\t` +
+                `---[Refactor all smells of this type...](command:extension.refactorAllSmellsOfType?${encodeURIComponent(
+                JSON.stringify(smell)
                 )})\n\n`
             );
         });
-
-        hoverContent.appendMarkdown(
-            `---\n\n[Refactor all smells of this type...](command:extension.refactorSmellTypeDropdown?${encodeURIComponent(
-                JSON.stringify(smellsOnLine)
-            )})\n\n`
-        );
 
         return hoverContent;
     }
@@ -94,56 +91,12 @@ export class HoverManager {
             ),
             // clicking "Refactor All Smells of this Type..."
             vscode.commands.registerCommand(
-                "extension.refactorSmellTypeDropdown",
-                async (smellsOnLine: Smell[]) => {
-                    vscode.window.showInformationMessage(
-                        `Eco: clicked refactorSmellTypeDropdown`
-                    );
-                    const hoverContent = new vscode.MarkdownString();
-                    hoverContent.isTrusted = true;
-
-                    smellsOnLine.forEach((smell) => {
-                        vscode.window.showInformationMessage(
-                            `Eco: adding smell type ${smell.type}`
-                        );
-                        hoverContent.appendMarkdown(
-                            `**${smell.type}**\n` +
-                            `[Refactor all ${smell.type} smells](command:extension.refactorSmellAcrossRepo?${encodeURIComponent(
-                                JSON.stringify(smell.type)
-                            )})\n\n`
-                        );
-                    });
-
-                    vscode.window.showInformationMessage(
-                        `Eco: Smell type dropdown made ${hoverContent}`
-                    );
-
-                    // Show hover content
-                    const editor = vscode.window.activeTextEditor;
-                    if (editor) {
-                        const position = editor.selection.active;
-                        vscode.languages.registerHoverProvider('*', {
-                            provideHover() {
-                                vscode.window.showInformationMessage(
-                                    `Eco: Smell type dropdown made`
-                                );
-                                return new vscode.Hover(hoverContent);
-                            }
-                        });
-                    }
+                "extension.refactorAllSmellsOfType",
+                async (smell: Smell) => {
+                    const contextManager = new ContextManager(this.vscodeContext);
+                    await refactorAllSmellsOfType(contextManager, this.vscodeContext, smell.messageId);
                 }
             ),
-            // clicking the specific smell from dropdown
-            vscode.commands.registerCommand(
-                "extension.refactorSmellAcrossRepo",
-                (smellType: string) => {
-                    vscode.window.showInformationMessage(
-                        `Refactoring all occurrences of: ${smellType}`
-                    );
-                    const refactorSmells = require("../commands/refactorSmell");
-                    refactorSmells.refactorAllOfType(smellType);
-                }
-            )
         );
     }
 }
