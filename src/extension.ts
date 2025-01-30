@@ -66,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
     () => {
       console.log('Command refactorSmells triggered');
       vscode.window.showInformationMessage('Eco: Detecting smells...');
-      refactorSelectedSmell(contextManager, context);
+      refactorSelectedSmell(contextManager);
     }
   );
   context.subscriptions.push(refactorSmellCmd);

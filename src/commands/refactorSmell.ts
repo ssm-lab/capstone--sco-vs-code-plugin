@@ -8,7 +8,6 @@ import * as fs from 'fs';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
 
-
 async function refactorLine(
   smell: Smell,
   filePath: string,
@@ -27,7 +26,10 @@ async function refactorLine(
   }
 }
 
-export async function refactorSelectedSmell(contextManager: ContextManager, context: vscode.ExtensionContext, smellId?: string) {
+export async function refactorSelectedSmell(
+  contextManager: ContextManager,
+  smellId?: string
+) {
   const { editor, filePath } = getEditorAndFilePath();
 
   if (!editor) {
@@ -51,7 +53,7 @@ export async function refactorSelectedSmell(contextManager: ContextManager, cont
   const smellsData: Smell[] = contextManager.getWorkspaceData(
     envConfig.SMELL_MAP_KEY!
   )[filePath].smells;
-  
+
   if (!smellsData || smellsData.length === 0) {
     vscode.window.showErrorMessage(
       'Eco: No smells detected in the file for refactoring.'
@@ -63,10 +65,10 @@ export async function refactorSelectedSmell(contextManager: ContextManager, cont
   // If smellId is provided, find that specific smell
   let smellToRefactor: Smell | undefined;
   if (smellId) {
-    vscode.window.showInformationMessage(
-      `Eco: Smell ID ${smellId}`
+    vscode.window.showInformationMessage(`Eco: Smell ID ${smellId}`);
+    smellToRefactor = smellsData.find(
+      (smell: Smell) => smell.messageId === smellId
     );
-    smellToRefactor = smellsData.find((smell: Smell) => smell.messageId === smellId);
     if (!smellToRefactor) {
       vscode.window.showErrorMessage(
         `Eco: Could not find smell with ID ${smellId}`
@@ -104,7 +106,6 @@ export async function refactorSelectedSmell(contextManager: ContextManager, cont
   }
   const { refactoredData, updatedSmells } = refactorResult;
 
-  
   if (!refactoredData) {
     vscode.window.showErrorMessage(
       'Eco: Refactoring failed. See console for details.'
@@ -138,7 +139,10 @@ export async function refactorSelectedSmell(contextManager: ContextManager, cont
   }
 }
 
-export async function refactorAllSmellsOfType(contextManager: ContextManager, context: vscode.ExtensionContext, smellId: string) {
+export async function refactorAllSmellsOfType(
+  contextManager: ContextManager,
+  smellId: string
+) {
   const { editor, filePath } = getEditorAndFilePath();
 
   if (!editor) {
@@ -162,7 +166,7 @@ export async function refactorAllSmellsOfType(contextManager: ContextManager, co
   const smellsData: Smell[] = contextManager.getWorkspaceData(
     envConfig.SMELL_MAP_KEY!
   )[filePath].smells;
-  
+
   if (!smellsData || smellsData.length === 0) {
     vscode.window.showErrorMessage(
       'Eco: No smells detected in the file for refactoring.'
@@ -172,7 +176,9 @@ export async function refactorAllSmellsOfType(contextManager: ContextManager, co
   }
 
   // Filter smells by the given type ID
-  const smellsOfType = smellsData.filter((smell: Smell) => smell.messageId === smellId);
+  const smellsOfType = smellsData.filter(
+    (smell: Smell) => smell.messageId === smellId
+  );
 
   if (smellsOfType.length === 0) {
     vscode.window.showWarningMessage(
@@ -188,13 +194,13 @@ export async function refactorAllSmellsOfType(contextManager: ContextManager, co
   // Refactor each smell of the given type
   for (const smell of smellsOfType) {
     const refactorResult = await refactorLine(smell, filePath, contextManager);
-    
+
     if (refactorResult && refactorResult.refactoredData) {
       // Add two newlines between each refactored result
       if (combinedRefactoredData) {
         combinedRefactoredData += '\n\n';
       }
-      
+
       fs.readFile(refactorResult.refactoredData.targetFile, (err, data) => {
         if (!err) {
           combinedRefactoredData += data.toString('utf8');
@@ -202,9 +208,12 @@ export async function refactorAllSmellsOfType(contextManager: ContextManager, co
       });
 
       totalEnergySaved += refactorResult.refactoredData.energySaved;
-      
+
       if (refactorResult.updatedSmells) {
-        allUpdatedSmells = [...allUpdatedSmells, ...refactorResult.updatedSmells];
+        allUpdatedSmells = [
+          ...allUpdatedSmells,
+          ...refactorResult.updatedSmells
+        ];
       }
     }
   }
@@ -212,7 +221,9 @@ export async function refactorAllSmellsOfType(contextManager: ContextManager, co
   if (combinedRefactoredData) {
     await RefactorManager.previewRefactor(editor, combinedRefactoredData);
     vscode.window.showInformationMessage(
-      `Eco: Refactoring completed. Total energy difference: ${totalEnergySaved.toFixed(4)}`
+      `Eco: Refactoring completed. Total energy difference: ${totalEnergySaved.toFixed(
+        4
+      )}`
     );
   } else {
     vscode.window.showErrorMessage(
