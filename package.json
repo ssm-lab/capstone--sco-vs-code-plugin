@@ -24,6 +24,11 @@
         "command": "ecooptimizer-vs-code-plugin.refactorSmell",
         "title": "Refactor Smell",
         "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer-vs-code-plugin.wipeWorkCache",
+        "title": "Wipe Workspace Cache",
+        "category": "Eco"
       }
     ],
     "keybindings": [

@@ -32,7 +32,7 @@ export async function getSmells(
   }
 }
 
-export async function detectSmells(contextManager: ContextManager, context: vscode.ExtensionContext) {
+export async function detectSmells(contextManager: ContextManager) {
   const { editor, filePath } = getEditorAndFilePath();
 
   if (!editor) {
