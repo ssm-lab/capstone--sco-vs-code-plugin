@@ -67,8 +67,7 @@ export class FileHighlighter {
         const range = new vscode.Range(line, indexStart, line, indexEnd);
 
           const hoverManager = HoverManager.getInstance(this.contextManager, smells);
-          const hoverContent = hoverManager.getHoverContent(editor.document, new vscode.Position(line, indexStart));
-          return { range, hoverMessage: hoverContent || undefined  }; // option to hover over and read smell details
+          return { range, hoverMessage: hoverManager.hoverContent || undefined  }; // option to hover over and read smell details
         });
 
     this.decoration = aLittleExtra;
