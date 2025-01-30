@@ -6,6 +6,7 @@ import { Smell } from '../types';
 import { fetchSmells, refactorSmell } from '../api/backend';
 import * as fs from 'fs';
 import { ContextManager } from '../context/contextManager';
+import { showDiffViewer } from '../ui/diffViewer';
 
 async function refactorLine(
   smell: Smell,
@@ -89,7 +90,9 @@ export async function refactorSelectedSmell(contextManager: ContextManager) {
     if (err) {
       throw err;
     }
-    await RefactorManager.previewRefactor(editor, data.toString('utf8'));
+  
+    // await RefactorManager.previewRefactor(editor, data.toString('utf8')); mya commented to test my difference library stuff
+    await showDiffViewer(editor, data.toString('utf8'), "bumb");
     vscode.window.showInformationMessage(
       `Eco: Refactoring completed. Energy difference: ${refactoredData.energySaved.toFixed(
         4
