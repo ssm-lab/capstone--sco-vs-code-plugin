@@ -7,6 +7,7 @@ import { fetchSmells, refactorSmell } from '../api/backend';
 import * as fs from 'fs';
 import { ContextManager } from '../context/contextManager';
 import { showDiffViewer } from '../ui/diffViewer';
+import { envConfig } from '../utils/envConfig';
 
 async function refactorLine(
   smell: Smell,
@@ -44,7 +45,9 @@ export async function refactorSelectedSmell(contextManager: ContextManager) {
   // only account for one selection to be refactored for now
   const selectedLine = editor.selection.start.line + 1; // update to VS code editor indexing
 
-  const smellsData = await fetchSmells(filePath);
+  const smellsData: Smell[] = contextManager.getWorkspaceData(
+    envConfig.SMELL_MAP_KEY!
+  )[filePath].smells;
   if (!smellsData || smellsData.length === 0) {
     vscode.window.showErrorMessage(
       'Eco: No smells detected in the file for refactoring.'
@@ -84,8 +87,16 @@ export async function refactorSelectedSmell(contextManager: ContextManager) {
   }
   const { refactoredData, updatedSmells } = refactorResult;
 
+  if (!refactoredData) {
+    vscode.window.showErrorMessage(
+      'Eco: Refactoring failed. See console for details.'
+    );
+    return;
+  }
+
   // Did not test this yet, but if it works need to change so that all modified files are displayed
   // only shows the file where the smell was found
+  console.log(`target file: ${refactoredData.targetFile}`);
   fs.readFile(refactoredData.targetFile, async (err, data) => {
     if (err) {
       throw err;
@@ -101,7 +112,8 @@ export async function refactorSelectedSmell(contextManager: ContextManager) {
   });
 
   if (updatedSmells.length) {
-    FileHighlighter.highlightSmells(editor, updatedSmells);
+    const fileHighlighter = new FileHighlighter(contextManager);
+    fileHighlighter.highlightSmells(editor, smellsData);
   } else {
     vscode.window.showWarningMessage(
       'Eco: No updated smells detected after refactoring.'

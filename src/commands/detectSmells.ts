@@ -108,7 +108,8 @@ export async function detectSmells(contextManager: ContextManager) {
     `Eco: Detected ${smellsData.length} smells in the file.`
   );
 
-  FileHighlighter.highlightSmells(editor, smellsData);
+  const fileHighlighter = new FileHighlighter(contextManager);
+  fileHighlighter.highlightSmells(editor, smellsData);
   vscode.window.showInformationMessage(
     'Eco: Detected code smells have been highlighted.'
   );

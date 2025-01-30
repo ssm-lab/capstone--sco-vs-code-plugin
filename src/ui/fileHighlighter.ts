@@ -1,8 +1,25 @@
 import * as vscode from 'vscode';
 import { getEditor } from '../utils/editorUtils';
+import { ContextManager } from '../context/contextManager';
 
 export class FileHighlighter {
-  static highlightSmells(editor: vscode.TextEditor, smells: Smell[]) {
+  private contextManager;
+  private decoration: vscode.TextEditorDecorationType | null = null;
+
+  public constructor(contextManager: ContextManager) {
+    this.contextManager = contextManager;
+  }
+
+  public resetHighlights() {
+    if (this.decoration) {
+      console.log('Removing decoration');
+      this.decoration.dispose();
+    }
+  }
+
+  public highlightSmells(editor: vscode.TextEditor, smells: Smell[]) {
+    this.resetHighlights();
+
     const underline = vscode.window.createTextEditorDecorationType({
       textDecoration: 'wavy rgba(76, 245, 96, 0.62) underline 1px'
     });
@@ -13,7 +30,6 @@ export class FileHighlighter {
     });
 
     const aLittleExtra = vscode.window.createTextEditorDecorationType({
-      // isWholeLine: true,
       borderWidth: '1px 2px 1px 0', // Top, Right, Bottom, No Left border
       borderStyle: 'solid',
       borderColor: 'rgba(76, 245, 96, 0.62)', // Change as needed
@@ -27,7 +43,13 @@ export class FileHighlighter {
       overviewRulerLane: vscode.OverviewRulerLane.Right
     });
 
-    const decorations: vscode.DecorationOptions[] = smells
+    const padding = vscode.window.createTextEditorDecorationType({
+      after: {
+        contentText: ' '
+      }
+    });
+
+    const smellLines: vscode.DecorationOptions[] = smells
       .filter((smell: Smell) =>
         smell.occurences.every((occurrence: { line: number }) =>
           isValidLine(occurrence.line)
@@ -40,7 +62,7 @@ export class FileHighlighter {
           const line_text = editor.document.lineAt(line).text;
           const line_length = line_text.length;
           const indexStart = line_length - line_text.trimStart().length;
-          const indexEnd = line_text.trimEnd().length + 1;
+          const indexEnd = line_text.trimEnd().length + 2;
 
           const range = new vscode.Range(line, indexStart, line, indexEnd);
 
@@ -48,7 +70,11 @@ export class FileHighlighter {
         });
       });
 
-    editor.setDecorations(flashlight, decorations);
+    this.decoration = aLittleExtra;
+
+    editor.setDecorations(padding, smellLines);
+    editor.setDecorations(this.decoration, smellLines);
+
     console.log('Updated smell line highlights');
   }
 }
