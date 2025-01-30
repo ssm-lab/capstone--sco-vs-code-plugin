@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { RefactorManager } from '../ui/refactorManager';
 import { getEditorAndFilePath } from '../utils/editorUtils';
 import { FileHighlighter } from '../ui/fileHighlighter';
+import { refactorSmell } from '../api/backend';
 import { Smell } from '../types';
-import { fetchSmells, refactorSmell } from '../api/backend';
 import * as fs from 'fs';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
@@ -58,6 +58,8 @@ export async function refactorSelectedSmell(contextManager: ContextManager) {
   const matchingSmells = smellsData.filter((smell: Smell) => {
     return selectedLine === smell.occurences[0].line;
   });
+  console.log(JSON.stringify(matchingSmells));
+  console.log('===========================================================');
 
   if (matchingSmells.length === 0) {
     vscode.window.showInformationMessage(

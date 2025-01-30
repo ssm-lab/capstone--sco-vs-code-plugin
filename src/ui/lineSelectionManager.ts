@@ -47,10 +47,7 @@ export class LineSelectionManager {
     const smells = smellsDetectRecord.smells;
 
     const smellsAtLine = smells.filter((smell) => {
-      const numOcc = smell.occurences.filter((occ) => {
-        return occ.line === selectedLine + 1;
-      });
-      return numOcc.length > 0;
+      return smell.occurences[0].line === selectedLine + 1;
     });
 
     if (smellsAtLine.length === 0) {

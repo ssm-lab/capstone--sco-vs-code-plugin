@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import path from 'path';
+import { Smell, RefactorOutput } from '../types';
 
 const BASE_URL = 'http://127.0.0.1:8000'; // API URL for Python backend
 
@@ -12,6 +13,7 @@ export async function fetchSmells(filePath: string): Promise<Smell[]> {
       throw new Error(`Error fetching smells: ${response.statusText}`);
     }
     const smellsList = (await response.json()) as Smell[];
+    smellsList.forEach((smell) => console.log(JSON.stringify(smell)));
     return smellsList;
   } catch (error) {
     console.error('Error in getSmells:', error);
@@ -25,12 +27,13 @@ export async function refactorSmell(
   smell: Smell
 ): Promise<RefactorOutput> {
   const url = `${BASE_URL}/refactor`;
+
   const payload = {
     source_dir: path.dirname(filePath),
     smell
   };
 
-  console.log(`workspace: ${payload.source_dir}`);
+  console.log(`payload: ${JSON.stringify(payload)}`);
   console.log(`${smell.path}`);
 
   try {

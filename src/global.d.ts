@@ -10,11 +10,13 @@ declare global {
     endLine?: number;
     column: number;
     endColumn?: number;
-    callString?: string;
   }
 
   interface AdditionalInfo {
+    // CRC
     repetitions?: number;
+    callString?: string;
+    // SCL
     concatTarget?: string;
     innerLoopLine?: number;
   }
@@ -27,9 +29,9 @@ declare global {
     confidence: string; // Confidence level (e.g., "HIGH", "MEDIUM")
     path: string; // Optional: absolute file path
     module: string; // Optional: Module name
-    obj: string; // Optional: Object name associated with the smell (if applicable)
+    obj?: string; // Optional: Object name associated with the smell (if applicable)
     occurences: Occurrence[]; // Optional: List of occurrences for repeated calls
-    additionalInfo?: AdditionalInfo;
+    additionalInfo: AdditionalInfo;
   }
 
   interface RefactoredData {

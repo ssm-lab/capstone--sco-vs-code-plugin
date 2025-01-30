@@ -1,8 +1,17 @@
-interface Occurrence {
+export interface Occurrence {
   line: number;
   endLine?: number;
   column: number;
   endColumn?: number;
+}
+
+export interface AdditionalInfo {
+  // CRC
+  repetitions?: number;
+  callString?: string;
+  // SCL
+  concatTarget?: string;
+  innerLoopLine?: number;
 }
 
 export interface Smell {
@@ -13,7 +22,19 @@ export interface Smell {
   confidence: string; // Confidence level (e.g., "HIGH", "MEDIUM")
   path: string; // Optional: absolute file path
   module: string; // Optional: Module name
-  obj: string; // Optional: Object name associated with the smell (if applicable)
+  obj?: string; // Optional: Object name associated with the smell (if applicable)
   occurences: Occurrence[]; // Optional: List of occurrences for repeated calls
-  additionalInfo?: any;
+  additionalInfo: AdditionalInfo;
+}
+
+export interface RefactoredData {
+  tempDir: string;
+  targetFile: string;
+  energySaved: number;
+  refactoredFiles: string[];
+}
+
+export interface RefactorOutput {
+  refactoredData?: RefactoredData; // Refactored code as a string
+  updatedSmells: Smell[]; //
 }

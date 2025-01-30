@@ -55,19 +55,17 @@ export class FileHighlighter {
           isValidLine(occurrence.line)
         )
       )
-      .flatMap((smell: any) => {
-        return smell.occurences.map((occurrence: { line: number }) => {
-          const line = occurrence.line - 1; // convert to zero-based line index for VS editor
+      .map((smell: Smell) => {
+        const line = smell.occurences[0].line - 1; // convert to zero-based line index for VS editor
 
-          const line_text = editor.document.lineAt(line).text;
-          const line_length = line_text.length;
-          const indexStart = line_length - line_text.trimStart().length;
-          const indexEnd = line_text.trimEnd().length + 2;
+        const line_text = editor.document.lineAt(line).text;
+        const line_length = line_text.length;
+        const indexStart = line_length - line_text.trimStart().length;
+        const indexEnd = line_text.trimEnd().length + 2;
 
-          const range = new vscode.Range(line, indexStart, line, indexEnd);
+        const range = new vscode.Range(line, indexStart, line, indexEnd);
 
-          return { range, hoverMessage: `Smell: ${smell.message}` }; // option to hover over and read smell details
-        });
+        return { range, hoverMessage: `Smell: ${smell.message}` }; // option to hover over and read smell details
       });
 
     this.decoration = aLittleExtra;
