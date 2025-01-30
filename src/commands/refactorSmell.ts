@@ -7,7 +7,6 @@ import { Smell } from '../types';
 import * as fs from 'fs';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
-// import { HoverManager } from '../ui/hoverManager';
 
 
 async function refactorLine(
@@ -16,6 +15,9 @@ async function refactorLine(
   contextManager: ContextManager
 ) {
   try {
+    vscode.window.showInformationMessage(
+      `Eco: Smell ID ${smell.messageId} on line ${smell.occurences[0].line}`
+    );
     const refactorResult = await refactorSmell(filePath, smell);
     return refactorResult;
   } catch (error) {
@@ -25,7 +27,7 @@ async function refactorLine(
   }
 }
 
-export async function refactorSelectedSmell(contextManager: ContextManager, context: vscode.ExtensionContext) {
+export async function refactorSelectedSmell(contextManager: ContextManager, context: vscode.ExtensionContext, smellId?: string) {
   const { editor, filePath } = getEditorAndFilePath();
 
   if (!editor) {
@@ -57,31 +59,47 @@ export async function refactorSelectedSmell(contextManager: ContextManager, cont
     return;
   }
 
-  const matchingSmells = smellsData.filter((smell: Smell) => {
-    return selectedLine === smell.occurences[0].line;
-  });
-  console.log(JSON.stringify(matchingSmells));
-  console.log('===========================================================');
 
-  if (matchingSmells.length === 0) {
+
+  // If smellId is provided, find that specific smell
+  let smellToRefactor: Smell | undefined;
+  if (smellId) {
     vscode.window.showInformationMessage(
-      'Eco: Selected line(s) does not include a refactorable code pattern. Please switch to a line with highlighted code smell.'
+      `Eco: Smell ID ${smellId}`
     );
-    return;
+    smellToRefactor = smellsData.find((smell: Smell) => smell.messageId === smellId);
+    if (!smellToRefactor) {
+      vscode.window.showErrorMessage(
+        `Eco: Could not find smell with ID ${smellId}`
+      );
+      return;
+    }
+  } else {
+    // Original line-based logic as fallback
+    const matchingSmells = smellsData.filter((smell: Smell) => {
+      return selectedLine === smell.occurences[0].line;
+    });
+    if (matchingSmells.length === 0) {
+      vscode.window.showInformationMessage(
+        'Eco: Selected line(s) does not include a refactorable code pattern. Please switch to a line with highlighted code smell.'
+      );
+      return;
+    }
+    smellToRefactor = matchingSmells[0];
   }
 
   vscode.window.showInformationMessage(
-    'Eco: Refactoring smell on selected line.'
+    'Eco: Refactoring selected smell.'
   );
   console.log('Detecting smells in detectSmells on selected line');
 
-  //refactor the first found smell
-  //TODO UI that allows users to choose the smell to refactor
+  //refactor the selected smell
   const refactorResult = await refactorLine(
-    matchingSmells[0],
+    smellToRefactor,
     filePath,
     contextManager
   );
+
   if (!refactorResult) {
     vscode.window.showErrorMessage(
       'Eco: Refactoring failed. See console for details.'
