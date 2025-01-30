@@ -7,6 +7,8 @@ import { Smell } from '../types';
 import * as fs from 'fs';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
+// import { HoverManager } from '../ui/hoverManager';
+
 
 async function refactorLine(
   smell: Smell,
@@ -23,7 +25,7 @@ async function refactorLine(
   }
 }
 
-export async function refactorSelectedSmell(contextManager: ContextManager) {
+export async function refactorSelectedSmell(contextManager: ContextManager, context: vscode.ExtensionContext) {
   const { editor, filePath } = getEditorAndFilePath();
 
   if (!editor) {
@@ -112,7 +114,8 @@ export async function refactorSelectedSmell(contextManager: ContextManager) {
 
   if (updatedSmells.length) {
     const fileHighlighter = new FileHighlighter(contextManager);
-    fileHighlighter.highlightSmells(editor, smellsData);
+    // const hoverManager = new HoverManager(context, smellsData);
+    fileHighlighter.highlightSmells(editor, updatedSmells);
   } else {
     vscode.window.showWarningMessage(
       'Eco: No updated smells detected after refactoring.'

@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext) {
     'ecooptimizer-vs-code-plugin.detectSmells',
     async () => {
       console.log('Command detectSmells triggered');
-      detectSmells(contextManager);
+      detectSmells(contextManager, context);
     }
   );
   context.subscriptions.push(detectSmellsCmd);
@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
     () => {
       console.log('Command refactorSmells triggered');
       vscode.window.showInformationMessage('Eco: Detecting smells...');
-      refactorSelectedSmell(contextManager);
+      refactorSelectedSmell(contextManager, context);
     }
   );
   context.subscriptions.push(refactorSmellCmd);

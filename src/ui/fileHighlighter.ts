@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getEditor } from '../utils/editorUtils';
 import { ContextManager } from '../context/contextManager';
+import { HoverManager } from './hoverManager';
 
 export class FileHighlighter {
   private contextManager;
@@ -65,8 +66,10 @@ export class FileHighlighter {
 
         const range = new vscode.Range(line, indexStart, line, indexEnd);
 
-        return { range, hoverMessage: `Smell: ${smell.message}` }; // option to hover over and read smell details
-      });
+          const hoverManager = HoverManager.getInstance(this.contextManager, smells);
+          const hoverContent = hoverManager.getHoverContent(editor.document, new vscode.Position(line, indexStart));
+          return { range, hoverMessage: hoverContent || undefined  }; // option to hover over and read smell details
+        });
 
     this.decoration = aLittleExtra;
 
