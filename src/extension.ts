@@ -4,8 +4,9 @@ import * as vscode from 'vscode';
 import { detectSmells } from './commands/detectSmells';
 import { refactorSelectedSmell } from './commands/refactorSmell';
 import { LineSelectionManager } from './ui/lineSelectionManager';
-import * as crypto from 'crypto';
 import { ContextManager } from './context/contextManager';
+import { wipeWorkCache } from './commands/wipeWorkCache';
+import { updateHash } from './utils/hashDocs';
 
 interface Smell {
   line: number; // Known attribute
@@ -70,6 +71,19 @@ export function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(refactorSmellCmd);
 
+  // Register Wipe Workspace Cache
+  let wipeWorkCacheCmd = vscode.commands.registerCommand(
+    'ecooptimizer-vs-code-plugin.wipeWorkCache',
+    () => {
+      console.log('Command wipeWorkCache triggered');
+      vscode.window.showInformationMessage(
+        'Eco: Wiping existing worspace memory...'
+      );
+      wipeWorkCache(contextManager);
+    }
+  );
+  context.subscriptions.push(wipeWorkCacheCmd);
+
   // ===============================================================
   // ADD LISTENERS
   // ===============================================================
@@ -87,70 +101,25 @@ export function activate(context: vscode.ExtensionContext) {
   // Updates directory of file states (for checking if modified)
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument(async (document) => {
-      const lastSavedHashes = contextManager.getWorkspaceData(
-        envConfig.FILE_CHANGES_KEY!,
-        {}
-      );
-      const lastHash = lastSavedHashes[document.fileName];
-      const currentHash = hashContent(document.getText());
-
-      if (lastHash !== undefined && lastHash !== currentHash) {
-        console.log(
-          `Document ${document.uri.fsPath} has changed since last save.`
-        );
-      }
-
-      // Update the hash in workspace storage
-      await updateLastSavedHash(contextManager, document);
+      await updateHash(contextManager, document);
     })
   );
 
+  // Handles case of documents already being open on vscode open
+  vscode.window.visibleTextEditors.forEach(async (editor) => {
+    if (editor.document) {
+      await updateHash(contextManager, editor.document);
+    }
+  });
+
   // Initializes first state of document when opened while extension active
   context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument(async (document) => {
-      console.log('Detected document opening');
-      const HASH_STORAGE_KEY = envConfig.FILE_CHANGES_KEY!;
-      const lastSavedHashes = contextManager.getWorkspaceData(
-        HASH_STORAGE_KEY,
-        {}
-      );
-      const lastHash = lastSavedHashes[document.fileName];
-      if (!lastHash) {
-        console.log(
-          `Saving current state of ${document.uri.fsPath.split('/').at(-1)}.`
-        );
-        await updateLastSavedHash(contextManager, document);
-      }
-    })
+    vscode.workspace.onDidOpenTextDocument(
+      async (document) => await updateHash(contextManager, document)
+    )
   );
 }
 
 export function deactivate() {
   console.log('Refactor Plugin deactivated');
-}
-
-// ===============================================================
-// UTILITY FUNCTIONS
-// ===============================================================
-
-// Function to hash the document content
-export function hashContent(content: string): string {
-  return crypto.createHash('sha256').update(content).digest('hex');
-}
-
-// Function to update the stored hashes in workspace storage
-async function updateLastSavedHash(
-  contextManager: ContextManager,
-  document: vscode.TextDocument
-) {
-  const lastSavedHashes = contextManager.getWorkspaceData(
-    envConfig.FILE_CHANGES_KEY!,
-    {}
-  );
-  const currentHash = hashContent(document.getText());
-  lastSavedHashes[document.fileName] = currentHash;
-  await contextManager.setWorkspaceData(
-    envConfig.FILE_CHANGES_KEY!,
-    lastSavedHashes
-  );
 }

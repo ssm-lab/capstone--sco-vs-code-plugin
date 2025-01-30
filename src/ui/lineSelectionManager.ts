@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
 import { SmellDetectRecord } from '../commands/detectSmells';
-import { hashContent } from '../extension';
+import { hashContent } from '../utils/hashDocs';
 
 export class LineSelectionManager {
   private contextManager;
