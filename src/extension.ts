@@ -75,11 +75,11 @@ export function activate(context: vscode.ExtensionContext) {
   // ===============================================================
 
   // Adds comments to lines describing the smell
+  const lineSelectManager = new LineSelectionManager(contextManager);
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((event) => {
       console.log(`Detected event: ${event.kind?.toString()}`);
 
-      const lineSelectManager = new LineSelectionManager(contextManager);
       lineSelectManager.commentLine(event.textEditor);
     })
   );
@@ -87,41 +87,22 @@ export function activate(context: vscode.ExtensionContext) {
   // Updates directory of file states (for checking if modified)
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument(async (document) => {
-      const lastSavedHashes = contextManager.getWorkspaceData(
-        envConfig.FILE_CHANGES_KEY!,
-        {}
-      );
-      const lastHash = lastSavedHashes[document.fileName];
-      const currentHash = hashContent(document.getText());
-
-      if (lastHash !== undefined && lastHash !== currentHash) {
-        console.log(
-          `Document ${document.uri.fsPath} has changed since last save.`
-        );
-      }
-
-      // Update the hash in workspace storage
-      await updateLastSavedHash(contextManager, document);
+      await updateHash(contextManager, document);
     })
   );
 
+  // Handles case of documents already being open on vscode open
+  vscode.window.visibleTextEditors.forEach(async (editor) => {
+    if (editor.document) {
+      await updateHash(contextManager, editor.document);
+    }
+  });
+
   // Initializes first state of document when opened while extension active
   context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument(async (document) => {
-      console.log('Detected document opening');
-      const HASH_STORAGE_KEY = envConfig.FILE_CHANGES_KEY!;
-      const lastSavedHashes = contextManager.getWorkspaceData(
-        HASH_STORAGE_KEY,
-        {}
-      );
-      const lastHash = lastSavedHashes[document.fileName];
-      if (!lastHash) {
-        console.log(
-          `Saving current state of ${document.uri.fsPath.split('/').at(-1)}.`
-        );
-        await updateLastSavedHash(contextManager, document);
-      }
-    })
+    vscode.workspace.onDidOpenTextDocument(
+      async (document) => await updateHash(contextManager, document)
+    )
   );
 }
 
@@ -139,7 +120,7 @@ export function hashContent(content: string): string {
 }
 
 // Function to update the stored hashes in workspace storage
-async function updateLastSavedHash(
+async function updateHash(
   contextManager: ContextManager,
   document: vscode.TextDocument
 ) {
@@ -147,10 +128,15 @@ async function updateLastSavedHash(
     envConfig.FILE_CHANGES_KEY!,
     {}
   );
+  const lastHash = lastSavedHashes[document.fileName];
   const currentHash = hashContent(document.getText());
-  lastSavedHashes[document.fileName] = currentHash;
-  await contextManager.setWorkspaceData(
-    envConfig.FILE_CHANGES_KEY!,
-    lastSavedHashes
-  );
+
+  if (lastHash !== undefined && lastHash !== currentHash) {
+    console.log(`Document ${document.uri.fsPath} has changed since last save.`);
+    lastSavedHashes[document.fileName] = currentHash;
+    await contextManager.setWorkspaceData(
+      envConfig.FILE_CHANGES_KEY!,
+      lastSavedHashes
+    );
+  }
 }

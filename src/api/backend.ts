@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import path from 'path';
+
 const BASE_URL = 'http://127.0.0.1:8000'; // API URL for Python backend
 
 // Fetch detected smells for a given file
@@ -23,9 +26,12 @@ export async function refactorSmell(
 ): Promise<RefactorOutput> {
   const url = `${BASE_URL}/refactor`;
   const payload = {
-    file_path: filePath,
-    smell: smell
+    source_dir: path.dirname(filePath),
+    smell
   };
+
+  console.log(`workspace: ${payload.source_dir}`);
+  console.log(`${smell.path}`);
 
   try {
     const response = await fetch(url, {
@@ -37,7 +43,7 @@ export async function refactorSmell(
     });
 
     if (!response.ok) {
-      throw new Error(`Error refactoring smell: ${response.statusText}`);
+      throw new Error(`Error refactoring smell: ${await response.text()}`);
     }
 
     const refactorResult = (await response.json()) as RefactorOutput;

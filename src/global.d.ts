@@ -10,6 +10,13 @@ declare global {
     endLine?: number;
     column: number;
     endColumn?: number;
+    callString?: string;
+  }
+
+  interface AdditionalInfo {
+    repetitions?: number;
+    concatTarget?: string;
+    innerLoopLine?: number;
   }
 
   interface Smell {
@@ -22,11 +29,11 @@ declare global {
     module: string; // Optional: Module name
     obj: string; // Optional: Object name associated with the smell (if applicable)
     occurences: Occurrence[]; // Optional: List of occurrences for repeated calls
-    additionalInfo?: any;
+    additionalInfo?: AdditionalInfo;
   }
 
   interface RefactoredData {
-    temp_dir: string;
+    tempDir: string;
     targetFile: string;
     energySaved: number;
     refactoredFiles: string[];
