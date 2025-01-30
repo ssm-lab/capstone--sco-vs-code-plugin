@@ -96,17 +96,17 @@ export async function refactorSelectedSmell(contextManager: ContextManager) {
   // Did not test this yet, but if it works need to change so that all modified files are displayed
   // only shows the file where the smell was found
   console.log(`target file: ${refactoredData.targetFile}`);
-  // fs.readFile(refactoredData.targetFile, async (err, data) => {
-  //   if (err) {
-  //     throw err;
-  //   }
-  //   await RefactorManager.previewRefactor(editor, data.toString('utf8'));
-  //   vscode.window.showInformationMessage(
-  //     `Eco: Refactoring completed. Energy difference: ${refactoredData.energySaved.toFixed(
-  //       4
-  //     )}`
-  //   );
-  // });
+  fs.readFile(refactoredData.targetFile, async (err, data) => {
+    if (err) {
+      throw err;
+    }
+    await RefactorManager.previewRefactor(editor, data.toString('utf8'));
+    vscode.window.showInformationMessage(
+      `Eco: Refactoring completed. Energy difference: ${refactoredData.energySaved.toFixed(
+        4
+      )}`
+    );
+  });
 
   if (updatedSmells.length) {
     const fileHighlighter = new FileHighlighter(contextManager);

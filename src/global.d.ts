@@ -40,7 +40,7 @@ declare global {
   }
 
   interface RefactorOutput {
-    refactoredData: RefactoredData; // Refactored code as a string
+    refactoredData?: RefactoredData; // Refactored code as a string
     updatedSmells: Smell[]; //
   }
 }
