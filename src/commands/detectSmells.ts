@@ -6,6 +6,8 @@ import { Smell } from '../types';
 import { fetchSmells } from '../api/backend';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
+// import { HoverManager } from "../ui/hoverManager"; // Import the HoverManager
+
 
 export interface SmellDetectRecord {
   hash: string;
@@ -30,7 +32,7 @@ export async function getSmells(
   }
 }
 
-export async function detectSmells(contextManager: ContextManager) {
+export async function detectSmells(contextManager: ContextManager, context: vscode.ExtensionContext) {
   const { editor, filePath } = getEditorAndFilePath();
 
   if (!editor) {
@@ -109,8 +111,8 @@ export async function detectSmells(contextManager: ContextManager) {
   );
 
   const fileHighlighter = new FileHighlighter(contextManager);
+  // const hoverManager = new HoverManager(context, smellsData);
   fileHighlighter.highlightSmells(editor, smellsData);
-  vscode.window.showInformationMessage(
-    'Eco: Detected code smells have been highlighted.'
-  );
+  vscode.window.showInformationMessage('Eco: Detected code smells have been highlighted.');
 }
+
