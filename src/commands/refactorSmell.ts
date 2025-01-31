@@ -7,6 +7,7 @@ import { Smell } from '../types';
 import * as fs from 'fs';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
+import path from 'path';
 
 async function refactorLine(
   smell: Smell,
@@ -91,7 +92,10 @@ export async function refactorSelectedSmell(
 
   console.log('Detecting smells in detectSmells on selected line');
 
-  //refactor the selected smell
+  let tempDirPaths: string[] = [];
+
+  //refactor the first found smell
+  //TODO UI that allows users to choose the smell to refactor
   const refactorResult = await refactorLine(
     smellToRefactor,
     filePath,
@@ -112,6 +116,20 @@ export async function refactorSelectedSmell(
     );
     return;
   }
+
+  // tempDirPaths.push(refactoredData.tempDir);
+  // tempDirPaths.forEach((dirPath: string) => {
+  //   fs.rm(
+  //     dirPath,
+  //     {
+  //       recursive: true,
+  //       force: true
+  //     },
+  //     (err, data) => {
+
+  //     }
+  //   );
+  // });
 
   // Did not test this yet, but if it works need to change so that all modified files are displayed
   // only shows the file where the smell was found

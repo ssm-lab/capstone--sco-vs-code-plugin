@@ -50,12 +50,19 @@ export class FileHighlighter {
       }
     });
 
+    const seenLines: number[] = [];
     const smellLines: vscode.DecorationOptions[] = smells
-      .filter((smell: Smell) =>
-        smell.occurences.every((occurrence: { line: number }) =>
+      .filter((smell: Smell) => {
+        const valid = smell.occurences.every((occurrence: { line: number }) =>
           isValidLine(occurrence.line)
-        )
-      )
+        );
+        if (valid && seenLines.includes(smell.occurences[0].line)) {
+          return false;
+        } else if (valid) {
+          seenLines.push(smell.occurences[0].line);
+        }
+        return valid;
+      })
       .map((smell: Smell) => {
         const line = smell.occurences[0].line - 1; // convert to zero-based line index for VS editor
 
@@ -66,9 +73,12 @@ export class FileHighlighter {
 
         const range = new vscode.Range(line, indexStart, line, indexEnd);
 
-          const hoverManager = HoverManager.getInstance(this.contextManager, smells);
-          return { range, hoverMessage: hoverManager.hoverContent || undefined  }; // option to hover over and read smell details
-        });
+        const hoverManager = HoverManager.getInstance(
+          this.contextManager,
+          smells
+        );
+        return { range, hoverMessage: hoverManager.hoverContent || undefined }; // option to hover over and read smell details
+      });
 
     this.decoration = aLittleExtra;
 

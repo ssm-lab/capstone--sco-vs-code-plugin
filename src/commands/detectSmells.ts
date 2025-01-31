@@ -8,11 +8,12 @@ import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
 // import { HoverManager } from "../ui/hoverManager"; // Import the HoverManager
 
-
 export interface SmellDetectRecord {
   hash: string;
   smells: Smell[];
 }
+
+let fileHighlighter: FileHighlighter;
 
 export async function getSmells(
   filePath: string,
@@ -110,9 +111,12 @@ export async function detectSmells(contextManager: ContextManager) {
     `Eco: Detected ${smellsData.length} smells in the file.`
   );
 
-  const fileHighlighter = new FileHighlighter(contextManager);
+  if (!fileHighlighter) {
+    fileHighlighter = new FileHighlighter(contextManager);
+  }
   // const hoverManager = new HoverManager(context, smellsData);
   fileHighlighter.highlightSmells(editor, smellsData);
-  vscode.window.showInformationMessage('Eco: Detected code smells have been highlighted.');
+  vscode.window.showInformationMessage(
+    'Eco: Detected code smells have been highlighted.'
+  );
 }
-
