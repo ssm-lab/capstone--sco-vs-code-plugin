@@ -34,130 +34,56 @@ export async function refactorSelectedSmell(
 ) {
   const { editor, filePath } = getEditorAndFilePath();
 
-  if (!editor) {
-    vscode.window.showErrorMessage(
-      'Eco: Unable to proceed as no active editor found.'
-    );
-    console.log('No active editor found to refactor smell. Returning back.');
-    return;
-  }
-  if (!filePath) {
-    vscode.window.showErrorMessage(
-      'Eco: Unable to proceed as active editor does not have a valid file path.'
-    );
-    console.log('No valid file path found to refactor smell. Returning back.');
+  if (!editor || !filePath) {
+    vscode.window.showErrorMessage('Eco: Unable to proceed as no active editor or file path found.');
     return;
   }
 
-  // only account for one selection to be refactored for now
-  const selectedLine = editor.selection.start.line + 1; // update to VS code editor indexing
+  const selectedLine = editor.selection.start.line + 1; // Update to VS Code editor indexing
 
   const smellsData: Smell[] = contextManager.getWorkspaceData(
     envConfig.SMELL_MAP_KEY!
   )[filePath].smells;
 
   if (!smellsData || smellsData.length === 0) {
-    vscode.window.showErrorMessage(
-      'Eco: No smells detected in the file for refactoring.'
-    );
-    console.log('No smells found in the file for refactoring.');
+    vscode.window.showErrorMessage('Eco: No smells detected in the file for refactoring.');
     return;
   }
 
-  // If smellId is provided, find that specific smell
+  // Find the smell to refactor
   let smellToRefactor: Smell | undefined;
   if (smellId) {
-    vscode.window.showInformationMessage(`Eco: Smell ID ${smellId}`);
-    smellToRefactor = smellsData.find(
-      (smell: Smell) => smell.messageId === smellId
-    );
-    if (!smellToRefactor) {
-      vscode.window.showErrorMessage(
-        `Eco: Could not find smell with ID ${smellId}`
-      );
-      return;
-    }
+    smellToRefactor = smellsData.find((smell: Smell) => smell.messageId === smellId);
   } else {
-    // Original line-based logic as fallback
-    const matchingSmells = smellsData.filter((smell: Smell) => {
-      return selectedLine === smell.occurences[0].line;
-    });
-    if (matchingSmells.length === 0) {
-      vscode.window.showInformationMessage(
-        'Eco: Selected line(s) does not include a refactorable code pattern. Please switch to a line with highlighted code smell.'
-      );
-      return;
-    }
-    smellToRefactor = matchingSmells[0];
+    smellToRefactor = smellsData.find((smell: Smell) => selectedLine === smell.occurences[0].line);
   }
 
-  console.log('Detecting smells in detectSmells on selected line');
-
-  let tempDirPaths: string[] = [];
-
-  //refactor the first found smell
-  //TODO UI that allows users to choose the smell to refactor
-  const refactorResult = await refactorLine(
-    smellToRefactor,
-    filePath,
-    contextManager
-  );
-
-  if (!refactorResult) {
-    vscode.window.showErrorMessage(
-      'Eco: Refactoring failed. See console for details.'
-    );
-    return;
-  }
-  const { refactoredData, updatedSmells } = refactorResult;
-
-  if (!refactoredData) {
-    vscode.window.showErrorMessage(
-      'Eco: Refactoring failed. See console for details.'
-    );
+  if (!smellToRefactor) {
+    vscode.window.showErrorMessage('Eco: No matching smell found for refactoring.');
     return;
   }
 
-  // tempDirPaths.push(refactoredData.tempDir);
-  // tempDirPaths.forEach((dirPath: string) => {
-  //   fs.rm(
-  //     dirPath,
-  //     {
-  //       recursive: true,
-  //       force: true
-  //     },
-  //     (err, data) => {
+  // Refactor the smell
+  const refactorResult = await refactorLine(smellToRefactor, filePath, contextManager);
 
-  //     }
-  //   );
-  // });
-
-  // Did not test this yet, but if it works need to change so that all modified files are displayed
-  // only shows the file where the smell was found
-  console.log(`target file: ${refactoredData.targetFile}`);
-  fs.readFile(refactoredData.targetFile, async (err, data) => {
-    if (err) {
-      throw err;
-    }
-  
-    // await RefactorManager.previewRefactor(editor, data.toString('utf8')); mya commented to test my difference library stuff
-    await showDiffViewer(editor, data.toString('utf8'), "bumb");
-    vscode.window.showInformationMessage(
-      `Eco: Refactoring completed. Energy difference: ${refactoredData.energySaved.toFixed(
-        4
-      )}`
-    );
-  });
-
-  if (updatedSmells.length) {
-    const fileHighlighter = new FileHighlighter(contextManager);
-    // const hoverManager = new HoverManager(context, smellsData);
-    fileHighlighter.highlightSmells(editor, updatedSmells);
-  } else {
-    vscode.window.showWarningMessage(
-      'Eco: No updated smells detected after refactoring.'
-    );
+  if (!refactorResult || !refactorResult.refactoredData) {
+    vscode.window.showErrorMessage('Eco: Refactoring failed. See console for details.');
+    return;
   }
+
+  const { refactoredData } = refactorResult;
+
+  //Read the refactored code
+  const refactoredCode = await fs.promises.readFile(refactoredData.targetFile, 'utf8');
+
+  //Get the original code from the editor
+  const originalCode = editor.document.getText();
+
+  //Show the diff viewer
+  await showDiffViewer(editor, refactoredCode, originalCode);
+
+  // Clean up temporary files
+  await fs.promises.rm(refactoredData.tempDir, { recursive: true, force: true });
 }
 
 export async function refactorAllSmellsOfType(
