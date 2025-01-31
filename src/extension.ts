@@ -1,17 +1,13 @@
-import { envConfig } from './utils/envConfig';
+import { envConfig } from './utils/envConfig'; // ENV variables should always be first import!!
 
 import * as vscode from 'vscode';
+
 import { detectSmells } from './commands/detectSmells';
 import { refactorSelectedSmell } from './commands/refactorSmell';
 import { LineSelectionManager } from './ui/lineSelectionManager';
 import { ContextManager } from './context/contextManager';
 import { wipeWorkCache } from './commands/wipeWorkCache';
 import { updateHash } from './utils/hashDocs';
-
-interface Smell {
-  line: number; // Known attribute
-  [key: string]: any; // Index signature for unknown properties
-}
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Refactor Plugin activated');
@@ -22,22 +18,16 @@ export function activate(context: vscode.ExtensionContext) {
   // INITIALIZE WORKSPACE DATA
   // ===============================================================
 
-  let allDetectedSmells = contextManager.getWorkspaceData(
-    envConfig.SMELL_MAP_KEY!
-  );
-  let fileHashes = contextManager.getWorkspaceData(envConfig.FILE_CHANGES_KEY!);
-
-  if (!allDetectedSmells) {
-    allDetectedSmells = {};
-    contextManager.setWorkspaceData(
-      envConfig.SMELL_MAP_KEY!,
-      allDetectedSmells
-    );
+  let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!);
+  if (!smellsData) {
+    smellsData = {};
+    contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, smellsData);
   }
 
+  let fileHashes = contextManager.getWorkspaceData(envConfig.FILE_CHANGES_KEY!);
   if (!fileHashes) {
     fileHashes = {};
-    contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, fileHashes);
+    contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, fileHashes);
   }
 
   console.log(
@@ -66,7 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
     () => {
       console.log('Command refactorSmells triggered');
       vscode.window.showInformationMessage('Eco: Detecting smells...');
-      refactorSelectedSmell(contextManager, context);
+      refactorSelectedSmell(contextManager);
     }
   );
   context.subscriptions.push(refactorSmellCmd);
@@ -89,11 +79,11 @@ export function activate(context: vscode.ExtensionContext) {
   // ===============================================================
 
   // Adds comments to lines describing the smell
+  const lineSelectManager = new LineSelectionManager(contextManager);
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((event) => {
       console.log(`Detected event: ${event.kind?.toString()}`);
 
-      const lineSelectManager = new LineSelectionManager(contextManager);
       lineSelectManager.commentLine(event.textEditor);
     })
   );

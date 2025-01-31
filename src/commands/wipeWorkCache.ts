@@ -13,4 +13,6 @@ export async function wipeWorkCache(contextManager: ContextManager) {
       await updateHash(contextManager, editor.document);
     }
   });
+
+  vscode.window.showInformationMessage('Workspace cache clean!');
 }

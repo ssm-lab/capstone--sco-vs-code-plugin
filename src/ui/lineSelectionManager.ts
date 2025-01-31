@@ -22,6 +22,10 @@ export class LineSelectionManager {
   public commentLine(editor: vscode.TextEditor) {
     this.removeLastComment();
 
+    if (!editor) {
+      return;
+    }
+
     const filePath = editor.document.fileName;
     const smellsDetectRecord = this.contextManager.getWorkspaceData(
       envConfig.SMELL_MAP_KEY!
@@ -57,7 +61,9 @@ export class LineSelectionManager {
     let comment;
 
     if (smellsAtLine.length > 1) {
-      comment = `🍂 Smell: ${smellsAtLine[0].symbol} | ...`;
+      comment = `🍂 Smell: ${smellsAtLine[0].symbol} | (+${
+        smellsAtLine.length - 1
+      })`;
     } else {
       comment = `🍂 Smell: ${smellsAtLine[0].symbol}`;
     }
@@ -66,15 +72,11 @@ export class LineSelectionManager {
       isWholeLine: true,
       after: {
         contentText: comment,
-        color: 'rgb(153, 211, 212)', // Red-orange for visibility
-        margin: '0 0 0 10px', // Moves it to the right edge
+        color: 'rgb(153, 211, 212)',
+        margin: '0 0 0 10px',
         textDecoration: 'none'
       }
     });
-
-    if (!editor) {
-      return;
-    }
 
     const selectionLine: vscode.Range[] = [];
 
