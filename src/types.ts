@@ -1,3 +1,5 @@
+import * as vscode from 'vscode';
+
 export interface Occurrence {
   line: number;
   endLine?: number;
@@ -27,14 +29,25 @@ export interface Smell {
   additionalInfo: AdditionalInfo;
 }
 
+export interface ChangedFile {
+  original: string;
+  refactored: string;
+}
+
 export interface RefactoredData {
   tempDir: string;
-  targetFile: string;
+  targetFile: ChangedFile;
   energySaved: number;
-  refactoredFiles: string[];
+  affectedFiles: ChangedFile[];
 }
 
 export interface RefactorOutput {
   refactoredData?: RefactoredData; // Refactored code as a string
   updatedSmells: Smell[]; //
+}
+
+export interface ActiveDiff {
+  files: ChangedFile[];
+  isOpen: boolean;
+  firstOpen: boolean;
 }

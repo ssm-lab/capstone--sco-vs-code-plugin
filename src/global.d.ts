@@ -34,11 +34,16 @@ declare global {
     additionalInfo: AdditionalInfo;
   }
 
+  interface ChangedFile {
+    original: string;
+    refactored: string;
+  }
+
   interface RefactoredData {
     tempDir: string;
-    targetFile: string;
+    targetFile: ChangedFile;
     energySaved: number;
-    refactoredFiles: string[];
+    affectedFiles: ChangedFile[];
   }
 
   interface RefactorOutput {

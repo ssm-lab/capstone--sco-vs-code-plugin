@@ -13,7 +13,6 @@ export async function fetchSmells(filePath: string): Promise<Smell[]> {
       throw new Error(`Error fetching smells: ${response.statusText}`);
     }
     const smellsList = (await response.json()) as Smell[];
-    smellsList.forEach((smell) => console.log(JSON.stringify(smell)));
     return smellsList;
   } catch (error) {
     console.error('Error in getSmells:', error);
@@ -32,9 +31,6 @@ export async function refactorSmell(
     source_dir: path.dirname(filePath),
     smell
   };
-
-  console.log(`payload: ${JSON.stringify(payload)}`);
-  console.log(`${smell.path}`);
 
   try {
     const response = await fetch(url, {

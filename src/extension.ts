@@ -8,6 +8,8 @@ import { LineSelectionManager } from './ui/lineSelectionManager';
 import { ContextManager } from './context/contextManager';
 import { wipeWorkCache } from './commands/wipeWorkCache';
 import { updateHash } from './utils/hashDocs';
+import { RefactorSidebarProvider } from './ui/refactorView';
+import { handleEditorChanges } from './utils/handleEditorChange';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Refactor Plugin activated');
@@ -30,11 +32,11 @@ export function activate(context: vscode.ExtensionContext) {
     contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, fileHashes);
   }
 
-  console.log(
-    `Smell detection map: ${contextManager.getWorkspaceData(
-      envConfig.SMELL_MAP_KEY!
-    )}`
-  );
+  // console.log(
+  //   `Smell detection map: ${contextManager.getWorkspaceData(
+  //     envConfig.SMELL_MAP_KEY!
+  //   )}`
+  // );
 
   // ===============================================================
   // REGISTER COMMANDS
@@ -75,14 +77,52 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(wipeWorkCacheCmd);
 
   // ===============================================================
+  // REGISTER VIEWS
+  // ===============================================================
+
+  // Register the webview provider for the refactoring webview
+  const refactorProvider = new RefactorSidebarProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      RefactorSidebarProvider.viewType,
+      refactorProvider
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer-vs-code-plugin.showRefactorSidebar',
+      () => refactorProvider.updateView()
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer-vs-code-plugin.pauseRefactorSidebar',
+      () => refactorProvider.pauseView()
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer-vs-code-plugin.clearRefactorSidebar',
+      () => refactorProvider.clearView()
+    )
+  );
+
+  // ===============================================================
   // ADD LISTENERS
   // ===============================================================
+
+  vscode.window.onDidChangeVisibleTextEditors(async (editors) => {
+    handleEditorChanges(contextManager, editors);
+  });
 
   // Adds comments to lines describing the smell
   const lineSelectManager = new LineSelectionManager(contextManager);
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((event) => {
-      console.log(`Detected event: ${event.kind?.toString()}`);
+      console.log(`Detected line selection event`);
 
       lineSelectManager.commentLine(event.textEditor);
     })

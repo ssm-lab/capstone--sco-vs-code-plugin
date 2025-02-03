@@ -6,6 +6,7 @@ import { Smell } from '../types';
 import { fetchSmells } from '../api/backend';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
+import { hashContent, updateHash } from '../utils/hashDocs';
 // import { HoverManager } from "../ui/hoverManager"; // Import the HoverManager
 
 export interface SmellDetectRecord {
@@ -15,10 +16,7 @@ export interface SmellDetectRecord {
 
 let fileHighlighter: FileHighlighter;
 
-export async function getSmells(
-  filePath: string,
-  contextManager: ContextManager
-) {
+export async function getSmells(filePath: string, contextManager: ContextManager) {
   try {
     const smellsList: Smell[] = await fetchSmells(filePath);
     if (smellsList.length === 0) {
@@ -63,9 +61,7 @@ export async function detectSmells(contextManager: ContextManager) {
 
   const fileSmells = allSmells[filePath];
 
-  const currentFileHash = contextManager.getWorkspaceData(
-    envConfig.FILE_CHANGES_KEY!
-  )[filePath];
+  const currentFileHash = hashContent(editor.document.getText());
 
   // Function to handle the smells data retrieval and updating
   async function fetchAndStoreSmells(): Promise<Smell[] | undefined> {
@@ -73,9 +69,7 @@ export async function detectSmells(contextManager: ContextManager) {
 
     if (!smellsData) {
       console.log('No valid smells data found. Returning.');
-      vscode.window.showErrorMessage(
-        'Eco: No smells are present in current file.'
-      );
+      vscode.window.showErrorMessage('Eco: No smells are present in current file.');
       return undefined; // Indicate failure to fetch smells
     }
 
@@ -92,12 +86,14 @@ export async function detectSmells(contextManager: ContextManager) {
     if (currentFileHash === fileSmells.hash) {
       smellsData = fileSmells.smells;
     } else {
+      console.log('Updating smells');
       smellsData = await fetchAndStoreSmells();
       if (!smellsData) {
         return;
       }
     }
   } else {
+    updateHash(contextManager, editor.document);
     smellsData = await fetchAndStoreSmells();
     if (!smellsData) {
       return;
@@ -106,7 +102,6 @@ export async function detectSmells(contextManager: ContextManager) {
 
   console.log('Saving smells to workspace data.');
 
-  console.log('Detected smells data: ', smellsData);
   vscode.window.showInformationMessage(
     `Eco: Detected ${smellsData.length} smells in the file.`
   );

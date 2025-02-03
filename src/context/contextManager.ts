@@ -8,11 +8,11 @@ export class ContextManager {
   }
 
   // Global state example
-  public getGlobalData(
+  public getGlobalData<T>(
     key: string,
     defaultVal: any = undefined
   ): any | undefined {
-    return this.context.globalState.get<any>(key, defaultVal);
+    return this.context.globalState.get<T>(key, defaultVal);
   }
 
   public setGlobalData(key: string, value: any): Thenable<void> {
@@ -20,11 +20,11 @@ export class ContextManager {
   }
 
   // Workspace state example
-  public getWorkspaceData(
+  public getWorkspaceData<T>(
     key: string,
     defaultVal: any = undefined
   ): any | undefined {
-    return this.context.workspaceState.get<any>(key, defaultVal);
+    return this.context.workspaceState.get<T>(key, defaultVal);
   }
 
   public setWorkspaceData(key: string, value: any): Thenable<void> {

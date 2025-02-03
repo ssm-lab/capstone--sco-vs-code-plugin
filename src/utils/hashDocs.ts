@@ -13,6 +13,7 @@ export async function updateHash(
   contextManager: ContextManager,
   document: vscode.TextDocument
 ) {
+  console.log(`Updating hash for ${document.fileName}`);
   const lastSavedHashes = contextManager.getWorkspaceData(
     envConfig.FILE_CHANGES_KEY!,
     {}
