@@ -3,6 +3,7 @@ import path from 'path';
 import { readFileSync } from 'fs';
 import { ActiveDiff } from '../types';
 import { promises as fs } from 'fs';
+import { sidebarState } from '../utils/handleEditorChange';
 
 export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'extension.refactorSidebar';
@@ -46,12 +47,15 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async (message) => {
       switch (message.command) {
         case 'selectFile':
-          vscode.commands.executeCommand(
+          sidebarState.isOpening = true;
+          console.log('Switching diff file view.');
+          await vscode.commands.executeCommand(
             'vscode.diff',
             vscode.Uri.file(message.original),
             vscode.Uri.file(message.refactored),
             'Refactoring Comparison'
           );
+          sidebarState.isOpening = false;
           break;
         case 'accept':
           await this.applyRefactoring();

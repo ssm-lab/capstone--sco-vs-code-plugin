@@ -9,6 +9,8 @@ interface DiffInfo {
   modified: vscode.Uri;
 }
 
+export let sidebarState = { isOpening: false };
+
 export async function handleEditorChanges(
   contextManager: ContextManager,
   editors: readonly vscode.TextEditor[]
@@ -17,6 +19,10 @@ export async function handleEditorChanges(
   const diffState = contextManager.getWorkspaceData<ActiveDiff>('activeDiff');
   const refactorData =
     contextManager.getWorkspaceData<RefactoredData>('refactorData');
+
+  if (sidebarState.isOpening) {
+    return;
+  }
 
   if (!diffState) {
     console.log('No active refactoring session');
@@ -38,6 +44,7 @@ export async function handleEditorChanges(
     if (isDiffRefactorEditor === undefined) {
       return;
     }
+
     if ((!isDiffRefactorEditor || !refactorData) && !diffState.firstOpen) {
       console.log('Diff editor no longer active');
       diffState.isOpen = false;

@@ -62,12 +62,12 @@ function clearWebview() {
 }
 
 // Restore state when webview loads
-// window.addEventListener('DOMContentLoaded', () => {
-//   const savedState = vscode.getState();
-//   if (savedState) {
-//     updateWebView(savedState);
-//   }
-// });
+window.addEventListener('DOMContentLoaded', () => {
+  const savedState = vscode.getState();
+  if (savedState) {
+    updateWebView(savedState);
+  }
+});
 
 // Listen for extension messages
 window.addEventListener('message', (event) => {
