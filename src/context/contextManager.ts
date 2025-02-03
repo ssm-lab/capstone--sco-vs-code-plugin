@@ -8,10 +8,10 @@ export class ContextManager {
   }
 
   // Global state example
-  public getGlobalData<T>(
+  public getGlobalData<T = any>(
     key: string,
     defaultVal: any = undefined
-  ): any | undefined {
+  ): T | undefined {
     return this.context.globalState.get<T>(key, defaultVal);
   }
 
@@ -20,10 +20,10 @@ export class ContextManager {
   }
 
   // Workspace state example
-  public getWorkspaceData<T>(
+  public getWorkspaceData<T = any>(
     key: string,
     defaultVal: any = undefined
-  ): any | undefined {
+  ): T | undefined {
     return this.context.workspaceState.get<T>(key, defaultVal);
   }
 

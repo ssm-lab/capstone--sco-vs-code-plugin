@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 import { ActiveDiff } from '../types';
 import { promises as fs } from 'fs';
 import { sidebarState } from '../utils/handleEditorChange';
+import { MultiRefactoredData } from '../commands/refactorSmell';
 
 export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'extension.refactorSidebar';
@@ -94,7 +95,11 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
     if (diffView.isOpen) {
       console.log('starting view');
       this._view!.show(true);
-      this._view!.webview.postMessage({ command: 'update', data: refactoredData });
+      this._view!.webview.postMessage({
+        command: 'update',
+        data: refactoredData,
+        sep: path.sep
+      });
     } else {
       console.log('Gonna pause');
       this.pauseView();
@@ -137,10 +142,18 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
     vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     vscode.commands.executeCommand('workbench.view.explorer');
 
-    const tempDir =
-      this._context.workspaceState.get<RefactoredData>('refactorData')?.tempDir!;
+    const tempDirs =
+      this._context.workspaceState.get<RefactoredData>('refactorData')?.tempDir! ||
+      this._context.workspaceState.get<MultiRefactoredData>('refactorData')
+        ?.tempDirs;
 
-    fs.rm(tempDir, { recursive: true });
+    if (Array.isArray(tempDirs)) {
+      tempDirs.forEach((dir) => {
+        fs.rm(dir, { recursive: true });
+      });
+    } else {
+      fs.rm(tempDirs!, { recursive: true });
+    }
 
     this._context.workspaceState.update('activeDiff', undefined);
     this._context.workspaceState.update('refactorData', undefined);

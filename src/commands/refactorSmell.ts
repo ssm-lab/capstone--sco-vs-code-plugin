@@ -10,6 +10,14 @@ import { FileHighlighter } from '../ui/fileHighlighter';
 import { ContextManager } from '../context/contextManager';
 import { RefactorManager } from '../ui/refactorManager';
 import { setTimeout } from 'timers/promises';
+import { inherits } from 'util';
+
+export interface MultiRefactoredData {
+  tempDirs: string[];
+  targetFile: ChangedFile;
+  affectedFiles: ChangedFile[];
+  energySaved: number;
+}
 
 async function refactorLine(
   smell: Smell,
@@ -32,13 +40,11 @@ export async function refactorSelectedSmell(
 ) {
   const { editor, filePath } = getEditorAndFilePath();
 
-  const pastData = contextManager.getWorkspaceData<RefactoredData>('refactorData');
+  const pastData = contextManager.getWorkspaceData('refactorData');
 
   // Clean up temp directory if not removed
   if (pastData) {
-    if (fs.existsSync(pastData.tempDir)) {
-      fs.promises.rm(pastData.tempDir, { recursive: true });
-    }
+    cleanTemps(pastData);
   }
 
   if (!editor || !filePath) {
@@ -123,9 +129,7 @@ export async function refactorAllSmellsOfType(
 
   // Clean up temp directory if not removed
   if (pastData) {
-    if (fs.existsSync(pastData.tempDir)) {
-      fs.promises.rm(pastData.tempDir, { recursive: true });
-    }
+    cleanTemps(pastData);
   }
 
   if (!editor) {
@@ -202,12 +206,27 @@ export async function refactorAllSmellsOfType(
   }
 
   /*
-    Once all refactorings are merge, need to write to a file so that it has a path
-    Also need to reconstruct the `RefactoredData` object by combining all `affectedFiles`
-    target file should be the same. Once implemented, just uncomment line below and pass in 
-    the refactoredData.
+    Once all refactorings are merge, need to write to a file so that it has a path that
+    will be the new `targetFile`. Also need to reconstruct the `RefactoredData` object 
+    by combining all `affectedFiles` merge to new paths if applicable. Once implemented, 
+    just uncomment lines below and pass in the refactoredData.
   */
 
+  // Tentative data structure to be built below, change inputs as needed but needs
+  // to implement the `MultiRefactoredData` interface
+
+  // For any temp files that need to be written due to merging, I'd suggest writing them all
+  // to one temp directory and add that directory to allTempDirs, that way they will be removed
+
+  // UNCOMMENT ME WHEN READY
+  // const combinedRefactoredData: MultiRefactoredData = {
+  //   targetFile: combinedTargetFile,
+  //   affectedFiles: allAffectedFiles,
+  //   energySaved: totalEnergySaved,
+  //   tempDirs: allTempDirs
+  // }
+
+  // UNCOMMENT ME WHEN READY
   // startRefactoringSession(contextManager,editor,combinedRefactoredData);
 
   if (combinedRefactoredData) {
@@ -237,7 +256,7 @@ export async function refactorAllSmellsOfType(
 async function startRefactoringSession(
   contextManager: ContextManager,
   editor: vscode.TextEditor,
-  refactoredData: RefactoredData
+  refactoredData: RefactoredData | MultiRefactoredData
 ) {
   // Store only the diff editor state
   await contextManager.setWorkspaceData('refactorData', refactoredData);
@@ -279,4 +298,17 @@ async function startRefactoringSession(
     'Refactoring Comparison'
   );
   vscode.commands.executeCommand('ecooptimizer-vs-code-plugin.showRefactorSidebar');
+}
+
+function cleanTemps(pastData: any) {
+  console.log('Cleaning up stale artifacts');
+  const tempDirs = pastData!.tempDir! || pastData!.tempDirs!;
+
+  if (Array.isArray(tempDirs)) {
+    tempDirs.forEach((dir) => {
+      fs.promises.rm(dir, { recursive: true });
+    });
+  } else {
+    fs.promises.rm(tempDirs!, { recursive: true });
+  }
 }
