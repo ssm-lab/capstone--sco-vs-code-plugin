@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import path from 'path';
 import { readFileSync } from 'fs';
 import { ActiveDiff } from '../types';
-import { promises as fs } from 'fs';
+import * as fs from 'fs';
 import { sidebarState } from '../utils/handleEditorChange';
 import { MultiRefactoredData } from '../commands/refactorSmell';
 
@@ -59,11 +59,11 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
           sidebarState.isOpening = false;
           break;
         case 'accept':
-          await this.applyRefactoring();
-          this.closeViews();
+          this.applyRefactoring();
+          await this.closeViews();
           break;
         case 'reject':
-          this.closeViews();
+          await this.closeViews();
           break;
       }
     });
@@ -137,8 +137,9 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
     return htmlContent;
   }
 
-  private closeViews() {
-    this._file_map = new Map();
+  private async closeViews() {
+    console.log('Cleaning up webview');
+    this.clearView();
     vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     vscode.commands.executeCommand('workbench.view.explorer');
 
@@ -148,24 +149,26 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
         ?.tempDirs;
 
     if (Array.isArray(tempDirs)) {
-      tempDirs.forEach((dir) => {
-        fs.rm(dir, { recursive: true });
+      tempDirs.forEach(async (dir) => {
+        await fs.promises.rm(dir, { recursive: true });
       });
     } else {
-      fs.rm(tempDirs!, { recursive: true });
+      await fs.promises.rm(tempDirs!, { recursive: true });
     }
 
     this._context.workspaceState.update('activeDiff', undefined);
     this._context.workspaceState.update('refactorData', undefined);
   }
 
-  private async applyRefactoring() {
-    this._file_map!.forEach(async (refactored, original) => {
+  private applyRefactoring() {
+    this._file_map!.forEach((refactored, original) => {
       vscode.window.showInformationMessage('Applying Eco changes...');
       console.log(`refactored: ${refactored}\noriginal: ${original}`);
-      const modifiedContent = await vscode.workspace.fs.readFile(refactored);
+      const modifiedContent = fs.readFileSync(refactored.fsPath, {
+        encoding: 'utf-8'
+      });
 
-      await vscode.workspace.fs.writeFile(original, modifiedContent);
+      fs.writeFileSync(original.fsPath, modifiedContent);
     });
     vscode.window.showInformationMessage('Refactoring applied successfully!');
   }
