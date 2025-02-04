@@ -51,3 +51,9 @@ export interface ActiveDiff {
   isOpen: boolean;
   firstOpen: boolean;
 }
+
+export type SmellDetails = {
+  symbol: string;
+  message: string;
+  colour: string; // RGB colour as a string
+};
