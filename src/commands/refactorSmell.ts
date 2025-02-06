@@ -10,7 +10,6 @@ import { FileHighlighter } from '../ui/fileHighlighter';
 import { ContextManager } from '../context/contextManager';
 import { RefactorManager } from '../ui/refactorManager';
 import { setTimeout } from 'timers/promises';
-import { inherits } from 'util';
 
 export interface MultiRefactoredData {
   tempDirs: string[];
@@ -70,7 +69,11 @@ export async function refactorSelectedSmell(
   // Find the smell to refactor
   let smellToRefactor: Smell | undefined;
   if (smellGiven?.messageId) {
-    smellToRefactor = smellsData.find((smell: Smell) => smell.messageId === smellGiven.messageId && smellGiven.occurences[0].line === smell.occurences[0].line);
+    smellToRefactor = smellsData.find(
+      (smell: Smell) =>
+        smell.messageId === smellGiven.messageId &&
+        smellGiven.occurences[0].line === smell.occurences[0].line
+    );
   } else {
     smellToRefactor = smellsData.find(
       (smell: Smell) => selectedLine === smell.occurences[0].line
@@ -258,10 +261,10 @@ async function startRefactoringSession(
   editor: vscode.TextEditor,
   refactoredData: RefactoredData | MultiRefactoredData
 ) {
+  await vscode.commands.executeCommand('extension.refactorSidebar.focus');
+
   // Store only the diff editor state
   await contextManager.setWorkspaceData('refactorData', refactoredData);
-
-  await vscode.commands.executeCommand('extension.refactorSidebar.focus');
 
   //Read the refactored code
   const refactoredCode = vscode.Uri.file(refactoredData.targetFile.refactored);
