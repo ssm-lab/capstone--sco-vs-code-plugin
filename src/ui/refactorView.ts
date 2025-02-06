@@ -60,10 +60,10 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
           break;
         case 'accept':
           this.applyRefactoring();
-          await this.closeViews();
+          this.closeViews();
           break;
         case 'reject':
-          await this.closeViews();
+          this.closeViews();
           break;
       }
     });
@@ -137,30 +137,33 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
     return htmlContent;
   }
 
-  private async closeViews() {
+  private closeViews() {
     console.log('Cleaning up webview');
     this.clearView();
     vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     vscode.commands.executeCommand('workbench.view.explorer');
+
+    this._context.workspaceState.update('activeDiff', undefined);
 
     const tempDirs =
       this._context.workspaceState.get<RefactoredData>('refactorData')?.tempDir! ||
       this._context.workspaceState.get<MultiRefactoredData>('refactorData')
         ?.tempDirs;
 
+    console.log(`temp dir: ${tempDirs}`);
+
     if (Array.isArray(tempDirs)) {
       tempDirs.forEach(async (dir) => {
-        await fs.promises.rm(dir, { recursive: true });
+        fs.rmSync(dir, { recursive: true });
       });
     } else {
-      await fs.promises.rm(tempDirs!, { recursive: true });
+      fs.rmSync(tempDirs!, { recursive: true });
     }
 
-    this._context.workspaceState.update('activeDiff', undefined);
     this._context.workspaceState.update('refactorData', undefined);
   }
 
-  private applyRefactoring() {
+  private async applyRefactoring() {
     this._file_map!.forEach((refactored, original) => {
       vscode.window.showInformationMessage('Applying Eco changes...');
       console.log(`refactored: ${refactored}\noriginal: ${original}`);
@@ -170,6 +173,6 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
 
       fs.writeFileSync(original.fsPath, modifiedContent);
     });
-    vscode.window.showInformationMessage('Refactoring applied successfully!');
+    await vscode.window.showInformationMessage('Refactoring applied successfully!');
   }
 }

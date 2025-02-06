@@ -5,6 +5,7 @@ import { envConfig } from '../utils/envConfig';
 
 import { getEditorAndFilePath } from '../utils/editorUtils';
 import { refactorSmell } from '../api/backend';
+import { sidebarState } from '../utils/handleEditorChange';
 
 import { FileHighlighter } from '../ui/fileHighlighter';
 import { ContextManager } from '../context/contextManager';
@@ -294,6 +295,7 @@ async function startRefactoringSession(
   await vscode.window.showTextDocument(doc, { preview: false });
 
   //Show the diff viewer
+  sidebarState.isOpening = true;
   vscode.commands.executeCommand(
     'vscode.diff',
     originalCode,
@@ -301,6 +303,7 @@ async function startRefactoringSession(
     'Refactoring Comparison'
   );
   vscode.commands.executeCommand('ecooptimizer-vs-code-plugin.showRefactorSidebar');
+  sidebarState.isOpening = false;
 }
 
 function cleanTemps(pastData: any) {
