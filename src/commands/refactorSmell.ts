@@ -36,7 +36,7 @@ async function refactorLine(
 
 export async function refactorSelectedSmell(
   contextManager: ContextManager,
-  smellId?: string
+  smellGiven?: Smell
 ) {
   const { editor, filePath } = getEditorAndFilePath();
 
@@ -69,8 +69,8 @@ export async function refactorSelectedSmell(
 
   // Find the smell to refactor
   let smellToRefactor: Smell | undefined;
-  if (smellId) {
-    smellToRefactor = smellsData.find((smell: Smell) => smell.messageId === smellId);
+  if (smellGiven?.messageId) {
+    smellToRefactor = smellsData.find((smell: Smell) => smell.messageId === smellGiven.messageId && smellGiven.occurences[0].line === smell.occurences[0].line);
   } else {
     smellToRefactor = smellsData.find(
       (smell: Smell) => selectedLine === smell.occurences[0].line
