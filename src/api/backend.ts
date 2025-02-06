@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import path from 'path';
+import * as vscode from 'vscode';
+
 import { Smell, RefactorOutput } from '../types';
 
 const BASE_URL = 'http://127.0.0.1:8000'; // API URL for Python backend
@@ -27,8 +27,14 @@ export async function refactorSmell(
 ): Promise<RefactorOutput> {
   const url = `${BASE_URL}/refactor`;
 
+  const workspace_folder = vscode.workspace.workspaceFolders?.find((folder) =>
+    filePath.includes(folder.uri.fsPath)
+  )?.uri.fsPath;
+
+  console.log(`workspace folder: ${workspace_folder}`);
+
   const payload = {
-    source_dir: path.dirname(filePath),
+    source_dir: workspace_folder,
     smell
   };
 
