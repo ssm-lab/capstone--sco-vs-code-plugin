@@ -13,6 +13,7 @@ import { handleEditorChanges } from './utils/handleEditorChange';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Refactor Plugin activated');
+  showSettingsPopup();
 
   const contextManager = new ContextManager(context);
 
@@ -148,6 +149,35 @@ export function activate(context: vscode.ExtensionContext) {
       async (document) => await updateHash(contextManager, document)
     )
   );
+}
+
+function showSettingsPopup() {
+  // Check if the required settings are already configured
+  const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
+  const workspacePath = config.get<string>('projectWorkspacePath', '');
+  const logsOutputPath = config.get<string>('logsOutputPath', '');
+
+  // If settings are not configured, prompt the user to configure them 
+  if (!workspacePath || !logsOutputPath) {
+    vscode.window
+      .showInformationMessage(
+        'Please configure the paths for your workspace and logs.',
+        { modal: true }, 
+        'Continue', // Button to open settings
+        'Skip for now' // Button to dismiss
+      )
+      .then((selection) => {
+        if (selection === 'Continue') {
+          // Open the settings page filtered to your extension's settings
+          vscode.commands.executeCommand('workbench.action.openSettings', 'ecooptimizer-vs-code-plugin');
+        } else if (selection === 'Skip for now') {
+          // Inform user they can configure later
+          vscode.window.showInformationMessage(
+            'You can configure the paths later in the settings.'
+          );
+        }
+      });
+  }
 }
 
 export function deactivate() {
