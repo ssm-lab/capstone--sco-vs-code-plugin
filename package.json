@@ -1,7 +1,7 @@
 {
   "name": "ecooptimizer-vs-code-plugin",
-  "displayName": "ecooptimizer-vs-code-plugin",
-  "description": "VS Code Plugin for Ecooptimizer Refactoring Tool",
+  "displayName": "EcoOptimizer VS Code Plugin",
+  "description": "VS Code Plugin for EcoOptimizer Refactoring Tool",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.92.0"
@@ -34,21 +34,94 @@
         "command": "ecooptimizer-vs-code-plugin.showRefactorSidebar",
         "title": "Show Refactor Sidebar",
         "category": "Eco",
-        "enablement": "false"
+        "when": "false"
       },
       {
         "command": "ecooptimizer-vs-code-plugin.pauseRefactorSidebar",
         "title": "Pause Refactor Sidebar",
         "category": "Eco",
-        "enablement": "false"
+        "when": "false"
       },
       {
         "command": "ecooptimizer-vs-code-plugin.clearRefactorSidebar",
         "title": "Clear Refactor Sidebar",
         "category": "Eco",
-        "enablement": "false"
+        "when": "false"
+      },
+      {
+        "command": "ecooptimizer-vs-code-plugin.showLogs",
+        "title": "Show Backend Logs",
+        "category": "Eco"
       }
     ],
+    "configuration": {
+      "title": "EcoOptimizer",
+      "properties": {
+        "ecooptimizer.enableSmells": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Enable or disable specific code smell detections.",
+          "default": {
+            "long-element-chain": true,
+            "too-many-arguments": true,
+            "long-lambda-expression": true,
+            "long-message-chain": true,
+            "unused-variables-and-attributes": true,
+            "cached-repeated-calls": true,
+            "string-concat-loop": true,
+            "no-self-use": true,
+            "use-a-generator": true
+          },
+          "properties": {
+            "long-element-chain": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of Long Element Chain"
+            },
+            "too-many-arguments": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of Long Parameter List"
+            },
+            "long-lambda-expression": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of Long Lambda Expression"
+            },
+            "long-message-chain": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of Long Message Chain"
+            },
+            "unused-variables-and-attributes": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of Unused Variables and Attributes"
+            },
+            "cached-repeated-calls": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of Cached Repeated Calls"
+            },
+            "string-concat-loop": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of String Concatenation in Loop"
+            },
+            "no-self-use": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of No Self Use"
+            },
+            "use-a-generator": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable detection of Use a Generator"
+            }
+          }
+        }
+      }
+    },
     "keybindings": [
       {
         "command": "ecooptimizer-vs-code-plugin.refactorSmell",
