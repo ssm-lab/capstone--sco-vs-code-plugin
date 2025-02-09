@@ -14,6 +14,26 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "EcoOptimizer",
+      "properties": {
+        "ecooptimizer-vs-code-plugin.projectWorkspacePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the folder to be targeted, relative to current workspace. Defaults to the currently open folder in VS Code."
+        },
+        "ecooptimizer-vs-code-plugin.unitTestCommand": {
+          "type": "string",
+          "default": "",
+          "description": "Command to run unit tests. Should be the same as if written in the terminal (e.i. pytest tests/)."
+        },
+        "ecooptimizer-vs-code-plugin.logsOutputPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to store log files and output reports. Defaults to a 'logs' folder inside the workspace."
+        }
+      }
+    },
     "commands": [
       {
         "command": "ecooptimizer-vs-code-plugin.detectSmells",

@@ -21,6 +21,15 @@ import { LineSelectionManager } from './ui/lineSelectionManager';
 export function activate(context: vscode.ExtensionContext) {
   console.log('Eco: Refactor Plugin Activated Successfully');
 
+  // Show the settings popup if needed
+  showSettingsPopup();
+
+  // Register a listener for configuration changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      handleConfigurationChange(event);
+    })
+  );
   const contextManager = new ContextManager(context);
 
   let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
@@ -169,6 +178,53 @@ export function activate(context: vscode.ExtensionContext) {
       previousSmells = getEnabledSmells();
     }
   });
+}
+
+function showSettingsPopup() {
+  // Check if the required settings are already configured
+  const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
+  const workspacePath = config.get<string>('projectWorkspacePath', '');
+  const logsOutputPath = config.get<string>('logsOutputPath', '');
+  const unitTestPath = config.get<string>('unitTestPath', '');
+
+  // If settings are not configured, prompt the user to configure them
+  if (!workspacePath || !logsOutputPath || !unitTestPath) {
+    vscode.window
+      .showInformationMessage(
+        'Please configure the paths for your workspace and logs.',
+        { modal: true },
+        'Continue', // Button to open settings
+        'Skip for now' // Button to dismiss
+      )
+      .then((selection) => {
+        if (selection === 'Continue') {
+          // Open the settings page filtered to extension's settings
+          vscode.commands.executeCommand(
+            'workbench.action.openSettings',
+            'ecooptimizer-vs-code-plugin'
+          );
+        } else if (selection === 'Skip for now') {
+          // Inform user they can configure later
+          vscode.window.showInformationMessage(
+            'You can configure the paths later in the settings.'
+          );
+        }
+      });
+  }
+}
+
+function handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
+  // Check if any relevant setting was changed
+  if (
+    event.affectsConfiguration('ecooptimizer-vs-code-plugin.projectWorkspacePath') ||
+    event.affectsConfiguration('ecooptimizer-vs-code-plugin.unitTestCommand') ||
+    event.affectsConfiguration('ecooptimizer-vs-code-plugin.logsOutputPath')
+  ) {
+    // Display a warning message about changing critical settings
+    vscode.window.showWarningMessage(
+      'You have changed a critical setting for the EcoOptimizer plugin. Ensure the new value is valid and correct for optimal functionality.'
+    );
+  }
 }
 
 export function deactivate() {
