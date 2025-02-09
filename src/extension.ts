@@ -1,99 +1,93 @@
-import { envConfig } from './utils/envConfig'; // ENV variables should always be first import!!
-
+import { envConfig } from './utils/envConfig';
 import * as vscode from 'vscode';
 
 import { detectSmells } from './commands/detectSmells';
 import { refactorSelectedSmell } from './commands/refactorSmell';
 import { refactorAllSmellType } from './commands/refactorAllSmellsOfType';
-import { LineSelectionManager } from './ui/lineSelectionManager';
-import { ContextManager } from './context/contextManager';
 import { wipeWorkCache } from './commands/wipeWorkCache';
+import { showLogsCommand, stopWatchingLogs } from './commands/showLogs';
+import { ContextManager } from './context/contextManager';
+import {
+  getEnabledSmells,
+  handleSmellFilterUpdate
+} from './utils/handleSmellSettings';
 import { updateHash } from './utils/hashDocs';
 import { RefactorSidebarProvider } from './ui/refactorView';
 import { handleEditorChanges } from './utils/handleEditorChange';
+import { LineSelectionManager } from './ui/lineSelectionManager';
 
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Refactor Plugin activated');
+  console.log('Eco: Refactor Plugin Activated Successfully');
 
   const contextManager = new ContextManager(context);
 
-  // ===============================================================
-  // INITIALIZE WORKSPACE DATA
-  // ===============================================================
+  let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
+  contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, smellsData);
 
-  let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!);
-  if (!smellsData) {
-    smellsData = {};
-    contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, smellsData);
-  }
-
-  let fileHashes = contextManager.getWorkspaceData(envConfig.FILE_CHANGES_KEY!);
-  if (!fileHashes) {
-    fileHashes = {};
-    contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, fileHashes);
-  }
-
-  // console.log(
-  //   `Smell detection map: ${contextManager.getWorkspaceData(
-  //     envConfig.SMELL_MAP_KEY!
-  //   )}`
-  // );
+  let fileHashes =
+    contextManager.getWorkspaceData(envConfig.FILE_CHANGES_KEY!) || {};
+  contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, fileHashes);
 
   // ===============================================================
   // REGISTER COMMANDS
   // ===============================================================
 
-  // Register Detect Smells Command
-  let detectSmellsCmd = vscode.commands.registerCommand(
-    'ecooptimizer-vs-code-plugin.detectSmells',
-    async () => {
-      console.log('Command detectSmells triggered');
-      detectSmells(contextManager);
-    }
+  // Detect Smells Command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer-vs-code-plugin.detectSmells',
+      async () => {
+        console.log('Eco: Detect Smells Command Triggered');
+        detectSmells(contextManager);
+      }
+    )
   );
-  context.subscriptions.push(detectSmellsCmd);
 
-  // Register Refactor Smell Command
-  let refactorSmellCmd = vscode.commands.registerCommand(
-    'ecooptimizer-vs-code-plugin.refactorSmell',
-    () => {
-      console.log('Command refactorSmells triggered');
-      vscode.window.showInformationMessage('Eco: Detecting smells...');
-      refactorSelectedSmell(contextManager);
-    }
+  // Refactor Selected Smell Command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer-vs-code-plugin.refactorSmell',
+      () => {
+        console.log('Eco: Refactor Selected Smell Command Triggered');
+        refactorSelectedSmell(contextManager);
+      }
+    )
   );
-  context.subscriptions.push(refactorSmellCmd);
 
   // Register Refactor All Smells of a Given Type Command
-  let refactorAllSmellsOfTypeCmd = vscode.commands.registerCommand(
-    'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
-    () => {
-      console.log('Command refactorAllSmellsOfType triggered');
-      vscode.window.showInformationMessage(`Eco: Refactoring all smells of the given type...`);
-      refactorAllSmellType(contextManager);
-    }
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
+      () => {
+        console.log('Command refactorAllSmellsOfType triggered');
+        vscode.window.showInformationMessage(`Eco: Refactoring all smells of the given type...`);
+        refactorAllSmellType(contextManager);
+      }
+    )
   );
-  context.subscriptions.push(refactorAllSmellsOfTypeCmd); 
+  
+  // Wipe Cache Command
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer-vs-code-plugin.wipeWorkCache',
+      async () => {
+        console.log('Eco: Wipe Work Cache Command Triggered');
+        vscode.window.showInformationMessage(
+          'Eco: Manually wiping workspace memory... ✅'
+        );
+        await wipeWorkCache(contextManager, 'manual');
+      }
+    )
+  );
 
-  // Register Wipe Workspace Cache
-  let wipeWorkCacheCmd = vscode.commands.registerCommand(
-    'ecooptimizer-vs-code-plugin.wipeWorkCache',
-    () => {
-      console.log('Command wipeWorkCache triggered');
-      vscode.window.showInformationMessage(
-        'Eco: Wiping existing worspace memory...'
-      );
-      wipeWorkCache(contextManager);
-    }
-  );
-  context.subscriptions.push(wipeWorkCacheCmd);
+  // Log Viewing Command
+  showLogsCommand(context);
 
   // ===============================================================
   // REGISTER VIEWS
   // ===============================================================
 
-  // Register the webview provider for the refactoring webview
   const refactorProvider = new RefactorSidebarProvider(context);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
@@ -135,8 +129,7 @@ export function activate(context: vscode.ExtensionContext) {
   const lineSelectManager = new LineSelectionManager(contextManager);
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((event) => {
-      console.log(`Detected line selection event`);
-
+      console.log('Eco: Detected line selection event');
       lineSelectManager.commentLine(event.textEditor);
     })
   );
@@ -148,21 +141,35 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Handles case of documents already being open on vscode open
+  // Handles case of documents already being open on VS Code open
   vscode.window.visibleTextEditors.forEach(async (editor) => {
     if (editor.document) {
       await updateHash(contextManager, editor.document);
     }
   });
 
-  // Initializes first state of document when opened while extension active
+  // Initializes first state of document when opened while extension is active
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument(
       async (document) => await updateHash(contextManager, document)
     )
   );
+
+  // ===============================================================
+  // HANDLE SMELL FILTER CHANGES
+  // ===============================================================
+
+  let previousSmells = getEnabledSmells();
+  vscode.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration('ecooptimizer.enableSmells')) {
+      console.log('Eco: Smell preferences changed! Wiping cache.');
+      handleSmellFilterUpdate(previousSmells, contextManager);
+      previousSmells = getEnabledSmells();
+    }
+  });
 }
 
 export function deactivate() {
-  console.log('Refactor Plugin deactivated');
+  console.log('Eco: Deactivating Plugin - Stopping Log Watching');
+  stopWatchingLogs();
 }
