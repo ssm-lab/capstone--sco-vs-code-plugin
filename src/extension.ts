@@ -18,9 +18,18 @@ import { LineSelectionManager } from './ui/lineSelectionManager';
 
 
 export function activate(context: vscode.ExtensionContext) {
+  console.log('Refactor Plugin activated');
+
+  // Show the settings popup if needed
   console.log('Eco: Refactor Plugin Activated Successfully');
   showSettingsPopup();
 
+  // Register a listener for configuration changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      handleConfigurationChange(event);
+    })
+  );
   const contextManager = new ContextManager(context);
 
   let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
@@ -198,6 +207,21 @@ function showSettingsPopup() {
       });
   }
 }
+
+function handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
+  // Check if any relevant setting was changed
+  if (
+    event.affectsConfiguration('ecooptimizer-vs-code-plugin.projectWorkspacePath') ||
+    event.affectsConfiguration('ecooptimizer-vs-code-plugin.unitTestPath') ||
+    event.affectsConfiguration('ecooptimizer-vs-code-plugin.logsOutputPath')
+  ) {
+    // Display a warning message about changing critical settings
+    vscode.window.showWarningMessage(
+      'You have changed a critical setting for the EcoOptimizer plugin. Ensure the new value is valid and correct for optimal functionality.'
+    );
+  }
+}
+
 
 export function deactivate() {
   console.log('Eco: Deactivating Plugin - Stopping Log Watching');
