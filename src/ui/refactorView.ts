@@ -4,7 +4,6 @@ import { readFileSync } from 'fs';
 import { ActiveDiff } from '../types';
 import * as fs from 'fs';
 import { sidebarState } from '../utils/handleEditorChange';
-import { MultiRefactoredData } from '../commands/refactorSmell';
 
 export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'extension.refactorSidebar';
@@ -145,20 +144,12 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
 
     this._context.workspaceState.update('activeDiff', undefined);
 
-    const tempDirs =
-      this._context.workspaceState.get<RefactoredData>('refactorData')?.tempDir! ||
-      this._context.workspaceState.get<MultiRefactoredData>('refactorData')
-        ?.tempDirs;
+    const tempDir =
+      this._context.workspaceState.get<RefactoredData>('refactorData')?.tempDir!;
 
-    console.log(`temp dir: ${tempDirs}`);
+    console.log(`temp dir: ${tempDir}`);
 
-    if (Array.isArray(tempDirs)) {
-      tempDirs.forEach(async (dir) => {
-        fs.rmSync(dir, { recursive: true });
-      });
-    } else {
-      fs.rmSync(tempDirs!, { recursive: true });
-    }
+    fs.rmSync(tempDir, { recursive: true });
 
     this._context.workspaceState.update('refactorData', undefined);
   }

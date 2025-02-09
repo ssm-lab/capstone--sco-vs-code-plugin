@@ -4,12 +4,14 @@ import * as vscode from 'vscode';
 
 import { detectSmells } from './commands/detectSmells';
 import { refactorSelectedSmell } from './commands/refactorSmell';
+import { refactorAllSmellType } from './commands/refactorAllSmellsOfType';
 import { LineSelectionManager } from './ui/lineSelectionManager';
 import { ContextManager } from './context/contextManager';
 import { wipeWorkCache } from './commands/wipeWorkCache';
 import { updateHash } from './utils/hashDocs';
 import { RefactorSidebarProvider } from './ui/refactorView';
 import { handleEditorChanges } from './utils/handleEditorChange';
+
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Refactor Plugin activated');
@@ -62,6 +64,17 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
   context.subscriptions.push(refactorSmellCmd);
+
+  // Register Refactor All Smells of a Given Type Command
+  let refactorAllSmellsOfTypeCmd = vscode.commands.registerCommand(
+    'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
+    () => {
+      console.log('Command refactorAllSmellsOfType triggered');
+      vscode.window.showInformationMessage(`Eco: Refactoring all smells of the given type...`);
+      refactorAllSmellType(contextManager);
+    }
+  );
+  context.subscriptions.push(refactorAllSmellsOfTypeCmd); 
 
   // Register Wipe Workspace Cache
   let wipeWorkCacheCmd = vscode.commands.registerCommand(

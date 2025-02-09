@@ -58,3 +58,43 @@ export async function refactorSmell(
     throw error;
   }
 }
+
+
+// Request refactoring for all smells of a specific type
+export async function refactorAllSmellsOfAType(
+  filePath: string,
+  smell: Smell
+): Promise<RefactorOutput> {
+  const url = `${BASE_URL}/refactorAll`;
+
+  const workspace_folder = vscode.workspace.workspaceFolders?.find((folder) =>
+    filePath.includes(folder.uri.fsPath)
+  )?.uri.fsPath;
+
+  console.log(`workspace folder: ${workspace_folder}`);
+
+  const payload = {
+    source_dir: workspace_folder,
+    smell
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error refactoring smell: ${await response.text()}`);
+    }
+
+    const refactorResult = (await response.json()) as RefactorOutput;
+    return refactorResult;
+  } catch (error) {
+    console.error('Error in refactorSmell:', error);
+    throw error;
+  }
+}

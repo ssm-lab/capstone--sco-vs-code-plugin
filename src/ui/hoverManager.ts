@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
 import { Smell } from '../types';
-import {
-  refactorSelectedSmell,
-  refactorAllSmellsOfType
-} from '../commands/refactorSmell';
+import { refactorSelectedSmell } from '../commands/refactorSmell';
+import { refactorAllSmellType } from '../commands/refactorAllSmellsOfType';
 import { ContextManager } from '../context/contextManager';
 
 export class HoverManager {
@@ -106,7 +104,7 @@ export class HoverManager {
         'extension.refactorAllSmellsOfType',
         async (smell: Smell) => {
           const contextManager = new ContextManager(this.vscodeContext);
-          await refactorAllSmellsOfType(contextManager, smell.messageId);
+          await refactorAllSmellType(contextManager, smell);
         }
       )
     );

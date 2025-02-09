@@ -26,6 +26,11 @@
         "category": "Eco"
       },
       {
+        "command": "ecooptimizer-vs-code-plugin.refactorAllSmellsOfType",
+        "title": "Refactor All Smells Of Type",
+        "category": "Eco"
+      },
+      {
         "command": "ecooptimizer-vs-code-plugin.wipeWorkCache",
         "title": "Wipe Workspace Cache",
         "category": "Eco"
