@@ -186,19 +186,22 @@ function showSettingsPopup() {
   const logsOutputPath = config.get<string>('logsOutputPath', '');
   const unitTestPath = config.get<string>('unitTestPath', '');
 
-  // If settings are not configured, prompt the user to configure them 
+  // If settings are not configured, prompt the user to configure them
   if (!workspacePath || !logsOutputPath || !unitTestPath) {
     vscode.window
       .showInformationMessage(
         'Please configure the paths for your workspace and logs.',
-        { modal: true }, 
+        { modal: true },
         'Continue', // Button to open settings
         'Skip for now' // Button to dismiss
       )
       .then((selection) => {
         if (selection === 'Continue') {
           // Open the settings page filtered to extension's settings
-          vscode.commands.executeCommand('workbench.action.openSettings', 'ecooptimizer-vs-code-plugin');
+          vscode.commands.executeCommand(
+            'workbench.action.openSettings',
+            'ecooptimizer-vs-code-plugin'
+          );
         } else if (selection === 'Skip for now') {
           // Inform user they can configure later
           vscode.window.showInformationMessage(
@@ -213,7 +216,7 @@ function handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
   // Check if any relevant setting was changed
   if (
     event.affectsConfiguration('ecooptimizer-vs-code-plugin.projectWorkspacePath') ||
-    event.affectsConfiguration('ecooptimizer-vs-code-plugin.unitTestPath') ||
+    event.affectsConfiguration('ecooptimizer-vs-code-plugin.unitTestCommand') ||
     event.affectsConfiguration('ecooptimizer-vs-code-plugin.logsOutputPath')
   ) {
     // Display a warning message about changing critical settings
@@ -222,7 +225,6 @@ function handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
     );
   }
 }
-
 
 export function deactivate() {
   console.log('Eco: Deactivating Plugin - Stopping Log Watching');

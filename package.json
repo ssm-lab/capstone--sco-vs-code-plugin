@@ -15,17 +15,17 @@
   "main": "./dist/extension.js",
   "contributes": {
     "configuration": {
-      "title": "EcoOptimizer Settings",
+      "title": "EcoOptimizer",
       "properties": {
         "ecooptimizer-vs-code-plugin.projectWorkspacePath": {
           "type": "string",
           "default": "",
-          "description": "Path to the project workspace. Defaults to the currently open folder in VS Code."
+          "description": "Path to the folder to be targeted, relative to current workspace. Defaults to the currently open folder in VS Code."
         },
-        "ecooptimizer-vs-code-plugin.unitTestPath": {
+        "ecooptimizer-vs-code-plugin.unitTestCommand": {
           "type": "string",
           "default": "",
-          "description": "Path to the unit test directory. Defaults to none."
+          "description": "Command to run unit tests. Should be the same as if written in the terminal (e.i. pytest tests/)."
         },
         "ecooptimizer-vs-code-plugin.logsOutputPath": {
           "type": "string",
