@@ -184,9 +184,10 @@ function showSettingsPopup() {
   const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
   const workspacePath = config.get<string>('projectWorkspacePath', '');
   const logsOutputPath = config.get<string>('logsOutputPath', '');
+  const unitTestPath = config.get<string>('unitTestPath', '');
 
   // If settings are not configured, prompt the user to configure them 
-  if (!workspacePath || !logsOutputPath) {
+  if (!workspacePath || !logsOutputPath || !unitTestPath) {
     vscode.window
       .showInformationMessage(
         'Please configure the paths for your workspace and logs.',
@@ -196,7 +197,7 @@ function showSettingsPopup() {
       )
       .then((selection) => {
         if (selection === 'Continue') {
-          // Open the settings page filtered to your extension's settings
+          // Open the settings page filtered to extension's settings
           vscode.commands.executeCommand('workbench.action.openSettings', 'ecooptimizer-vs-code-plugin');
         } else if (selection === 'Skip for now') {
           // Inform user they can configure later
