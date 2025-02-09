@@ -66,6 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Register Refactor All Smells of a Given Type Command
+<<<<<<< HEAD
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
@@ -75,6 +76,28 @@ export function activate(context: vscode.ExtensionContext) {
         refactorAllSmellType(contextManager);
       }
     )
+=======
+  let refactorAllSmellsOfTypeCmd = vscode.commands.registerCommand(
+    'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
+    () => {
+      console.log('Command refactorAllSmellsOfType triggered');
+      vscode.window.showInformationMessage(`Eco: Refactoring all smells of the given type...`);
+      refactorAllSmellType(contextManager);
+    }
+  );
+  context.subscriptions.push(refactorAllSmellsOfTypeCmd); 
+
+  // Register Wipe Workspace Cache
+  let wipeWorkCacheCmd = vscode.commands.registerCommand(
+    'ecooptimizer-vs-code-plugin.wipeWorkCache',
+    () => {
+      console.log('Command wipeWorkCache triggered');
+      vscode.window.showInformationMessage(
+        'Eco: Wiping existing worspace memory...'
+      );
+      wipeWorkCache(contextManager);
+    }
+>>>>>>> 746dc58 (Started working on front end of the refactor all smells of type)
   );
   
   // Wipe Cache Command
