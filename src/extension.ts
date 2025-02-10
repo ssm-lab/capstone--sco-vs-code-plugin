@@ -7,7 +7,7 @@ import {
   refactorAllSmellsOfType
 } from './commands/refactorSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
-import { showLogsCommand, stopWatchingLogs } from './commands/showLogs';
+import { startLogging, stopWatchingLogs } from './commands/showLogs';
 import { ContextManager } from './context/contextManager';
 import {
   getEnabledSmells,
@@ -92,8 +92,17 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  // Log Viewing Command
-  showLogsCommand(context);
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer-vs-code-plugin.startLogging',
+      async () => {
+        console.log('Logging started');
+        startLogging();
+      }
+    )
+  );
+
+  vscode.commands.executeCommand('ecooptimizer-vs-code-plugin.startLogging');
 
   // ===============================================================
   // REGISTER VIEWS

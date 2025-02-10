@@ -98,7 +98,6 @@ export async function refactorSmell(
     }
 
     const refactorResult = (await response.json()) as RefactorOutput;
-    console.log(`Eco: Refactoring successful for smell "${smell.symbol}"`);
     return refactorResult;
   } catch (error) {
     console.error('Eco: Unexpected error in refactorSmell:', error);

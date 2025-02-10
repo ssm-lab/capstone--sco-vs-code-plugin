@@ -29,7 +29,7 @@ async function refactorLine(
     return refactorResult;
   } catch (error) {
     console.error('Error refactoring smell:', error);
-    vscode.window.showErrorMessage(`Eco: Error refactoring smell: ${error}`);
+    vscode.window.showErrorMessage((error as Error).message);
     return;
   }
 }
@@ -94,9 +94,11 @@ export async function refactorSelectedSmell(
     async (progress, token) => {
       const result = await refactorLine(smellToRefactor, filePath, contextManager);
 
-      vscode.window.showInformationMessage(
-        'Refactoring report available in sidebar.'
-      );
+      if (result && result.refactoredData) {
+        vscode.window.showInformationMessage(
+          'Refactoring report available in sidebar.'
+        );
+      }
 
       return result;
     }
