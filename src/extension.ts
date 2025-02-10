@@ -210,7 +210,7 @@ function showSettingsPopup() {
           // Open the settings page filtered to extension's settings
           vscode.commands.executeCommand(
             'workbench.action.openSettings',
-            'ecooptimizer-vs-code-plugin'
+            'ecooptimizer'
           );
         } else if (selection === 'Skip for now') {
           // Inform user they can configure later

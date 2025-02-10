@@ -21,16 +21,6 @@ export class ConfigManager {
     return resolvedPath;
   }
 
-  // get unit test path
-  static getUnitTestPath(): string {
-    const rawPath = vscode.workspace
-      .getConfiguration('ecooptimizer-vs-code-plugin')
-      .get<string>('unitTestPath', '');
-    const resolvedPath = this.resolvePath(rawPath);
-
-    return resolvedPath;
-  }
-
   // get logs output path
   static getLogsOutputPath(): string {
     const rawPath = vscode.workspace
@@ -52,7 +42,6 @@ export class ConfigManager {
         event.affectsConfiguration(
           'ecooptimizer-vs-code-plugin.projectWorkspacePath'
         ) ||
-        event.affectsConfiguration('ecooptimizer-vs-code-plugin.unitTestCommand') ||
         event.affectsConfiguration('ecooptimizer-vs-code-plugin.logsOutputPath')
       ) {
         callback();
