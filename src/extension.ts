@@ -20,17 +20,12 @@ import { LineSelectionManager } from './ui/lineSelectionManager';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Eco: Refactor Plugin Activated Successfully');
+  const contextManager = new ContextManager(context);
 
   // Show the settings popup if needed
   showSettingsPopup();
 
-  // Register a listener for configuration changes
-  context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((event) => {
-      handleConfigurationChange(event);
-    })
-  );
-  const contextManager = new ContextManager(context);
+  startLogging(context);
 
   let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
   contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, smellsData);
@@ -92,18 +87,6 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.startLogging',
-      async () => {
-        console.log('Logging started');
-        startLogging();
-      }
-    )
-  );
-
-  vscode.commands.executeCommand('ecooptimizer-vs-code-plugin.startLogging');
-
   // ===============================================================
   // REGISTER VIEWS
   // ===============================================================
@@ -141,6 +124,13 @@ export function activate(context: vscode.ExtensionContext) {
   // ADD LISTENERS
   // ===============================================================
 
+  // Register a listener for configuration changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      handleConfigurationChange(event);
+    })
+  );
+
   vscode.window.onDidChangeVisibleTextEditors(async (editors) => {
     handleEditorChanges(contextManager, editors);
   });
@@ -157,6 +147,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Updates directory of file states (for checking if modified)
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument(async (document) => {
+      console.log('Eco: Detected document saved event');
       await updateHash(contextManager, document);
     })
   );
@@ -170,9 +161,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initializes first state of document when opened while extension is active
   context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument(
-      async (document) => await updateHash(contextManager, document)
-    )
+    vscode.workspace.onDidOpenTextDocument(async (document) => {
+      console.log('Eco: Detected document opened event');
+      await updateHash(contextManager, document);
+    })
   );
 
   // ===============================================================

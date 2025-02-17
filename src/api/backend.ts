@@ -4,6 +4,36 @@ import { Smell } from '../types';
 
 const BASE_URL = 'http://127.0.0.1:8000'; // API URL for Python backend
 
+export async function initLogs(log_dir: string) {
+  const url = `${BASE_URL}/logs/init`;
+
+  try {
+    console.log('Initializing and synching logs with backend');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ log_dir })
+    });
+
+    if (!response.ok) {
+      console.error(`Unable to initialize logging: ${JSON.stringify(response)}`);
+
+      return false;
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error(`Eco: Unable to initialize logging: ${error.message}`);
+    vscode.window.showErrorMessage(
+      'Eco: Unable to reach the backend. Please check your connection.'
+    );
+    return false;
+  }
+}
+
 // ✅ Fetch detected smells for a given file (only enabled smells)
 export async function fetchSmells(
   filePath: string,

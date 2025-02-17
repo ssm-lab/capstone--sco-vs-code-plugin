@@ -1,72 +1,62 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
+import WebSocket from 'ws';
 
-/**
- * Returns the EcoOptimizer log directory inside the user's home directory.
- */
-function getLogDirectory(): string {
-  const userHome = process.env.HOME || process.env.USERPROFILE;
-  if (!userHome) {
-    vscode.window.showErrorMessage('Eco: Unable to determine user home directory.');
-    return '';
+import { initLogs } from '../api/backend';
+
+const WEBSOCKET_BASE_URL = 'ws://127.0.0.1:8000/logs';
+
+let mainLogChannel: vscode.OutputChannel | undefined;
+let detectSmellsChannel: vscode.OutputChannel | undefined;
+let refactorSmellChannel: vscode.OutputChannel | undefined;
+
+export async function startLogging(context: vscode.ExtensionContext) {
+  const initialized = await initializeBackendSync(context);
+
+  if (initialized) {
+    startWebSocket('main', 'EcoOptimizer: Main Logs');
+    startWebSocket('detect', 'EcoOptimizer: Detect Smells');
+    startWebSocket('refactor', 'EcoOptimizer: Refactor Smell');
+
+    console.log('Successfully initialized logging.');
   }
-  return path.join(userHome, '.ecooptimizer', 'outputs', 'logs');
 }
 
-const LOG_DIR = getLogDirectory();
+async function initializeBackendSync(context: vscode.ExtensionContext) {
+  return await initLogs(context.logUri.fsPath);
+}
 
-/**
- * Defines log file paths dynamically based on the home directory.
- */
-const LOG_FILES = {
-  main: path.join(LOG_DIR, 'main.log'),
-  detect: path.join(LOG_DIR, 'detect_smells.log'),
-  refactor: path.join(LOG_DIR, 'refactor_smell.log')
-};
+function startWebSocket(logType: string, channelName: string) {
+  const url = `${WEBSOCKET_BASE_URL}/${logType}`;
+  const ws = new WebSocket(url);
 
-// ✅ Create an output channel for logs
-const outputChannels = {
-  main: {
-    channel: vscode.window.createOutputChannel('EcoOptimizer Main'),
-    filePath: LOG_FILES.main
-  },
-  detect: {
-    channel: vscode.window.createOutputChannel('EcoOptimizer Detect'),
-    filePath: LOG_FILES.detect
-  },
-  refactor: {
-    channel: vscode.window.createOutputChannel('EcoOptimizer Refactor'),
-    filePath: LOG_FILES.refactor
+  let channel: vscode.OutputChannel;
+  if (logType === 'main') {
+    mainLogChannel = vscode.window.createOutputChannel(channelName);
+    channel = mainLogChannel;
+  } else if (logType === 'detect') {
+    detectSmellsChannel = vscode.window.createOutputChannel(channelName);
+    channel = detectSmellsChannel;
+  } else if (logType === 'refactor') {
+    refactorSmellChannel = vscode.window.createOutputChannel(channelName);
+    channel = refactorSmellChannel;
+  } else {
+    return;
   }
-};
 
-export function startLogging() {
-  Object.entries(outputChannels).forEach(([key, value]) => {
-    value.channel.clear();
-    value.channel.show();
+  ws.on('message', function message(data) {
+    channel.append(data.toString('utf8'));
+  });
 
-    if (!fs.existsSync(value.filePath)) {
-      value.channel.appendLine('⚠️ Log file does not exist.');
-      return;
-    }
+  ws.onerror = (event) => {
+    channel.appendLine(`WebSocket error: ${event}`);
+  };
 
-    fs.readFile(value.filePath, 'utf8', (err, data) => {
-      if (!err) {
-        value.channel.append(data);
-      }
-    });
+  ws.on('close', function close() {
+    channel.appendLine(`WebSocket connection closed for ${logType}`);
+  });
 
-    // ✅ Watch the log file for live updates
-    fs.watchFile(value.filePath, { interval: 1000 }, () => {
-      fs.readFile(value.filePath, 'utf8', (err, data) => {
-        if (!err) {
-          value.channel.clear();
-          value.channel.appendLine(`📄 Viewing: ${key}`);
-          value.channel.append(data);
-        }
-      });
-    });
+  ws.on('open', function open() {
+    channel.appendLine(`Connected to ${channelName} via WebSocket`);
   });
 }
 
@@ -74,5 +64,7 @@ export function startLogging() {
  * Stops watching log files when the extension is deactivated.
  */
 export function stopWatchingLogs() {
-  Object.values(LOG_FILES).forEach((filePath) => fs.unwatchFile(filePath));
+  mainLogChannel?.dispose();
+  detectSmellsChannel?.dispose();
+  refactorSmellChannel?.dispose();
 }

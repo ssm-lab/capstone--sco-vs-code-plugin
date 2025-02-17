@@ -33,8 +33,7 @@
       {
         "command": "ecooptimizer-vs-code-plugin.showRefactorSidebar",
         "title": "Show Refactor Sidebar",
-        "category": "Eco",
-        "enablement": "false"
+        "category": "Eco"
       },
       {
         "command": "ecooptimizer-vs-code-plugin.pauseRefactorSidebar",
@@ -174,6 +173,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@types/vscode": "^1.92.0",
+    "@types/ws": "^8.5.14",
     "@typescript-eslint/eslint-plugin": "^8.17.0",
     "@typescript-eslint/parser": "^8.17.0",
     "@vscode/test-cli": "^0.0.10",
@@ -188,7 +188,10 @@
   },
   "dependencies": {
     "@types/dotenv": "^6.1.1",
+    "bufferutil": "^4.0.9",
     "dotenv": "^16.4.7",
-    "dotenv-webpack": "^8.1.0"
+    "dotenv-webpack": "^8.1.0",
+    "utf-8-validate": "^6.0.5",
+    "ws": "^8.18.0"
   }
 }
