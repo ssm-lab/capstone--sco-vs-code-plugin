@@ -6,6 +6,8 @@ import { envConfig } from '../utils/envConfig';
 
 const WEBSOCKET_BASE_URL = `ws://${envConfig.SERVER_URL}/logs`;
 
+let websockets: WebSocket[] = [];
+
 let mainLogChannel: vscode.OutputChannel | undefined;
 let detectSmellsChannel: vscode.OutputChannel | undefined;
 let refactorSmellChannel: vscode.OutputChannel | undefined;
@@ -23,12 +25,17 @@ export async function startLogging(context: vscode.ExtensionContext) {
 }
 
 async function initializeBackendSync(context: vscode.ExtensionContext) {
-  return await initLogs(context.logUri.fsPath);
+  const logPath = context.logUri.fsPath;
+
+  console.log('Log path:', logPath);
+
+  return await initLogs(logPath);
 }
 
 function startWebSocket(logType: string, channelName: string) {
   const url = `${WEBSOCKET_BASE_URL}/${logType}`;
   const ws = new WebSocket(url);
+  websockets.push(ws);
 
   let channel: vscode.OutputChannel;
   if (logType === 'main') {
@@ -65,6 +72,8 @@ function startWebSocket(logType: string, channelName: string) {
  * Stops watching log files when the extension is deactivated.
  */
 export function stopWatchingLogs() {
+  websockets.forEach((ws) => ws.close());
+
   mainLogChannel?.dispose();
   detectSmellsChannel?.dispose();
   refactorSmellChannel?.dispose();
