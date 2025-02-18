@@ -40,7 +40,9 @@ export async function refactorSelectedSmell(
 ) {
   const { editor, filePath } = getEditorAndFilePath();
 
-  const pastData = contextManager.getWorkspaceData('refactorData');
+  const pastData = contextManager.getWorkspaceData(
+    envConfig.CURRENT_REFACTOR_DATA_KEY!
+  );
 
   // Clean up temp directory if not removed
   if (pastData) {
@@ -113,7 +115,7 @@ export async function refactorSelectedSmell(
 
   const { refactoredData } = refactorResult;
 
-  startRefactoringSession(contextManager, editor, refactoredData);
+  await startRefactoringSession(contextManager, editor, refactoredData);
 
   if (refactorResult.updatedSmells.length) {
     const fileHighlighter = new FileHighlighter(contextManager);
@@ -131,7 +133,9 @@ export async function refactorAllSmellsOfType(
 ) {
   const { editor, filePath } = getEditorAndFilePath();
 
-  const pastData = contextManager.getWorkspaceData<RefactoredData>('refactorData');
+  const pastData = contextManager.getWorkspaceData<RefactoredData>(
+    envConfig.CURRENT_REFACTOR_DATA_KEY!
+  );
 
   // Clean up temp directory if not removed
   if (pastData) {
@@ -264,10 +268,13 @@ async function startRefactoringSession(
   editor: vscode.TextEditor,
   refactoredData: RefactoredData | MultiRefactoredData
 ) {
-  await vscode.commands.executeCommand('extension.refactorSidebar.focus');
-
   // Store only the diff editor state
-  await contextManager.setWorkspaceData('refactorData', refactoredData);
+  await contextManager.setWorkspaceData(
+    envConfig.CURRENT_REFACTOR_DATA_KEY!,
+    refactoredData
+  );
+
+  await vscode.commands.executeCommand('extension.refactorSidebar.focus');
 
   //Read the refactored code
   const refactoredCode = vscode.Uri.file(refactoredData.targetFile.refactored);
@@ -285,7 +292,7 @@ async function startRefactoringSession(
     };
   });
 
-  await contextManager.setWorkspaceData('activeDiff', {
+  await contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, {
     files: allFiles,
     firstOpen: true,
     isOpen: true
@@ -308,15 +315,16 @@ async function startRefactoringSession(
   sidebarState.isOpening = false;
 }
 
-function cleanTemps(pastData: any) {
+async function cleanTemps(pastData: any) {
   console.log('Cleaning up stale artifacts');
-  const tempDirs = pastData!.tempDir! || pastData!.tempDirs!;
+  const tempDirs =
+    (pastData!.tempDir! as string) || (pastData!.tempDirs! as string[]);
 
   if (Array.isArray(tempDirs)) {
-    tempDirs.forEach((dir) => {
-      fs.promises.rm(dir, { recursive: true });
-    });
+    for (const dir in tempDirs) {
+      await fs.promises.rm(dir, { recursive: true, force: true });
+    }
   } else {
-    fs.promises.rm(tempDirs!, { recursive: true });
+    await fs.promises.rm(tempDirs, { recursive: true, force: true });
   }
 }

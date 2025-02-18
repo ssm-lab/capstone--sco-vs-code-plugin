@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import WebSocket from 'ws';
 
 import { initLogs } from '../api/backend';
+import { envConfig } from '../utils/envConfig';
 
-const WEBSOCKET_BASE_URL = 'ws://127.0.0.1:8000/logs';
+const WEBSOCKET_BASE_URL = `ws://${envConfig.SERVER_URL}/logs`;
 
 let mainLogChannel: vscode.OutputChannel | undefined;
 let detectSmellsChannel: vscode.OutputChannel | undefined;

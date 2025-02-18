@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 
 import { Smell } from '../types';
+import { envConfig } from '../utils/envConfig';
 
-const BASE_URL = 'http://127.0.0.1:8000'; // API URL for Python backend
+const BASE_URL = envConfig.SERVER_URL; // API URL for Python backend
 
 export async function initLogs(log_dir: string) {
   const url = `${BASE_URL}/logs/init`;

@@ -106,7 +106,6 @@ export async function detectSmells(contextManager: ContextManager) {
   } else {
     if (fileSmells) {
       console.log(`Eco: File changed. Updating smells.`);
-      await wipeWorkCache(contextManager, 'fileChange');
     } else {
       console.log(`Eco: No cached smells found. Fetching from backend.`);
     }
@@ -120,7 +119,6 @@ export async function detectSmells(contextManager: ContextManager) {
     return;
   }
 
-  // ✅ Highlight smells in editor
   console.log(`Eco: Highlighting detected smells in ${filePath}.`);
   if (!fileHighlighter) {
     fileHighlighter = new FileHighlighter(contextManager);
@@ -132,9 +130,6 @@ export async function detectSmells(contextManager: ContextManager) {
   );
 }
 
-/**
- * ✅ Fetches the currently enabled smells from VS Code settings.
- */
 function getEnabledSmells(): { [key: string]: boolean } {
   return vscode.workspace.getConfiguration('ecooptimizer').get('enableSmells', {});
 }
