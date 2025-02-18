@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import path from 'path';
+import * as fs from 'fs';
+
+import { envConfig } from '../utils/envConfig';
 import { readFileSync } from 'fs';
 import { ActiveDiff } from '../types';
-import * as fs from 'fs';
 import { sidebarState } from '../utils/handleEditorChange';
 import { MultiRefactoredData } from '../commands/refactorSmell';
 
@@ -31,8 +33,9 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
       console.log('Webview is visible');
       if (webviewView.visible) {
         // Use acquireVsCodeApi to get the webview state
-        const savedState =
-          this._context.workspaceState.get<RefactoredData>('refactorData');
+        const savedState = this._context.workspaceState.get<RefactoredData>(
+          envConfig.CURRENT_REFACTOR_DATA_KEY!
+        );
 
         if (savedState) {
           this.updateView();
@@ -59,11 +62,11 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
           sidebarState.isOpening = false;
           break;
         case 'accept':
-          this.applyRefactoring();
-          this.closeViews();
+          await this.applyRefactoring();
+          await this.closeViews();
           break;
         case 'reject':
-          this.closeViews();
+          await this.closeViews();
           break;
       }
     });
@@ -72,8 +75,9 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
 
   async updateView() {
     console.log('Updating view');
-    const refactoredData =
-      this._context.workspaceState.get<RefactoredData>('refactorData')!;
+    const refactoredData = this._context.workspaceState.get<RefactoredData>(
+      envConfig.CURRENT_REFACTOR_DATA_KEY!
+    )!;
 
     this._file_map.set(
       vscode.Uri.file(refactoredData.targetFile.original),
@@ -90,7 +94,9 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
   }
 
   private async openView(refactoredData: RefactoredData) {
-    const diffView = this._context.workspaceState.get<ActiveDiff>('activeDiff')!;
+    const diffView = this._context.workspaceState.get<ActiveDiff>(
+      envConfig.ACTIVE_DIFF_KEY!
+    )!;
 
     if (diffView.isOpen) {
       console.log('starting view');
@@ -111,9 +117,11 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
     this._view!.webview.postMessage({ command: 'pause' });
   }
 
-  clearView() {
-    this._view?.webview.postMessage({ command: 'clear' });
+  async clearView() {
+    await this._view?.webview.postMessage({ command: 'clear' });
     this._file_map = new Map();
+
+    console.log('View cleared');
   }
 
   private _getHtml(webview: vscode.Webview): string {
@@ -137,42 +145,55 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
     return htmlContent;
   }
 
-  private closeViews() {
-    console.log('Cleaning up webview');
-    this.clearView();
-    vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-    vscode.commands.executeCommand('workbench.view.explorer');
+  private async closeViews() {
+    await this.clearView();
+    try {
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      await vscode.commands.executeCommand('workbench.view.explorer');
 
-    this._context.workspaceState.update('activeDiff', undefined);
+      await this._context.workspaceState.update(
+        envConfig.ACTIVE_DIFF_KEY!,
+        undefined
+      );
 
-    const tempDirs =
-      this._context.workspaceState.get<RefactoredData>('refactorData')?.tempDir! ||
-      this._context.workspaceState.get<MultiRefactoredData>('refactorData')
-        ?.tempDirs;
+      const tempDirs =
+        this._context.workspaceState.get<RefactoredData>(
+          envConfig.CURRENT_REFACTOR_DATA_KEY!
+        )?.tempDir ||
+        this._context.workspaceState.get<MultiRefactoredData>(
+          envConfig.CURRENT_REFACTOR_DATA_KEY!
+        )?.tempDirs;
 
-    console.log(`temp dir: ${tempDirs}`);
-
-    if (Array.isArray(tempDirs)) {
-      tempDirs.forEach(async (dir) => {
-        fs.rmSync(dir, { recursive: true });
-      });
-    } else {
-      fs.rmSync(tempDirs!, { recursive: true });
+      if (Array.isArray(tempDirs)) {
+        for (const dir in tempDirs) {
+          await fs.promises.rm(dir, { recursive: true, force: true });
+        }
+      } else if (tempDirs) {
+        await fs.promises.rm(tempDirs, { recursive: true, force: true });
+      }
+    } catch (err) {
+      console.error('Error closing views', err);
     }
 
-    this._context.workspaceState.update('refactorData', undefined);
+    console.log('Closed views');
+
+    await this._context.workspaceState.update(
+      envConfig.CURRENT_REFACTOR_DATA_KEY!,
+      undefined
+    );
   }
 
   private async applyRefactoring() {
-    this._file_map!.forEach((refactored, original) => {
-      vscode.window.showInformationMessage('Applying Eco changes...');
-      console.log(`refactored: ${refactored}\noriginal: ${original}`);
-      const modifiedContent = fs.readFileSync(refactored.fsPath, {
-        encoding: 'utf-8'
-      });
-
-      fs.writeFileSync(original.fsPath, modifiedContent);
-    });
-    await vscode.window.showInformationMessage('Refactoring applied successfully!');
+    try {
+      for (const [original, refactored] of this._file_map.entries()) {
+        const content = await vscode.workspace.fs.readFile(refactored);
+        await vscode.workspace.fs.writeFile(original, content);
+        await vscode.workspace.save(original);
+        console.log(`Applied refactoring to ${original.fsPath}`);
+      }
+      vscode.window.showInformationMessage('Refactoring applied successfully!');
+    } catch (error) {
+      console.error('Error applying refactoring:', error);
+    }
   }
 }
