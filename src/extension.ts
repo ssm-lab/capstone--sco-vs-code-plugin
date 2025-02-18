@@ -23,7 +23,15 @@ export function activate(context: vscode.ExtensionContext) {
   const contextManager = new ContextManager(context);
 
   // Show the settings popup if needed
-  showSettingsPopup();
+  // TODO: Setting to re-enable popup if disabled
+  const settingsPopupChoice =
+    contextManager.getGlobalData<boolean>('showSettingsPopup');
+
+  if (settingsPopupChoice === undefined || settingsPopupChoice) {
+    showSettingsPopup(contextManager);
+  }
+
+  console.log('environment variables:', envConfig);
 
   startLogging(context);
 
@@ -181,7 +189,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 }
 
-function showSettingsPopup() {
+function showSettingsPopup(contextManager: ContextManager) {
   // Check if the required settings are already configured
   const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
   const workspacePath = config.get<string>('projectWorkspacePath', '');
@@ -195,7 +203,8 @@ function showSettingsPopup() {
         'Please configure the paths for your workspace and logs.',
         { modal: true },
         'Continue', // Button to open settings
-        'Skip for now' // Button to dismiss
+        'Skip', // Button to dismiss
+        'Never show this again'
       )
       .then((selection) => {
         if (selection === 'Continue') {
@@ -204,10 +213,15 @@ function showSettingsPopup() {
             'workbench.action.openSettings',
             'ecooptimizer'
           );
-        } else if (selection === 'Skip for now') {
+        } else if (selection === 'Skip') {
           // Inform user they can configure later
           vscode.window.showInformationMessage(
             'You can configure the paths later in the settings.'
+          );
+        } else if (selection === 'Never show this again') {
+          contextManager.setGlobalData('showSettingsPopup', false);
+          vscode.window.showInformationMessage(
+            'You can re-enable this popup again in the settings.'
           );
         }
       });

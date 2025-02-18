@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { Smell } from '../types';
 import { envConfig } from '../utils/envConfig';
 
-const BASE_URL = envConfig.SERVER_URL; // API URL for Python backend
+const BASE_URL = `http://${envConfig.SERVER_URL}`; // API URL for Python backend
 
 export async function initLogs(log_dir: string) {
   const url = `${BASE_URL}/logs/init`;
