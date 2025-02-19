@@ -3,6 +3,22 @@ import WebSocket from 'ws';
 
 import { initLogs } from '../api/backend';
 import { envConfig } from '../utils/envConfig';
+import { serverStatus } from '../utils/serverStatus';
+import { globalData } from '../extension';
+
+class LogInitializationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LogInitializationError';
+  }
+}
+
+class WebSocketInitializationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WebSocketInitializationError';
+  }
+}
 
 const WEBSOCKET_BASE_URL = `ws://${envConfig.SERVER_URL}/logs`;
 
@@ -12,24 +28,76 @@ let mainLogChannel: vscode.OutputChannel | undefined;
 let detectSmellsChannel: vscode.OutputChannel | undefined;
 let refactorSmellChannel: vscode.OutputChannel | undefined;
 
-export async function startLogging(context: vscode.ExtensionContext) {
-  const initialized = await initializeBackendSync(context);
+let CHANNELS_CREATED = false;
 
-  if (initialized) {
-    startWebSocket('main', 'EcoOptimizer: Main Logs');
-    startWebSocket('detect', 'EcoOptimizer: Detect Smells');
-    startWebSocket('refactor', 'EcoOptimizer: Refactor Smell');
+serverStatus.on('change', async (newStatus) => {
+  console.log('Server status changed:', newStatus);
+  if (newStatus === 'down') {
+    mainLogChannel?.appendLine('Server connection lost');
+  } else {
+    mainLogChannel?.appendLine('Server connection re-established.');
+    await startLogging();
+  }
+});
 
-    console.log('Successfully initialized logging.');
+export async function startLogging(retries = 3, delay = 1000): Promise<void> {
+  let logInitialized = false;
+  const logPath = globalData.contextManager?.context.logUri?.fsPath;
+
+  if (!logPath) {
+    console.error('Missing contextManager or logUri. Cannot initialize logging.');
+    return;
+  }
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      if (!logInitialized) {
+        logInitialized = await initLogs(logPath);
+
+        if (!logInitialized) {
+          throw new LogInitializationError(
+            `Failed to initialize logs at path: ${logPath}`
+          );
+        }
+        console.log('Log initialization successful.');
+      }
+
+      if (CHANNELS_CREATED) {
+        console.warn(
+          'Logging channels already initialized. Skipping WebSocket setup.'
+        );
+        return;
+      }
+
+      // Try initializing WebSockets separately
+      try {
+        initializeWebSockets();
+        console.log('Successfully initialized WebSockets. Logging is now active.');
+        return; // Exit function if everything is successful
+      } catch {
+        throw new WebSocketInitializationError('Failed to initialize WebSockets.');
+      }
+    } catch (error) {
+      const err = error as Error;
+      console.error(`[Attempt ${attempt}/${retries}] ${err.name}: ${err.message}`);
+
+      if (attempt < retries) {
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      } else {
+        console.error('Max retries reached. Logging process failed.');
+      }
+    }
   }
 }
 
-async function initializeBackendSync(context: vscode.ExtensionContext) {
-  const logPath = context.logUri.fsPath;
+function initializeWebSockets() {
+  startWebSocket('main', 'EcoOptimizer: Main Logs');
+  startWebSocket('detect', 'EcoOptimizer: Detect Smells');
+  startWebSocket('refactor', 'EcoOptimizer: Refactor Smell');
 
-  console.log('Log path:', logPath);
-
-  return await initLogs(logPath);
+  CHANNELS_CREATED = true;
 }
 
 function startWebSocket(logType: string, channelName: string) {

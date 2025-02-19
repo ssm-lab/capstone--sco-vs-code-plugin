@@ -11,6 +11,14 @@ import { FileHighlighter } from '../ui/fileHighlighter';
 import { ContextManager } from '../context/contextManager';
 import { RefactorManager } from '../ui/refactorManager';
 import { setTimeout } from 'timers/promises';
+import { serverStatus } from '../utils/serverStatus';
+
+serverStatus.on('change', (newStatus) => {
+  console.log('Server status changed:', newStatus);
+  if (newStatus === 'down') {
+    vscode.window.showWarningMessage('No refactoring is possible at this time.');
+  }
+});
 
 export interface MultiRefactoredData {
   tempDirs: string[];

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 import { FileHighlighter } from '../ui/fileHighlighter';
 import { getEditorAndFilePath } from '../utils/editorUtils';
 import { fetchSmells } from '../api/backend';
@@ -7,6 +8,21 @@ import { envConfig } from '../utils/envConfig';
 import { hashContent, updateHash } from '../utils/hashDocs';
 import { wipeWorkCache } from './wipeWorkCache'; // ✅ Import cache wipe function
 import { Smell } from '../types';
+import { serverStatus } from '../utils/serverStatus';
+
+let serverOn: boolean = true;
+
+serverStatus.on('change', (newStatus) => {
+  console.log('Server status changed:', newStatus);
+  if (newStatus === 'down') {
+    serverOn = false;
+    vscode.window.showWarningMessage(
+      'Smell detection limited. Only cached smells will be shown.'
+    );
+  } else {
+    serverOn = true;
+  }
+});
 
 export interface SmellDetectRecord {
   hash: string;
@@ -103,7 +119,7 @@ export async function detectSmells(contextManager: ContextManager) {
     console.log(`Eco: Using cached smells for ${filePath}`);
     vscode.window.showInformationMessage(`Eco: Using cached smells for ${filePath}`);
     smellsData = fileSmells.smells;
-  } else {
+  } else if (serverOn) {
     if (fileSmells) {
       console.log(`Eco: File changed. Updating smells.`);
     } else {
@@ -112,6 +128,11 @@ export async function detectSmells(contextManager: ContextManager) {
 
     updateHash(contextManager, editor.document);
     smellsData = await fetchAndStoreSmells();
+  } else {
+    vscode.window.showWarningMessage(
+      'Action blocked: Server is down and no cached smells exists for this file version.'
+    );
+    return;
   }
 
   if (!smellsData || smellsData.length === 0) {

@@ -2,8 +2,22 @@ import * as vscode from 'vscode';
 
 import { Smell } from '../types';
 import { envConfig } from '../utils/envConfig';
+import { serverStatus } from '../utils/serverStatus';
 
 const BASE_URL = `http://${envConfig.SERVER_URL}`; // API URL for Python backend
+
+export async function checkServerStatus() {
+  try {
+    const response = await fetch('http://localhost:8000/health');
+    if (response.ok) {
+      serverStatus.setStatus('up');
+    } else {
+      serverStatus.setStatus('down');
+    }
+  } catch {
+    serverStatus.setStatus('down');
+  }
+}
 
 export async function initLogs(log_dir: string) {
   const url = `${BASE_URL}/logs/init`;

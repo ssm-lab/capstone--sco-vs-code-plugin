@@ -7,7 +7,7 @@ import {
   refactorAllSmellsOfType
 } from './commands/refactorSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
-import { startLogging, stopWatchingLogs } from './commands/showLogs';
+import { stopWatchingLogs } from './commands/showLogs';
 import { ContextManager } from './context/contextManager';
 import {
   getEnabledSmells,
@@ -17,10 +17,18 @@ import { updateHash } from './utils/hashDocs';
 import { RefactorSidebarProvider } from './ui/refactorView';
 import { handleEditorChanges } from './utils/handleEditorChange';
 import { LineSelectionManager } from './ui/lineSelectionManager';
+import { checkServerStatus } from './api/backend';
+import { serverStatus } from './utils/serverStatus';
+
+export const globalData: { contextManager?: ContextManager } = {
+  contextManager: undefined
+};
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Eco: Refactor Plugin Activated Successfully');
   const contextManager = new ContextManager(context);
+
+  globalData.contextManager = contextManager;
 
   // Show the settings popup if needed
   // TODO: Setting to re-enable popup if disabled
@@ -28,12 +36,12 @@ export function activate(context: vscode.ExtensionContext) {
     contextManager.getGlobalData<boolean>('showSettingsPopup');
 
   if (settingsPopupChoice === undefined || settingsPopupChoice) {
-    showSettingsPopup(contextManager);
+    showSettingsPopup();
   }
 
   console.log('environment variables:', envConfig);
 
-  startLogging(context);
+  checkServerStatus();
 
   let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
   contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, smellsData);
@@ -41,6 +49,9 @@ export function activate(context: vscode.ExtensionContext) {
   let fileHashes =
     contextManager.getWorkspaceData(envConfig.FILE_CHANGES_KEY!) || {};
   contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, fileHashes);
+
+  // Check server health every 10 seconds
+  setInterval(checkServerStatus, 10000);
 
   // ===============================================================
   // REGISTER COMMANDS
@@ -62,8 +73,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       'ecooptimizer-vs-code-plugin.refactorSmell',
       () => {
-        console.log('Eco: Refactor Selected Smell Command Triggered');
-        refactorSelectedSmell(contextManager);
+        if (serverStatus.getStatus() === 'up') {
+          console.log('Eco: Refactor Selected Smell Command Triggered');
+          refactorSelectedSmell(contextManager);
+        } else {
+          vscode.window.showWarningMessage('Action blocked: Server is down.');
+        }
       }
     )
   );
@@ -73,10 +88,14 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
       async (smellId: string) => {
-        console.log(
-          `Eco: Refactor All Smells of Type Command Triggered for ${smellId}`
-        );
-        refactorAllSmellsOfType(contextManager, smellId);
+        if (serverStatus.getStatus() === 'up') {
+          console.log(
+            `Eco: Refactor All Smells of Type Command Triggered for ${smellId}`
+          );
+          refactorAllSmellsOfType(contextManager, smellId);
+        } else {
+          vscode.window.showWarningMessage('Action blocked: Server is down.');
+        }
       }
     )
   );
@@ -189,7 +208,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 }
 
-function showSettingsPopup(contextManager: ContextManager) {
+function showSettingsPopup() {
   // Check if the required settings are already configured
   const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
   const workspacePath = config.get<string>('projectWorkspacePath', '');
@@ -219,7 +238,7 @@ function showSettingsPopup(contextManager: ContextManager) {
             'You can configure the paths later in the settings.'
           );
         } else if (selection === 'Never show this again') {
-          contextManager.setGlobalData('showSettingsPopup', false);
+          globalData.contextManager!.setGlobalData('showSettingsPopup', false);
           vscode.window.showInformationMessage(
             'You can re-enable this popup again in the settings.'
           );
