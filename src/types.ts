@@ -1,5 +1,3 @@
-import * as vscode from 'vscode';
-
 export interface Occurrence {
   line: number;
   endLine?: number;

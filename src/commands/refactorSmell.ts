@@ -30,8 +30,7 @@ export interface MultiRefactoredData {
 async function refactorLine(
   smell: Smell,
   filePath: string,
-  contextManager: ContextManager
-) {
+): Promise<RefactorOutput | undefined> {
   try {
     const refactorResult = await refactorSmell(filePath, smell);
     return refactorResult;
@@ -44,12 +43,12 @@ async function refactorLine(
 
 export async function refactorSelectedSmell(
   contextManager: ContextManager,
-  smellGiven?: Smell
-) {
+  smellGiven?: Smell,
+): Promise<void> {
   const { editor, filePath } = getEditorAndFilePath();
 
   const pastData = contextManager.getWorkspaceData(
-    envConfig.CURRENT_REFACTOR_DATA_KEY!
+    envConfig.CURRENT_REFACTOR_DATA_KEY!,
   );
 
   // Clean up temp directory if not removed
@@ -59,7 +58,7 @@ export async function refactorSelectedSmell(
 
   if (!editor || !filePath) {
     vscode.window.showErrorMessage(
-      'Eco: Unable to proceed as no active editor or file path found.'
+      'Eco: Unable to proceed as no active editor or file path found.',
     );
     return;
   }
@@ -67,12 +66,12 @@ export async function refactorSelectedSmell(
   const selectedLine = editor.selection.start.line + 1; // Update to VS Code editor indexing
 
   const smellsData: Smell[] = contextManager.getWorkspaceData(
-    envConfig.SMELL_MAP_KEY!
+    envConfig.SMELL_MAP_KEY!,
   )[filePath].smells;
 
   if (!smellsData || smellsData.length === 0) {
     vscode.window.showErrorMessage(
-      'Eco: No smells detected in the file for refactoring.'
+      'Eco: No smells detected in the file for refactoring.',
     );
     return;
   }
@@ -83,11 +82,11 @@ export async function refactorSelectedSmell(
     smellToRefactor = smellsData.find(
       (smell: Smell) =>
         smell.messageId === smellGiven.messageId &&
-        smellGiven.occurences[0].line === smell.occurences[0].line
+        smellGiven.occurences[0].line === smell.occurences[0].line,
     );
   } else {
     smellToRefactor = smellsData.find(
-      (smell: Smell) => selectedLine === smell.occurences[0].line
+      (smell: Smell) => selectedLine === smell.occurences[0].line,
     );
   }
 
@@ -99,24 +98,24 @@ export async function refactorSelectedSmell(
   const refactorResult = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Fetching refactoring for ${smellToRefactor.symbol} on line ${smellToRefactor.occurences[0].line}`
+      title: `Fetching refactoring for ${smellToRefactor.symbol} on line ${smellToRefactor.occurences[0].line}`,
     },
-    async (progress, token) => {
-      const result = await refactorLine(smellToRefactor, filePath, contextManager);
+    async (_progress, _token) => {
+      const result = await refactorLine(smellToRefactor, filePath);
 
       if (result && result.refactoredData) {
         vscode.window.showInformationMessage(
-          'Refactoring report available in sidebar.'
+          'Refactoring report available in sidebar.',
         );
       }
 
       return result;
-    }
+    },
   );
 
   if (!refactorResult || !refactorResult.refactoredData) {
     vscode.window.showErrorMessage(
-      'Eco: Refactoring failed. See console for details.'
+      'Eco: Refactoring failed. See console for details.',
     );
     return;
   }
@@ -130,19 +129,19 @@ export async function refactorSelectedSmell(
     fileHighlighter.highlightSmells(editor, refactorResult.updatedSmells);
   } else {
     vscode.window.showWarningMessage(
-      'Eco: No updated smells detected after refactoring.'
+      'Eco: No updated smells detected after refactoring.',
     );
   }
 }
 
 export async function refactorAllSmellsOfType(
   contextManager: ContextManager,
-  smellId: string
-) {
+  smellId: string,
+): Promise<void> {
   const { editor, filePath } = getEditorAndFilePath();
 
   const pastData = contextManager.getWorkspaceData<RefactoredData>(
-    envConfig.CURRENT_REFACTOR_DATA_KEY!
+    envConfig.CURRENT_REFACTOR_DATA_KEY!,
   );
 
   // Clean up temp directory if not removed
@@ -152,29 +151,29 @@ export async function refactorAllSmellsOfType(
 
   if (!editor) {
     vscode.window.showErrorMessage(
-      'Eco: Unable to proceed as no active editor found.'
+      'Eco: Unable to proceed as no active editor found.',
     );
     console.log('No active editor found to refactor smell. Returning back.');
     return;
   }
   if (!filePath) {
     vscode.window.showErrorMessage(
-      'Eco: Unable to proceed as active editor does not have a valid file path.'
+      'Eco: Unable to proceed as active editor does not have a valid file path.',
     );
     console.log('No valid file path found to refactor smell. Returning back.');
     return;
   }
 
   // only account for one selection to be refactored for now
-  const selectedLine = editor.selection.start.line + 1; // update to VS code editor indexing
+  // const selectedLine = editor.selection.start.line + 1; // update to VS code editor indexing
 
   const smellsData: Smell[] = contextManager.getWorkspaceData(
-    envConfig.SMELL_MAP_KEY!
+    envConfig.SMELL_MAP_KEY!,
   )[filePath].smells;
 
   if (!smellsData || smellsData.length === 0) {
     vscode.window.showErrorMessage(
-      'Eco: No smells detected in the file for refactoring.'
+      'Eco: No smells detected in the file for refactoring.',
     );
     console.log('No smells found in the file for refactoring.');
     return;
@@ -182,12 +181,12 @@ export async function refactorAllSmellsOfType(
 
   // Filter smells by the given type ID
   const smellsOfType = smellsData.filter(
-    (smell: Smell) => smell.messageId === smellId
+    (smell: Smell) => smell.messageId === smellId,
   );
 
   if (smellsOfType.length === 0) {
     vscode.window.showWarningMessage(
-      `Eco: No smells of type ${smellId} found in the file.`
+      `Eco: No smells of type ${smellId} found in the file.`,
     );
     return;
   }
@@ -198,7 +197,7 @@ export async function refactorAllSmellsOfType(
 
   // Refactor each smell of the given type
   for (const smell of smellsOfType) {
-    const refactorResult = await refactorLine(smell, filePath, contextManager);
+    const refactorResult = await refactorLine(smell, filePath);
 
     if (refactorResult && refactorResult.refactoredData) {
       // Add two newlines between each refactored result
@@ -212,7 +211,7 @@ export async function refactorAllSmellsOfType(
           if (!err) {
             combinedRefactoredData += data.toString('utf8');
           }
-        }
+        },
       );
 
       totalEnergySaved += refactorResult.refactoredData.energySaved;
@@ -251,12 +250,12 @@ export async function refactorAllSmellsOfType(
     await RefactorManager.previewRefactor(editor, combinedRefactoredData);
     vscode.window.showInformationMessage(
       `Eco: Refactoring completed. Total energy difference: ${totalEnergySaved.toFixed(
-        4
-      )}`
+        4,
+      )}`,
     );
   } else {
     vscode.window.showErrorMessage(
-      'Eco: Refactoring failed. See console for details.'
+      'Eco: Refactoring failed. See console for details.',
     );
     return;
   }
@@ -266,7 +265,7 @@ export async function refactorAllSmellsOfType(
     fileHighlighter.highlightSmells(editor, allUpdatedSmells);
   } else {
     vscode.window.showWarningMessage(
-      'Eco: No updated smells detected after refactoring.'
+      'Eco: No updated smells detected after refactoring.',
     );
   }
 }
@@ -274,12 +273,12 @@ export async function refactorAllSmellsOfType(
 async function startRefactoringSession(
   contextManager: ContextManager,
   editor: vscode.TextEditor,
-  refactoredData: RefactoredData | MultiRefactoredData
-) {
+  refactoredData: RefactoredData | MultiRefactoredData,
+): Promise<void> {
   // Store only the diff editor state
   await contextManager.setWorkspaceData(
     envConfig.CURRENT_REFACTOR_DATA_KEY!,
-    refactoredData
+    refactoredData,
   );
 
   await vscode.commands.executeCommand('extension.refactorSidebar.focus');
@@ -292,18 +291,18 @@ async function startRefactoringSession(
 
   const allFiles: ChangedFile[] = [
     refactoredData.targetFile,
-    ...refactoredData.affectedFiles
+    ...refactoredData.affectedFiles,
   ].map((file) => {
     return {
       original: vscode.Uri.file(file.original).toString(),
-      refactored: vscode.Uri.file(file.refactored).toString()
+      refactored: vscode.Uri.file(file.refactored).toString(),
     };
   });
 
   await contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, {
     files: allFiles,
     firstOpen: true,
-    isOpen: true
+    isOpen: true,
   });
 
   await setTimeout(500);
@@ -317,13 +316,13 @@ async function startRefactoringSession(
     'vscode.diff',
     originalCode,
     refactoredCode,
-    'Refactoring Comparison'
+    'Refactoring Comparison',
   );
   vscode.commands.executeCommand('ecooptimizer-vs-code-plugin.showRefactorSidebar');
   sidebarState.isOpening = false;
 }
 
-async function cleanTemps(pastData: any) {
+async function cleanTemps(pastData: any): Promise<void> {
   console.log('Cleaning up stale artifacts');
   const tempDirs =
     (pastData!.tempDir! as string) || (pastData!.tempDirs! as string[]);

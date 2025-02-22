@@ -56,7 +56,7 @@ export async function startLogging(retries = 3, delay = 1000): Promise<void> {
 
         if (!logInitialized) {
           throw new LogInitializationError(
-            `Failed to initialize logs at path: ${logPath}`
+            `Failed to initialize logs at path: ${logPath}`,
           );
         }
         console.log('Log initialization successful.');
@@ -64,7 +64,7 @@ export async function startLogging(retries = 3, delay = 1000): Promise<void> {
 
       if (CHANNELS_CREATED) {
         console.warn(
-          'Logging channels already initialized. Skipping WebSocket setup.'
+          'Logging channels already initialized. Skipping WebSocket setup.',
         );
         return;
       }
@@ -92,7 +92,7 @@ export async function startLogging(retries = 3, delay = 1000): Promise<void> {
   }
 }
 
-function initializeWebSockets() {
+function initializeWebSockets(): void {
   startWebSocket('main', 'EcoOptimizer: Main Logs');
   startWebSocket('detect', 'EcoOptimizer: Detect Smells');
   startWebSocket('refactor', 'EcoOptimizer: Refactor Smell');
@@ -100,7 +100,7 @@ function initializeWebSockets() {
   CHANNELS_CREATED = true;
 }
 
-function startWebSocket(logType: string, channelName: string) {
+function startWebSocket(logType: string, channelName: string): void {
   const url = `${WEBSOCKET_BASE_URL}/${logType}`;
   const ws = new WebSocket(url);
   websockets.push(ws);
@@ -123,9 +123,9 @@ function startWebSocket(logType: string, channelName: string) {
     channel.append(data.toString('utf8'));
   });
 
-  ws.onerror = (event) => {
-    channel.appendLine(`WebSocket error: ${event}`);
-  };
+  ws.on('error', function error(err) {
+    channel.appendLine(`WebSocket error: ${err}`);
+  });
 
   ws.on('close', function close() {
     channel.appendLine(`WebSocket connection closed for ${logType}`);
@@ -139,7 +139,7 @@ function startWebSocket(logType: string, channelName: string) {
 /**
  * Stops watching log files when the extension is deactivated.
  */
-export function stopWatchingLogs() {
+export function stopWatchingLogs(): void {
   websockets.forEach((ws) => ws.close());
 
   mainLogChannel?.dispose();

@@ -15,8 +15,8 @@ export function getEnabledSmells(): { [key: string]: boolean } {
  */
 export function handleSmellFilterUpdate(
   previousSmells: { [key: string]: boolean },
-  contextManager: ContextManager
-) {
+  contextManager: ContextManager,
+): void {
   const currentSmells = getEnabledSmells();
   let smellsChanged = false;
 
@@ -26,7 +26,7 @@ export function handleSmellFilterUpdate(
       vscode.window.showInformationMessage(
         isEnabled
           ? `Eco: Enabled detection of ${formatSmellName(smell)}.`
-          : `Eco: Disabled detection of ${formatSmellName(smell)}.`
+          : `Eco: Disabled detection of ${formatSmellName(smell)}.`,
       );
     }
   });

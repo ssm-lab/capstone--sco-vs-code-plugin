@@ -11,11 +11,11 @@ export function hashContent(content: string): string {
 // Function to update the stored hashes in workspace storage
 export async function updateHash(
   contextManager: ContextManager,
-  document: vscode.TextDocument
-) {
+  document: vscode.TextDocument,
+): Promise<void> {
   const lastSavedHashes = contextManager.getWorkspaceData(
     envConfig.FILE_CHANGES_KEY!,
-    {}
+    {},
   );
   const lastHash = lastSavedHashes[document.fileName];
   const currentHash = hashContent(document.getText());
@@ -25,7 +25,7 @@ export async function updateHash(
     lastSavedHashes[document.fileName] = currentHash;
     await contextManager.setWorkspaceData(
       envConfig.FILE_CHANGES_KEY!,
-      lastSavedHashes
+      lastSavedHashes,
     );
   }
 }

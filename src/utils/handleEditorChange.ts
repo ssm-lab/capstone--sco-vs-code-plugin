@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { setTimeout } from 'timers/promises';
 
+import { envConfig } from './envConfig';
 import { ContextManager } from '../context/contextManager';
 import { ActiveDiff } from '../types';
 
@@ -13,12 +14,15 @@ export let sidebarState = { isOpening: false };
 
 export async function handleEditorChanges(
   contextManager: ContextManager,
-  editors: readonly vscode.TextEditor[]
-) {
+  editors: readonly vscode.TextEditor[],
+): Promise<void> {
   console.log('Detected visible editor change');
-  const diffState = contextManager.getWorkspaceData<ActiveDiff>('activeDiff');
-  const refactorData =
-    contextManager.getWorkspaceData<RefactoredData>('refactorData');
+  const diffState = contextManager.getWorkspaceData<ActiveDiff>(
+    envConfig.ACTIVE_DIFF_KEY!,
+  );
+  const refactorData = contextManager.getWorkspaceData<RefactoredData>(
+    envConfig.CURRENT_REFACTOR_DATA_KEY!,
+  );
 
   if (sidebarState.isOpening) {
     return;
@@ -50,16 +54,16 @@ export async function handleEditorChanges(
       diffState.isOpen = false;
       // console.log(`diffstate: ${diffState.isOpen}`);
       // console.log(`diffstate: ${JSON.stringify(diffState)}`);
-      contextManager.setWorkspaceData('activeDiff', diffState);
+      contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, diffState);
       await setTimeout(500);
-      vscode.commands.executeCommand(
-        'ecooptimizer-vs-code-plugin.pauseRefactorSidebar'
-      );
+      // vscode.commands.executeCommand(
+      //   'ecooptimizer-vs-code-plugin.pauseRefactorSidebar'
+      // );
       return;
     }
     if (diffState.firstOpen) {
       diffState.firstOpen = false;
-      contextManager.setWorkspaceData('activeDiff', diffState);
+      contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, diffState);
       await setTimeout(500);
     }
     // switched from one diff editor to another, no handling needed
@@ -73,10 +77,10 @@ export async function handleEditorChanges(
     // console.log(`diffstate: ${diffState.isOpen}`);
     diffState.isOpen = true;
     // console.log(`diffstate: ${JSON.stringify(diffState)}`);
-    contextManager.setWorkspaceData('activeDiff', diffState);
+    contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, diffState);
     await setTimeout(500);
     vscode.commands.executeCommand(
-      'ecooptimizer-vs-code-plugin.showRefactorSidebar'
+      'ecooptimizer-vs-code-plugin.showRefactorSidebar',
     );
   }
   console.log('Doing nothing');
@@ -84,8 +88,8 @@ export async function handleEditorChanges(
 
 function isDiffEditorOpen(
   editors: readonly vscode.TextEditor[],
-  diffState: ActiveDiff
-) {
+  diffState: ActiveDiff,
+): boolean | undefined {
   console.log('Checking if editor is a diff editor');
   if (!editors.length) {
     console.log('No editors found');

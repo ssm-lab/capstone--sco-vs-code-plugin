@@ -5,8 +5,8 @@ import { updateHash } from '../utils/hashDocs';
 
 export async function wipeWorkCache(
   contextManager: ContextManager,
-  reason?: string
-) {
+  reason?: string,
+): Promise<void> {
   try {
     console.log('Eco: Wiping workspace cache...');
 
@@ -46,7 +46,7 @@ export async function wipeWorkCache(
   } catch (error: any) {
     console.error('Eco: Error while wiping workspace cache:', error);
     vscode.window.showErrorMessage(
-      `Eco: Failed to wipe workspace cache. See console for details.`
+      `Eco: Failed to wipe workspace cache. See console for details.`,
     );
   }
 }

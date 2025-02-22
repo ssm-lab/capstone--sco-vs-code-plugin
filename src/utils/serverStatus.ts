@@ -1,19 +1,25 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 
-class ServerStatus extends EventEmitter {
-  private status: 'unknown' | 'up' | 'down' = 'unknown';
+enum ServerStatusType {
+  UNKNOWN = 'unknown',
+  UP = 'up',
+  DOWN = 'down',
+}
 
-  getStatus() {
+class ServerStatus extends EventEmitter {
+  private status: ServerStatusType = ServerStatusType.UNKNOWN;
+
+  getStatus(): ServerStatusType {
     return this.status;
   }
 
-  setStatus(newStatus: 'up' | 'down') {
+  setStatus(newStatus: ServerStatusType.UP | ServerStatusType.DOWN): void {
     if (this.status !== newStatus) {
-      if (newStatus === 'up') {
-        if (this.status !== 'unknown') {
+      if (newStatus === ServerStatusType.UP) {
+        if (this.status !== ServerStatusType.UNKNOWN) {
           vscode.window.showInformationMessage(
-            'Server connection re-established. Smell detection and refactoring functionality resumed.'
+            'Server connection re-established. Smell detection and refactoring functionality resumed.',
           );
         }
       } else {

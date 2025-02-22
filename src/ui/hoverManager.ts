@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Smell } from '../types';
 import {
   refactorSelectedSmell,
-  refactorAllSmellsOfType
+  refactorAllSmellsOfType,
 } from '../commands/refactorSmell';
 import { ContextManager } from '../context/contextManager';
 
@@ -12,10 +12,7 @@ export class HoverManager {
   public hoverContent: vscode.MarkdownString;
   private vscodeContext: vscode.ExtensionContext;
 
-  static getInstance(
-    contextManager: ContextManager,
-    smells: Smell[]
-  ): HoverManager {
+  static getInstance(contextManager: ContextManager, smells: Smell[]): HoverManager {
     if (!HoverManager.instance) {
       HoverManager.instance = new HoverManager(contextManager, smells);
     } else {
@@ -24,11 +21,13 @@ export class HoverManager {
     return HoverManager.instance;
   }
 
-  private constructor(private contextManager: ContextManager, smells: Smell[]) {
+  private constructor(
+    private contextManager: ContextManager,
+    smells: Smell[],
+  ) {
     this.smells = smells || [];
     this.vscodeContext = contextManager.context;
-    this.hoverContent =
-      this.registerHoverProvider() ?? new vscode.MarkdownString();
+    this.hoverContent = this.registerHoverProvider() ?? new vscode.MarkdownString();
     this.registerCommands();
   }
 
@@ -42,19 +41,19 @@ export class HoverManager {
       vscode.languages.registerHoverProvider(
         { scheme: 'file', language: 'python' },
         {
-          provideHover: (document, position, token) => {
+          provideHover: (document, position, _token) => {
             const hoverContent = this.getHoverContent(document, position);
             return hoverContent ? new vscode.Hover(hoverContent) : null;
-          }
-        }
-      )
+          },
+        },
+      ),
     );
   }
 
   // hover content for detected smells
   getHoverContent(
     document: vscode.TextDocument,
-    position: vscode.Position
+    position: vscode.Position,
   ): vscode.MarkdownString | null {
     const lineNumber = position.line + 1; // convert to 1-based index
 
@@ -65,8 +64,8 @@ export class HoverManager {
           occurrence.line === lineNumber ||
           (occurrence.endLine &&
             lineNumber >= occurrence.line &&
-            lineNumber <= occurrence.endLine)
-      )
+            lineNumber <= occurrence.endLine),
+      ),
     );
 
     if (smellsOnLine.length === 0) {
@@ -80,11 +79,11 @@ export class HoverManager {
       hoverContent.appendMarkdown(
         `**${smell.symbol}:** ${smell.message}\t\t` +
           `[Refactor](command:extension.refactorThisSmell?${encodeURIComponent(
-            JSON.stringify(smell)
+            JSON.stringify(smell),
           )})\t\t` +
           `---[Refactor all smells of this type...](command:extension.refactorAllSmellsOfType?${encodeURIComponent(
-            JSON.stringify(smell)
-          )})\n\n`
+            JSON.stringify(smell),
+          )})\n\n`,
       );
     });
 
@@ -99,7 +98,7 @@ export class HoverManager {
         async (smell: Smell) => {
           const contextManager = new ContextManager(this.vscodeContext);
           await refactorSelectedSmell(contextManager, smell);
-        }
+        },
       ),
       // clicking "Refactor All Smells of this Type..."
       vscode.commands.registerCommand(
@@ -107,8 +106,8 @@ export class HoverManager {
         async (smell: Smell) => {
           const contextManager = new ContextManager(this.vscodeContext);
           await refactorAllSmellsOfType(contextManager, smell.messageId);
-        }
-      )
+        },
+      ),
     );
   }
 }

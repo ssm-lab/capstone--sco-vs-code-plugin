@@ -36,11 +36,11 @@ export class ConfigManager {
   }
 
   // listen for configuration changes
-  static onConfigChange(callback: () => void) {
+  static onConfigChange(callback: () => void): void {
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (
         event.affectsConfiguration(
-          'ecooptimizer-vs-code-plugin.projectWorkspacePath'
+          'ecooptimizer-vs-code-plugin.projectWorkspacePath',
         ) ||
         event.affectsConfiguration('ecooptimizer-vs-code-plugin.logsOutputPath')
       ) {
@@ -50,7 +50,7 @@ export class ConfigManager {
   }
 
   // write settings to both User and Workspace if necessary
-  private static writeSetting(setting: string, value: string) {
+  private static writeSetting(setting: string, value: string): void {
     const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
 
     // inspect current values in both User and Workspace settings

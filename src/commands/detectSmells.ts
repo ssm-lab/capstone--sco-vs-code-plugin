@@ -17,7 +17,7 @@ serverStatus.on('change', (newStatus) => {
   if (newStatus === 'down') {
     serverOn = false;
     vscode.window.showWarningMessage(
-      'Smell detection limited. Only cached smells will be shown.'
+      'Smell detection limited. Only cached smells will be shown.',
     );
   } else {
     serverOn = true;
@@ -31,7 +31,7 @@ export interface SmellDetectRecord {
 
 let fileHighlighter: FileHighlighter;
 
-export async function detectSmells(contextManager: ContextManager) {
+export async function detectSmells(contextManager: ContextManager): Promise<void> {
   const { editor, filePath } = getEditorAndFilePath();
 
   // ✅ Ensure an active editor exists
@@ -53,12 +53,12 @@ export async function detectSmells(contextManager: ContextManager) {
   // ✅ Fetch user-enabled smells
   const enabledSmells = getEnabledSmells();
   const activeSmells = Object.keys(enabledSmells).filter(
-    (smell) => enabledSmells[smell]
+    (smell) => enabledSmells[smell],
   );
 
   if (activeSmells.length === 0) {
     vscode.window.showWarningMessage(
-      'Eco: No smells are enabled! Detection skipped.'
+      'Eco: No smells are enabled! Detection skipped.',
     );
     console.warn('Eco: No smells are enabled. Detection will not proceed.');
     return;
@@ -67,7 +67,7 @@ export async function detectSmells(contextManager: ContextManager) {
   // ✅ Check if the enabled smells have changed
   const lastUsedSmells = contextManager.getWorkspaceData(
     envConfig.LAST_USED_SMELLS_KEY!,
-    {}
+    {},
   );
   if (JSON.stringify(lastUsedSmells) !== JSON.stringify(enabledSmells)) {
     console.log('Eco: Smell settings have changed! Wiping cache.');
@@ -85,7 +85,7 @@ export async function detectSmells(contextManager: ContextManager) {
   // ✅ Function to fetch smells and update cache
   async function fetchAndStoreSmells(): Promise<Smell[] | undefined> {
     console.log(
-      `Eco: Fetching smells from backend for file: ${filePath} with filters: ${activeSmells}`
+      `Eco: Fetching smells from backend for file: ${filePath} with filters: ${activeSmells}`,
     );
 
     if (!filePath) {
@@ -102,7 +102,7 @@ export async function detectSmells(contextManager: ContextManager) {
     }
 
     console.log(
-      `Eco: ${smellsData.length} smells found in ${filePath}. Updating cache.`
+      `Eco: ${smellsData.length} smells found in ${filePath}. Updating cache.`,
     );
 
     // ✅ Ensure safe update of smells cache
@@ -130,7 +130,7 @@ export async function detectSmells(contextManager: ContextManager) {
     smellsData = await fetchAndStoreSmells();
   } else {
     vscode.window.showWarningMessage(
-      'Action blocked: Server is down and no cached smells exists for this file version.'
+      'Action blocked: Server is down and no cached smells exists for this file version.',
     );
     return;
   }
@@ -147,7 +147,7 @@ export async function detectSmells(contextManager: ContextManager) {
   fileHighlighter.highlightSmells(editor, smellsData);
 
   vscode.window.showInformationMessage(
-    `Eco: Highlighted ${smellsData.length} smells.`
+    `Eco: Highlighted ${smellsData.length} smells.`,
   );
 }
 

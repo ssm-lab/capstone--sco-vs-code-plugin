@@ -17,5 +17,5 @@ export const envConfig: EnvConfig = {
   FILE_CHANGES_KEY: process.env.FILE_CHANGES_KEY,
   LAST_USED_SMELLS_KEY: process.env.LAST_USED_SMELLS_KEY,
   CURRENT_REFACTOR_DATA_KEY: process.env.CURRENT_REFACTOR_DATA_KEY,
-  ACTIVE_DIFF_KEY: process.env.ACTIVE_DIFF_KEY
+  ACTIVE_DIFF_KEY: process.env.ACTIVE_DIFF_KEY,
 };
