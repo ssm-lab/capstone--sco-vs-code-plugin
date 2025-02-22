@@ -1,5 +1,5 @@
 import js from '@eslint/js';
-import typescriptEslint from '@typescript-eslint/eslint-plugin';
+import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import eslintConfigPrettier from 'eslint-config-prettier';
@@ -22,7 +22,7 @@ export default [
   {
     files: ['**/*.ts'],
     plugins: {
-      '@typescript-eslint': typescriptEslint,
+      '@typescript-eslint': tseslint,
       'unused-imports': unusedImports,
     },
     languageOptions: {
@@ -32,8 +32,8 @@ export default [
     },
     rules: {
       'no-undef': 'off',
+      'no-unused-vars': 'off',
       'prettier/prettier': 'error',
-      '@typescript-eslint/no-unused-vars': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/naming-convention': [
         'warn',
