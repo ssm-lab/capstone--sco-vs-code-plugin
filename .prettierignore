@@ -6,3 +6,4 @@ media
 .env
 **/*.config.js
 **/*.mjs'
+**/*d.ts
