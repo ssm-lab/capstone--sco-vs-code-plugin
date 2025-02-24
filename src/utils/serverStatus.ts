@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 
-enum ServerStatusType {
+export enum ServerStatusType {
   UNKNOWN = 'unknown',
   UP = 'up',
   DOWN = 'down',

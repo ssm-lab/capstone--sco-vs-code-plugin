@@ -3,7 +3,7 @@ import WebSocket from 'ws';
 
 import { initLogs } from '../api/backend';
 import { envConfig } from '../utils/envConfig';
-import { serverStatus } from '../utils/serverStatus';
+import { serverStatus, ServerStatusType } from '../utils/serverStatus';
 import { globalData } from '../extension';
 
 class LogInitializationError extends Error {
@@ -30,9 +30,9 @@ let refactorSmellChannel: vscode.OutputChannel | undefined;
 
 let CHANNELS_CREATED = false;
 
-serverStatus.on('change', async (newStatus) => {
+serverStatus.on('change', async (newStatus: ServerStatusType) => {
   console.log('Server status changed:', newStatus);
-  if (newStatus === 'down') {
+  if (newStatus === ServerStatusType.DOWN) {
     mainLogChannel?.appendLine('Server connection lost');
   } else {
     mainLogChannel?.appendLine('Server connection re-established.');

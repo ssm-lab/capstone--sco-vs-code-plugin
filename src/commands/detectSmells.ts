@@ -8,13 +8,13 @@ import { envConfig } from '../utils/envConfig';
 import { hashContent, updateHash } from '../utils/hashDocs';
 import { wipeWorkCache } from './wipeWorkCache'; // ✅ Import cache wipe function
 import { Smell } from '../types';
-import { serverStatus } from '../utils/serverStatus';
+import { serverStatus, ServerStatusType } from '../utils/serverStatus';
 
 let serverOn: boolean = true;
 
-serverStatus.on('change', (newStatus) => {
+serverStatus.on('change', (newStatus: ServerStatusType) => {
   console.log('Server status changed:', newStatus);
-  if (newStatus === 'down') {
+  if (newStatus === ServerStatusType.DOWN) {
     serverOn = false;
     vscode.window.showWarningMessage(
       'Smell detection limited. Only cached smells will be shown.',

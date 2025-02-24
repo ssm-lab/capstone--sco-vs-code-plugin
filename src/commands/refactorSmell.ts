@@ -9,13 +9,13 @@ import { sidebarState } from '../utils/handleEditorChange';
 
 import { FileHighlighter } from '../ui/fileHighlighter';
 import { ContextManager } from '../context/contextManager';
-import { RefactorManager } from '../ui/refactorManager';
 import { setTimeout } from 'timers/promises';
 import { serverStatus } from '../utils/serverStatus';
+import { ServerStatusType } from '../utils/serverStatus';
 
-serverStatus.on('change', (newStatus) => {
+serverStatus.on('change', (newStatus: ServerStatusType) => {
   console.log('Server status changed:', newStatus);
-  if (newStatus === 'down') {
+  if (newStatus === ServerStatusType.DOWN) {
     vscode.window.showWarningMessage('No refactoring is possible at this time.');
   }
 });
@@ -247,7 +247,7 @@ export async function refactorAllSmellsOfType(
   // startRefactoringSession(contextManager,editor,combinedRefactoredData);
 
   if (combinedRefactoredData) {
-    await RefactorManager.previewRefactor(editor, combinedRefactoredData);
+    // await RefactorManager.previewRefactor(editor, combinedRefactoredData);
     vscode.window.showInformationMessage(
       `Eco: Refactoring completed. Total energy difference: ${totalEnergySaved.toFixed(
         4,

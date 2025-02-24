@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { Smell } from '../types';
 import { envConfig } from '../utils/envConfig';
 import { serverStatus } from '../utils/serverStatus';
+import { ServerStatusType } from '../utils/serverStatus';
 
 const BASE_URL = `http://${envConfig.SERVER_URL}`; // API URL for Python backend
 
@@ -10,12 +11,12 @@ export async function checkServerStatus(): Promise<void> {
   try {
     const response = await fetch('http://localhost:8000/health');
     if (response.ok) {
-      serverStatus.setStatus('up');
+      serverStatus.setStatus(ServerStatusType.UP);
     } else {
-      serverStatus.setStatus('down');
+      serverStatus.setStatus(ServerStatusType.DOWN);
     }
   } catch {
-    serverStatus.setStatus('down');
+    serverStatus.setStatus(ServerStatusType.DOWN);
   }
 }
 
