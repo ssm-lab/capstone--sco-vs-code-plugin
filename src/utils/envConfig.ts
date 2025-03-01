@@ -2,7 +2,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-interface EnvConfig {
+export interface EnvConfig {
   SERVER_URL?: string;
   SMELL_MAP_KEY?: string;
   FILE_CHANGES_KEY?: string;
