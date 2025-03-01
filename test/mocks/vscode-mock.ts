@@ -15,10 +15,13 @@ export const config: Config = {
 // Mock for `vscode.TextEditor`
 export const TextEditor = {
   document: {
-    getText: jest.fn(() => {
-      console.log('MOCK getText:', config.docText);
-      return config.docText;
-    }),
+    getText: jest.fn(() => config.docText),
+    fileName: config.filePath,
+    languageId: 'python',
+  },
+  selection: {
+    start: { line: 0, character: 0 },
+    end: { line: 0, character: 0 },
   },
 };
 
@@ -60,14 +63,65 @@ export const workspace: Workspace = {
   })),
 };
 
+// New mocks for hover functionality
+export const languages = {
+  registerHoverProvider: jest.fn(() => ({
+    dispose: jest.fn(),
+  })),
+};
+
+export const commands = {
+  registerCommand: jest.fn(),
+};
+
+// Mock VS Code classes
+export const Position = class MockPosition {
+  constructor(
+    public line: number,
+    public character: number,
+  ) {}
+};
+
+export class MockMarkdownString {
+  value: string;
+  isTrusted: boolean = false;
+
+  constructor() {
+    this.value = '';
+    this.isTrusted = false;
+  }
+
+  appendMarkdown(value: string): MockMarkdownString {
+    this.value += value;
+    return this;
+  }
+}
+
+export class MockHover {
+  constructor(public contents: MockMarkdownString | MockMarkdownString[]) {}
+}
+
+export const MarkdownString = MockMarkdownString;
+export const Hover = MockHover;
+
 export interface Vscode {
   window: Window;
   workspace: Workspace;
+  languages: typeof languages;
+  commands: typeof commands;
+  Position: typeof Position;
+  MarkdownString: typeof MarkdownString;
+  Hover: typeof Hover;
 }
 
 const vscode: Vscode = {
   window,
   workspace,
+  languages,
+  commands,
+  Position,
+  MarkdownString,
+  Hover,
 };
 
 export default vscode;
