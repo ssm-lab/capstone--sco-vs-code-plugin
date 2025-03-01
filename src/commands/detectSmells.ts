@@ -9,17 +9,12 @@ import { hashContent, updateHash } from '../utils/hashDocs';
 import { wipeWorkCache } from './wipeWorkCache'; // ✅ Import cache wipe function
 import { serverStatus, ServerStatusType } from '../utils/serverStatus';
 
-let serverOn: boolean = true;
-
 serverStatus.on('change', (newStatus: ServerStatusType) => {
   console.log('Server status changed:', newStatus);
   if (newStatus === ServerStatusType.DOWN) {
-    serverOn = false;
     vscode.window.showWarningMessage(
       'Smell detection limited. Only cached smells will be shown.',
     );
-  } else {
-    serverOn = true;
   }
 });
 
@@ -49,17 +44,11 @@ export async function detectSmells(contextManager: ContextManager): Promise<void
 
   console.log(`Eco: Detecting smells in file: ${filePath}`);
 
-  // ✅ Fetch user-enabled smells
   const enabledSmells = getEnabledSmells();
-  const activeSmells = Object.keys(enabledSmells).filter(
-    (smell) => enabledSmells[smell],
-  );
-
-  if (activeSmells.length === 0) {
+  if (!Object.values(enabledSmells).includes(true)) {
     vscode.window.showWarningMessage(
       'Eco: No smells are enabled! Detection skipped.',
     );
-    console.warn('Eco: No smells are enabled. Detection will not proceed.');
     return;
   }
 
@@ -74,68 +63,44 @@ export async function detectSmells(contextManager: ContextManager): Promise<void
     contextManager.setWorkspaceData(envConfig.LAST_USED_SMELLS_KEY!, enabledSmells);
   }
 
-  // ✅ Retrieve cached smells
+  // Handle cache and previous smells
   const allSmells: Record<string, SmellDetectRecord> =
     contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
-
   const fileSmells = allSmells[filePath];
   const currentFileHash = hashContent(editor.document.getText());
 
-  // ✅ Function to fetch smells and update cache
-  async function fetchAndStoreSmells(): Promise<Smell[] | undefined> {
-    console.log(
-      `Eco: Fetching smells from backend for file: ${filePath} with filters: ${activeSmells}`,
-    );
-
-    if (!filePath) {
-      console.error(`Eco: File path is undefined when fetching smells.`);
-      return undefined;
-    }
-
-    const smellsData = await fetchSmells(filePath, activeSmells);
-
-    if (!smellsData || smellsData.length === 0) {
-      console.log(`Eco: No smells found in file: ${filePath}`);
-      vscode.window.showInformationMessage('Eco: No code smells detected.');
-      return [];
-    }
-
-    console.log(
-      `Eco: ${smellsData.length} smells found in ${filePath}. Updating cache.`,
-    );
-
-    // ✅ Ensure safe update of smells cache
-    allSmells[filePath] = { hash: currentFileHash, smells: smellsData };
-    contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, allSmells);
-
-    return smellsData;
-  }
-
   let smellsData: Smell[] | undefined;
 
-  // ✅ **Check cache before requesting backend**
   if (fileSmells && currentFileHash === fileSmells.hash) {
-    console.log(`Eco: Using cached smells for ${filePath}`);
     vscode.window.showInformationMessage(`Eco: Using cached smells for ${filePath}`);
+
     smellsData = fileSmells.smells;
-  } else if (serverOn) {
-    if (fileSmells) {
-      console.log(`Eco: File changed. Updating smells.`);
-    } else {
-      console.log(`Eco: No cached smells found. Fetching from backend.`);
+  } else if (serverStatus.getStatus() === ServerStatusType.UP) {
+    updateHash(contextManager, editor.document);
+
+    try {
+      smellsData = await fetchSmells(
+        filePath,
+        Object.keys(enabledSmells).filter((s) => enabledSmells[s]),
+      );
+    } catch (err) {
+      console.error(err);
+      return;
     }
 
-    updateHash(contextManager, editor.document);
-    smellsData = await fetchAndStoreSmells();
+    if (smellsData) {
+      allSmells[filePath] = { hash: currentFileHash, smells: smellsData };
+      contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, allSmells);
+    }
   } else {
     vscode.window.showWarningMessage(
-      'Action blocked: Server is down and no cached smells exists for this file version.',
+      'Action blocked: Server is down and no cached smells exist for this file version.',
     );
     return;
   }
 
   if (!smellsData || smellsData.length === 0) {
-    console.log(`Eco: No smells to highlight for ${filePath}.`);
+    vscode.window.showInformationMessage('Eco: No code smells detected.');
     return;
   }
 
@@ -150,6 +115,6 @@ export async function detectSmells(contextManager: ContextManager): Promise<void
   );
 }
 
-function getEnabledSmells(): { [key: string]: boolean } {
+export function getEnabledSmells(): { [key: string]: boolean } {
   return vscode.workspace.getConfiguration('ecooptimizer').get('enableSmells', {});
 }
