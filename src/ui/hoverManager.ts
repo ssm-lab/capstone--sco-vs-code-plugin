@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { Smell } from '../types';
 import {
   refactorSelectedSmell,
   refactorAllSmellsOfType,

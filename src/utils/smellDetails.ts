@@ -1,5 +1,3 @@
-import { SmellDetails } from '../types';
-
 export const SMELL_MAP: Map<string, SmellDetails> = new Map([
   [
     'R1729', // id: "use-a-generator"

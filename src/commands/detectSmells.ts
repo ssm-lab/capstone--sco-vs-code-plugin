@@ -7,7 +7,6 @@ import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
 import { hashContent, updateHash } from '../utils/hashDocs';
 import { wipeWorkCache } from './wipeWorkCache'; // ✅ Import cache wipe function
-import { Smell } from '../types';
 import { serverStatus, ServerStatusType } from '../utils/serverStatus';
 
 let serverOn: boolean = true;

@@ -5,14 +5,14 @@ export {};
 
 declare global {
   // Define your global types here
-  interface Occurrence {
+  export interface Occurrence {
     line: number;
     endLine?: number;
     column: number;
     endColumn?: number;
   }
-
-  interface AdditionalInfo {
+  
+  export interface AdditionalInfo {
     // CRC
     repetitions?: number;
     callString?: string;
@@ -20,8 +20,8 @@ declare global {
     concatTarget?: string;
     innerLoopLine?: number;
   }
-
-  interface Smell {
+  
+  export interface Smell {
     type: string; // Type of the smell (e.g., "performance", "convention")
     symbol: string; // Symbolic identifier for the smell (e.g., "cached-repeated-calls")
     message: string; // Detailed description of the smell
@@ -33,21 +33,34 @@ declare global {
     occurences: Occurrence[]; // Optional: List of occurrences for repeated calls
     additionalInfo: AdditionalInfo;
   }
-
-  interface ChangedFile {
+  
+  export interface ChangedFile {
     original: string;
     refactored: string;
   }
-
-  interface RefactoredData {
+  
+  export interface RefactoredData {
     tempDir: string;
     targetFile: ChangedFile;
     energySaved: number;
     affectedFiles: ChangedFile[];
   }
-
-  interface RefactorOutput {
+  
+  export interface RefactorOutput {
     refactoredData?: RefactoredData; // Refactored code as a string
     updatedSmells: Smell[]; //
   }
+  
+  export interface ActiveDiff {
+    files: ChangedFile[];
+    isOpen: boolean;
+    firstOpen: boolean;
+  }
+  
+  export type SmellDetails = {
+    symbol: string;
+    message: string;
+    colour: string; // RGB colour as a string
+  };
+  
 }

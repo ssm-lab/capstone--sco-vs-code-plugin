@@ -4,7 +4,6 @@ import * as fs from 'fs';
 
 import { envConfig } from '../utils/envConfig';
 import { readFileSync } from 'fs';
-import { ActiveDiff } from '../types';
 import { sidebarState } from '../utils/handleEditorChange';
 import { MultiRefactoredData } from '../commands/refactorSmell';
 

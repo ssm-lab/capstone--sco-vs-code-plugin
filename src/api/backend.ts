@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 
-import { Smell } from '../types';
 import { envConfig } from '../utils/envConfig';
 import { serverStatus } from '../utils/serverStatus';
 import { ServerStatusType } from '../utils/serverStatus';

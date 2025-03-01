@@ -23,7 +23,7 @@ class ServerStatus extends EventEmitter {
           );
         }
       } else {
-        vscode.window.showWarningMessage('Server connection lost.');
+        vscode.window.showWarningMessage("Can't connect to ecooptimizer server.");
       }
       this.status = newStatus;
       this.emit('change', newStatus); // Notify listeners

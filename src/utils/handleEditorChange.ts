@@ -3,7 +3,6 @@ import { setTimeout } from 'timers/promises';
 
 import { envConfig } from './envConfig';
 import { ContextManager } from '../context/contextManager';
-import { ActiveDiff } from '../types';
 
 interface DiffInfo {
   original: vscode.Uri;
