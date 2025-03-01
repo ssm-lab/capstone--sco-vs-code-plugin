@@ -9,14 +9,6 @@ jest.mock('../../src/utils/hashDocs', () => ({
   updateHash: jest.fn(),
 }));
 
-// mock environment config
-jest.mock('../../src/utils/envConfig', () => ({
-  envConfig: {
-    SMELL_MAP_KEY: 'smell-map-key',
-    FILE_CHANGES_KEY: 'file-changes-key',
-  },
-}));
-
 describe('wipeWorkCache', () => {
   beforeEach(() => {
     jest.clearAllMocks(); // reset mocks before each test
