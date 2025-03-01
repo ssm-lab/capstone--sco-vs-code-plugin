@@ -27,6 +27,7 @@ interface Window {
   showErrorMessage: jest.Mock;
   showWarningMessage: jest.Mock;
   activeTextEditor: any;
+  visibleTextEditors: any[];
 }
 
 export const window = {
@@ -43,6 +44,7 @@ export const window = {
     return message;
   }),
   activeTextEditor: TextEditor,
+  visibleTextEditors: [],
 };
 
 interface Workspace {

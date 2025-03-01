@@ -1,18 +1,18 @@
 // test/detect-smells.test.ts
-import { ContextManager } from '../../context/contextManager';
-import { FileHighlighter } from '../../ui/fileHighlighter';
+import { ContextManager } from '../../src/context/contextManager';
+import { FileHighlighter } from '../../src/ui/fileHighlighter';
 
-import vscode, { config } from './../../../test/mocks/vscode-mock';
+import vscode, { config } from '../mocks/vscode-mock';
 
-import * as backend from '../../api/backend';
-import * as hashDocs from '../../utils/hashDocs';
-import * as editorUtils from '../../utils/editorUtils';
+import * as backend from '../../src/api/backend';
+import * as hashDocs from '../../src/utils/hashDocs';
+import * as editorUtils from '../../src/utils/editorUtils';
 
-import { detectSmells } from '../detectSmells';
-import { serverStatus, ServerStatusType } from '../../utils/serverStatus';
-import { wipeWorkCache } from '../wipeWorkCache';
+import { detectSmells } from '../../src/commands/detectSmells';
+import { serverStatus, ServerStatusType } from '../../src/utils/serverStatus';
+import { wipeWorkCache } from '../../src/commands/wipeWorkCache';
 
-jest.mock('./../wipeWorkCache', () => ({
+jest.mock('../../src/commands/wipeWorkCache', () => ({
   wipeWorkCache: jest.fn(),
 }));
 

@@ -10,14 +10,14 @@ export async function wipeWorkCache(
   try {
     console.log('Eco: Wiping workspace cache...');
 
-    // ✅ Clear stored smells cache
+    // Clear stored smells cache
     await contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, {});
 
     if (reason === 'manual') {
       await contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, {});
     }
 
-    // ✅ Update file hashes for all open editors
+    // Update file hashes for all open editors
     const visibleEditors = vscode.window.visibleTextEditors;
 
     if (visibleEditors.length === 0) {
