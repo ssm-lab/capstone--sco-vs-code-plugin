@@ -82,26 +82,31 @@ export const Position = class MockPosition {
   ) {}
 };
 
-export class MockMarkdownString {
+interface MockMarkdownString {
+  appendMarkdown: jest.Mock;
   value: string;
-  isTrusted: boolean = false;
-
-  constructor() {
-    this.value = '';
-    this.isTrusted = false;
-  }
-
-  appendMarkdown(value: string): MockMarkdownString {
-    this.value += value;
-    return this;
-  }
+  isTrusted: boolean;
 }
+
+// Create a constructor function mock
+export const MarkdownString = jest.fn().mockImplementation(() => {
+  return {
+    appendMarkdown: jest.fn(function (this: any, value: string) {
+      this.value += value;
+      return this;
+    }),
+    value: '',
+    isTrusted: false,
+  };
+}) as jest.Mock & {
+  prototype: MockMarkdownString;
+};
 
 export class MockHover {
-  constructor(public contents: MockMarkdownString | MockMarkdownString[]) {}
+  constructor(public contents: MockMarkdownString) {}
 }
 
-export const MarkdownString = MockMarkdownString;
+// export const MarkdownString = MockMarkdownString;
 export const Hover = MockHover;
 
 export interface Vscode {
@@ -110,7 +115,6 @@ export interface Vscode {
   languages: typeof languages;
   commands: typeof commands;
   Position: typeof Position;
-  MarkdownString: typeof MarkdownString;
   Hover: typeof Hover;
 }
 
@@ -120,7 +124,6 @@ const vscode: Vscode = {
   languages,
   commands,
   Position,
-  MarkdownString,
   Hover,
 };
 

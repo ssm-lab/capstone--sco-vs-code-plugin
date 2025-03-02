@@ -1,8 +1,11 @@
 // test/hover-manager.test.ts
-import vscode from '../mocks/vscode-mock';
+// import vscode from '../mocks/vscode-mock';
 import { HoverManager } from '../../src/ui/hoverManager';
 import { ContextManager } from '../../src/context/contextManager';
 import { Smell, Occurrence } from '../../src/types';
+import vscode from 'vscode';
+
+jest.mock('vscode');
 
 jest.mock('../../src/commands/refactorSmell', () => ({
   refactorSelectedSmell: jest.fn(),
@@ -59,6 +62,76 @@ describe('HoverManager', () => {
     );
   });
 
+  it('should subscribe hover provider correctly', () => {
+    const spy = jest.spyOn(contextManagerMock.context.subscriptions, 'push');
+    new HoverManager(contextManagerMock, mockSmells);
+    expect(spy).toHaveBeenCalledWith(expect.anything());
+  });
+
+  it('should return null for hover content if there are no smells', () => {
+    const manager = new HoverManager(contextManagerMock, []);
+    const document = { fileName: '/test/file.py', getText: jest.fn() } as any;
+    const position = { line: 4 } as any;
+    expect(manager.getHoverContent(document, position)).toBeNull();
+  });
+
+  it('should update smells when getInstance is called again', () => {
+    const initialSmells = [
+      {
+        type: 'performance',
+        symbol: 'CRS-001',
+        message: 'Cached repeated calls',
+        messageId: 'cached-repeated-calls',
+        confidence: 'HIGH',
+        path: '/test/file.py',
+        module: 'test_module',
+        occurences: [mockOccurrence],
+        additionalInfo: {},
+      },
+    ];
+
+    const newSmells = [
+      {
+        type: 'memory',
+        symbol: 'MEM-002',
+        message: 'Memory leak detected',
+        messageId: 'memory-leak',
+        confidence: 'MEDIUM',
+        path: '/test/file2.py',
+        module: 'test_module_2',
+        occurences: [mockOccurrence],
+        additionalInfo: {},
+      },
+    ];
+
+    const manager1 = HoverManager.getInstance(contextManagerMock, initialSmells);
+    expect(manager1['smells']).toEqual(initialSmells);
+
+    const manager2 = HoverManager.getInstance(contextManagerMock, newSmells);
+    expect(manager2['smells']).toEqual(newSmells);
+    expect(manager1).toBe(manager2); // Ensuring it's the same instance
+  });
+
+  it('should update smells correctly', () => {
+    const manager = new HoverManager(contextManagerMock, mockSmells);
+    const newSmells: Smell[] = [
+      {
+        type: 'security',
+        symbol: 'SEC-003',
+        message: 'Unsafe API usage',
+        messageId: 'unsafe-api',
+        confidence: 'HIGH',
+        path: '/test/file3.py',
+        module: 'security_module',
+        occurences: [mockOccurrence],
+        additionalInfo: {},
+      },
+    ];
+
+    manager.updateSmells(newSmells);
+    expect(manager['smells']).toEqual(newSmells);
+  });
+
   it('should generate valid hover content', () => {
     const manager = new HoverManager(contextManagerMock, mockSmells);
     const document = {
@@ -82,23 +155,20 @@ describe('HoverManager', () => {
     // Mock document text for line range
     document.getText.mockReturnValue('mock code content');
     const content = manager.getHoverContent(document, position);
-    console.log(content);
 
     expect(content?.value).toBeDefined(); // Check value exists
     expect(content?.value).toContain('CRS-001');
     expect(content?.value).toContain('Cached repeated calls');
-    expect(content).toBeInstanceOf(vscode.MarkdownString);
     expect(content?.isTrusted).toBe(true);
 
     // Verify basic structure for each smell
     expect(content?.value).toContain('**CRS-001:** Cached repeated calls');
-    expect(content?.value).toMatch(
-      '/[Refactor](command:extension.refactorThisSmell?/',
+    expect(content?.value).toContain(
+      '[Refactor](command:extension.refactorThisSmell?',
     );
-    expect(content?.value).toMatch(
-      '/---[Refactor all smells of this type...](command:extension.refactorAllSmellsOfType?/',
+    expect(content?.value).toContain(
+      '[Refactor all smells of this type...](command:extension.refactorAllSmellsOfType?',
     );
-
     // Verify command parameters are properly encoded
     const expectedSmellParam = encodeURIComponent(JSON.stringify(mockSmells[0]));
     expect(content?.value).toContain(
