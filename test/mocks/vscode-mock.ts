@@ -30,6 +30,22 @@ export const TextEditor = {
   setDecorations: jest.fn(),
 };
 
+// Add Range mock class
+export class MockRange {
+  public start: { line: number; character: number };
+  public end: { line: number; character: number };
+
+  constructor(
+    startLine: number,
+    startCharacter: number,
+    endLine: number,
+    endCharacter: number,
+  ) {
+    this.start = { line: startLine, character: startCharacter };
+    this.end = { line: endLine, character: endCharacter };
+  }
+}
+
 interface Window {
   showInformationMessage: jest.Mock;
   showErrorMessage: jest.Mock;
@@ -52,9 +68,17 @@ export const window = {
     console.log('MOCK showWarningMessage:', message);
     return message;
   }),
-  createTextEditorDecorationType: jest.fn(() => ({
-    dispose: jest.fn(),
-  })),
+  // Enhanced mock for `createTextEditorDecorationType`
+  createTextEditorDecorationType: jest.fn((decorationOptions) => {
+    console.log(
+      'MOCK createTextEditorDecorationType called with:',
+      decorationOptions,
+    );
+    return {
+      dispose: jest.fn(),
+      decorationOptions, // Store the decoration options for testing
+    };
+  }),
   activeTextEditor: TextEditor,
   visibleTextEditors: [],
 };
@@ -115,8 +139,8 @@ export class MockHover {
   constructor(public contents: MockMarkdownString) {}
 }
 
-// export const MarkdownString = MockMarkdownString;
 export const Hover = MockHover;
+export const Range = MockRange; // Use MockRange here
 
 export interface Vscode {
   window: Window;
@@ -124,6 +148,7 @@ export interface Vscode {
   languages: typeof languages;
   commands: typeof commands;
   Position: typeof Position;
+  Range: typeof Range; // Add Range to interface
   Hover: typeof Hover;
 }
 
@@ -133,6 +158,7 @@ const vscode: Vscode = {
   languages,
   commands,
   Position,
+  Range, // Add Range mock
   Hover,
 };
 
