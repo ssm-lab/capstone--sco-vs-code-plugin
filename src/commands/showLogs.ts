@@ -1,97 +1,148 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
+import WebSocket from 'ws';
 
-/**
- * Returns the EcoOptimizer log directory inside the user's home directory.
- */
-function getLogDirectory(): string {
-  const userHome = process.env.HOME || process.env.USERPROFILE;
-  if (!userHome) {
-    vscode.window.showErrorMessage('Eco: Unable to determine user home directory.');
-    return '';
+import { initLogs } from '../api/backend';
+import { envConfig } from '../utils/envConfig';
+import { serverStatus, ServerStatusType } from '../utils/serverStatus';
+import { globalData } from '../extension';
+
+class LogInitializationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LogInitializationError';
   }
-  return path.join(userHome, '.ecooptimizer', 'outputs', 'logs');
 }
 
-/**
- * Defines log file paths dynamically based on the home directory.
- */
-function getLogFiles(): Record<string, string> {
-  const LOG_DIR = getLogDirectory();
-  return {
-    'Main Log': path.join(LOG_DIR, 'main.log'),
-    'Detect Smells Log': path.join(LOG_DIR, 'detect_smells.log'),
-    'Refactor Smell Log': path.join(LOG_DIR, 'refactor_smell.log')
-  };
+class WebSocketInitializationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WebSocketInitializationError';
+  }
 }
 
-// ✅ Create an output channel for logs
-let outputChannel = vscode.window.createOutputChannel('Eco Optimizer Logs');
+const WEBSOCKET_BASE_URL = `ws://${envConfig.SERVER_URL}/logs`;
 
-/**
- * Registers the command to show logs in VS Code.
- */
-export function showLogsCommand(context: vscode.ExtensionContext) {
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.showLogs',
-      async () => {
-        const LOG_FILES = getLogFiles();
-        if (!LOG_FILES['Main Log']) {
-          vscode.window.showErrorMessage('Eco: Log directory is not set.');
-          return;
-        }
+let websockets: WebSocket[] = [];
 
-        const selectedLog: string | undefined = await vscode.window.showQuickPick(
-          Object.keys(LOG_FILES),
-          {
-            placeHolder: 'Select a log file to view'
-          }
-        );
+let mainLogChannel: vscode.OutputChannel | undefined;
+let detectSmellsChannel: vscode.OutputChannel | undefined;
+let refactorSmellChannel: vscode.OutputChannel | undefined;
 
-        if (selectedLog) {
-          showLogFile(LOG_FILES[selectedLog], selectedLog);
-        }
-      }
-    )
-  );
-}
+let CHANNELS_CREATED = false;
 
-/**
- * Displays the log file content in VS Code's Output Panel.
- */
-function showLogFile(filePath: string, logName: string) {
-  outputChannel.clear();
-  outputChannel.show();
-  outputChannel.appendLine(`📄 Viewing: ${logName}`);
+serverStatus.on('change', async (newStatus: ServerStatusType) => {
+  console.log('Server status changed:', newStatus);
+  if (newStatus === ServerStatusType.DOWN) {
+    mainLogChannel?.appendLine('Server connection lost');
+  } else {
+    mainLogChannel?.appendLine('Server connection re-established.');
+    await startLogging();
+  }
+});
 
-  if (!fs.existsSync(filePath)) {
-    outputChannel.appendLine('⚠️ Log file does not exist.');
+export async function startLogging(retries = 3, delay = 1000): Promise<void> {
+  let logInitialized = false;
+  const logPath = globalData.contextManager?.context.logUri?.fsPath;
+
+  if (!logPath) {
+    console.error('Missing contextManager or logUri. Cannot initialize logging.');
     return;
   }
 
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (!err) {
-      outputChannel.append(data);
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      if (!logInitialized) {
+        logInitialized = await initLogs(logPath);
+
+        if (!logInitialized) {
+          throw new LogInitializationError(
+            `Failed to initialize logs at path: ${logPath}`,
+          );
+        }
+        console.log('Log initialization successful.');
+      }
+
+      if (CHANNELS_CREATED) {
+        console.warn(
+          'Logging channels already initialized. Skipping WebSocket setup.',
+        );
+        return;
+      }
+
+      // Try initializing WebSockets separately
+      try {
+        initializeWebSockets();
+        console.log('Successfully initialized WebSockets. Logging is now active.');
+        return; // Exit function if everything is successful
+      } catch {
+        throw new WebSocketInitializationError('Failed to initialize WebSockets.');
+      }
+    } catch (error) {
+      const err = error as Error;
+      console.error(`[Attempt ${attempt}/${retries}] ${err.name}: ${err.message}`);
+
+      if (attempt < retries) {
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      } else {
+        console.error('Max retries reached. Logging process failed.');
+      }
     }
+  }
+}
+
+function initializeWebSockets(): void {
+  startWebSocket('main', 'EcoOptimizer: Main Logs');
+  startWebSocket('detect', 'EcoOptimizer: Detect Smells');
+  startWebSocket('refactor', 'EcoOptimizer: Refactor Smell');
+
+  CHANNELS_CREATED = true;
+}
+
+function startWebSocket(logType: string, channelName: string): void {
+  const url = `${WEBSOCKET_BASE_URL}/${logType}`;
+  const ws = new WebSocket(url);
+  websockets.push(ws);
+
+  let channel: vscode.OutputChannel;
+  if (logType === 'main') {
+    mainLogChannel = vscode.window.createOutputChannel(channelName);
+    channel = mainLogChannel;
+  } else if (logType === 'detect') {
+    detectSmellsChannel = vscode.window.createOutputChannel(channelName);
+    channel = detectSmellsChannel;
+  } else if (logType === 'refactor') {
+    refactorSmellChannel = vscode.window.createOutputChannel(channelName);
+    channel = refactorSmellChannel;
+  } else {
+    return;
+  }
+
+  ws.on('message', function message(data) {
+    channel.append(data.toString('utf8'));
   });
 
-  // ✅ Watch the log file for live updates
-  fs.watchFile(filePath, { interval: 1000 }, () => {
-    fs.readFile(filePath, 'utf8', (err, data) => {
-      if (!err) {
-        outputChannel.clear();
-        outputChannel.appendLine(`📄 Viewing: ${logName}`);
-        outputChannel.append(data);
-      }
-    });
+  ws.on('error', function error(err) {
+    channel.appendLine(`WebSocket error: ${err}`);
+  });
+
+  ws.on('close', function close() {
+    channel.appendLine(`WebSocket connection closed for ${logType}`);
+  });
+
+  ws.on('open', function open() {
+    channel.appendLine(`Connected to ${channelName} via WebSocket`);
   });
 }
 
 /**
  * Stops watching log files when the extension is deactivated.
  */
-export function stopWatchingLogs() {
-  Object.values(getLogFiles()).forEach((filePath) => fs.unwatchFile(filePath));
+export function stopWatchingLogs(): void {
+  websockets.forEach((ws) => ws.close());
+
+  mainLogChannel?.dispose();
+  detectSmellsChannel?.dispose();
+  refactorSmellChannel?.dispose();
 }

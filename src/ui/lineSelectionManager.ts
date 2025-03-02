@@ -12,14 +12,14 @@ export class LineSelectionManager {
     this.contextManager = contextManager;
   }
 
-  public removeLastComment() {
+  public removeLastComment(): void {
     if (this.decoration) {
       console.log('Removing decoration');
       this.decoration.dispose();
     }
   }
 
-  public commentLine(editor: vscode.TextEditor) {
+  public commentLine(editor: vscode.TextEditor): void {
     this.removeLastComment();
 
     if (!editor) {
@@ -28,7 +28,7 @@ export class LineSelectionManager {
 
     const filePath = editor.document.fileName;
     const smellsDetectRecord = this.contextManager.getWorkspaceData(
-      envConfig.SMELL_MAP_KEY!
+      envConfig.SMELL_MAP_KEY!,
     )[filePath] as SmellDetectRecord;
 
     if (!smellsDetectRecord) {
@@ -74,8 +74,8 @@ export class LineSelectionManager {
         contentText: comment,
         color: 'rgb(153, 211, 212)',
         margin: '0 0 0 10px',
-        textDecoration: 'none'
-      }
+        textDecoration: 'none',
+      },
     });
 
     const selectionLine: vscode.Range[] = [];
@@ -86,7 +86,7 @@ export class LineSelectionManager {
     const indexEnd = line_text.trimEnd().length + 1;
 
     selectionLine.push(
-      new vscode.Range(selectedLine, indexStart, selectedLine, indexEnd)
+      new vscode.Range(selectedLine, indexStart, selectedLine, indexEnd),
     );
 
     editor.setDecorations(this.decoration, selectionLine);

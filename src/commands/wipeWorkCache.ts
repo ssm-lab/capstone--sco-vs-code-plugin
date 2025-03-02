@@ -5,24 +5,28 @@ import { updateHash } from '../utils/hashDocs';
 
 export async function wipeWorkCache(
   contextManager: ContextManager,
-  reason?: string
-) {
+  reason?: string,
+): Promise<void> {
   try {
     console.log('Eco: Wiping workspace cache...');
 
-    // ✅ Clear stored smells cache
+    // Clear stored smells cache
     await contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, {});
 
-    // ✅ Update file hashes for all open editors
-    const openEditors = vscode.window.visibleTextEditors;
-
-    if (openEditors.length === 0) {
-      console.log('Eco: No open files to update hash.');
-    } else {
-      console.log(`Eco: Updating cache for ${openEditors.length} open files.`);
+    if (reason === 'manual') {
+      await contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, {});
     }
 
-    for (const editor of openEditors) {
+    // Update file hashes for all open editors
+    const visibleEditors = vscode.window.visibleTextEditors;
+
+    if (visibleEditors.length === 0) {
+      console.log('Eco: No open files to update hash.');
+    } else {
+      console.log(`Eco: Updating cache for ${visibleEditors.length} visible files.`);
+    }
+
+    for (const editor of visibleEditors) {
       if (editor.document) {
         await updateHash(contextManager, editor.document);
       }
@@ -33,8 +37,6 @@ export async function wipeWorkCache(
     if (reason === 'settings') {
       message =
         'Eco: Smell detection settings changed. Cache wiped to apply updates. ✅';
-    } else if (reason === 'fileChange') {
-      message = 'Eco: File changed. Cache wiped to refresh smell detection. 🔄';
     } else if (reason === 'manual') {
       message = 'Eco: Workspace cache manually wiped by user. ✅';
     }
@@ -44,7 +46,7 @@ export async function wipeWorkCache(
   } catch (error: any) {
     console.error('Eco: Error while wiping workspace cache:', error);
     vscode.window.showErrorMessage(
-      `Eco: Failed to wipe workspace cache. See console for details.`
+      `Eco: Failed to wipe workspace cache. See console for details.`,
     );
   }
 }

@@ -2,35 +2,46 @@ import { envConfig } from './utils/envConfig';
 import * as vscode from 'vscode';
 
 import { detectSmells } from './commands/detectSmells';
-import { refactorSelectedSmell } from './commands/refactorSmell';
-import { refactorAllSmellType } from './commands/refactorAllSmellsOfType';
+import {
+  refactorSelectedSmell,
+  refactorAllSmellsOfType,
+} from './commands/refactorSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
-import { showLogsCommand, stopWatchingLogs } from './commands/showLogs';
+import { stopWatchingLogs } from './commands/showLogs';
 import { ContextManager } from './context/contextManager';
 import {
   getEnabledSmells,
-  handleSmellFilterUpdate
+  handleSmellFilterUpdate,
 } from './utils/handleSmellSettings';
 import { updateHash } from './utils/hashDocs';
 import { RefactorSidebarProvider } from './ui/refactorView';
 import { handleEditorChanges } from './utils/handleEditorChange';
 import { LineSelectionManager } from './ui/lineSelectionManager';
+import { checkServerStatus } from './api/backend';
+import { serverStatus } from './utils/serverStatus';
 
+export const globalData: { contextManager?: ContextManager } = {
+  contextManager: undefined,
+};
 
-export function activate(context: vscode.ExtensionContext) {
-  console.log('Refactor Plugin activated');
+export function activate(context: vscode.ExtensionContext): void {
+  console.log('Eco: Refactor Plugin Activated Successfully');
+  const contextManager = new ContextManager(context);
+
+  globalData.contextManager = contextManager;
 
   // Show the settings popup if needed
-  console.log('Eco: Refactor Plugin Activated Successfully');
-  showSettingsPopup();
+  // TODO: Setting to re-enable popup if disabled
+  const settingsPopupChoice =
+    contextManager.getGlobalData<boolean>('showSettingsPopup');
 
-  // Register a listener for configuration changes
-  context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((event) => {
-      handleConfigurationChange(event);
-    })
-  );
-  const contextManager = new ContextManager(context);
+  if (settingsPopupChoice === undefined || settingsPopupChoice) {
+    showSettingsPopup();
+  }
+
+  console.log('environment variables:', envConfig);
+
+  checkServerStatus();
 
   let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
   contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, smellsData);
@@ -38,6 +49,9 @@ export function activate(context: vscode.ExtensionContext) {
   let fileHashes =
     contextManager.getWorkspaceData(envConfig.FILE_CHANGES_KEY!) || {};
   contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, fileHashes);
+
+  // Check server health every 10 seconds
+  setInterval(checkServerStatus, 10000);
 
   // ===============================================================
   // REGISTER COMMANDS
@@ -50,8 +64,8 @@ export function activate(context: vscode.ExtensionContext) {
       async () => {
         console.log('Eco: Detect Smells Command Triggered');
         detectSmells(contextManager);
-      }
-    )
+      },
+    ),
   );
 
   // Refactor Selected Smell Command
@@ -59,47 +73,33 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       'ecooptimizer-vs-code-plugin.refactorSmell',
       () => {
-        console.log('Eco: Refactor Selected Smell Command Triggered');
-        refactorSelectedSmell(contextManager);
-      }
-    )
+        if (serverStatus.getStatus() === 'up') {
+          console.log('Eco: Refactor Selected Smell Command Triggered');
+          refactorSelectedSmell(contextManager);
+        } else {
+          vscode.window.showWarningMessage('Action blocked: Server is down.');
+        }
+      },
+    ),
   );
 
-  // Register Refactor All Smells of a Given Type Command
-<<<<<<< HEAD
+  // Refactor All Smells of Type Command
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
-      () => {
-        console.log('Command refactorAllSmellsOfType triggered');
-        vscode.window.showInformationMessage(`Eco: Refactoring all smells of the given type...`);
-        refactorAllSmellType(contextManager);
-      }
-    )
-=======
-  let refactorAllSmellsOfTypeCmd = vscode.commands.registerCommand(
-    'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
-    () => {
-      console.log('Command refactorAllSmellsOfType triggered');
-      vscode.window.showInformationMessage(`Eco: Refactoring all smells of the given type...`);
-      refactorAllSmellType(contextManager);
-    }
+      async (smellId: string) => {
+        if (serverStatus.getStatus() === 'up') {
+          console.log(
+            `Eco: Refactor All Smells of Type Command Triggered for ${smellId}`,
+          );
+          refactorAllSmellsOfType(contextManager, smellId);
+        } else {
+          vscode.window.showWarningMessage('Action blocked: Server is down.');
+        }
+      },
+    ),
   );
-  context.subscriptions.push(refactorAllSmellsOfTypeCmd); 
 
-  // Register Wipe Workspace Cache
-  let wipeWorkCacheCmd = vscode.commands.registerCommand(
-    'ecooptimizer-vs-code-plugin.wipeWorkCache',
-    () => {
-      console.log('Command wipeWorkCache triggered');
-      vscode.window.showInformationMessage(
-        'Eco: Wiping existing worspace memory...'
-      );
-      wipeWorkCache(contextManager);
-    }
->>>>>>> 746dc58 (Started working on front end of the refactor all smells of type)
-  );
-  
   // Wipe Cache Command
   context.subscriptions.push(
     vscode.commands.registerCommand(
@@ -107,15 +107,12 @@ export function activate(context: vscode.ExtensionContext) {
       async () => {
         console.log('Eco: Wipe Work Cache Command Triggered');
         vscode.window.showInformationMessage(
-          'Eco: Manually wiping workspace memory... ✅'
+          'Eco: Manually wiping workspace memory... ✅',
         );
         await wipeWorkCache(contextManager, 'manual');
-      }
-    )
+      },
+    ),
   );
-
-  // Log Viewing Command
-  showLogsCommand(context);
 
   // ===============================================================
   // REGISTER VIEWS
@@ -125,34 +122,41 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       RefactorSidebarProvider.viewType,
-      refactorProvider
-    )
+      refactorProvider,
+    ),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'ecooptimizer-vs-code-plugin.showRefactorSidebar',
-      () => refactorProvider.updateView()
-    )
+      () => refactorProvider.updateView(),
+    ),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'ecooptimizer-vs-code-plugin.pauseRefactorSidebar',
-      () => refactorProvider.pauseView()
-    )
+      () => refactorProvider.pauseView(),
+    ),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'ecooptimizer-vs-code-plugin.clearRefactorSidebar',
-      () => refactorProvider.clearView()
-    )
+      () => refactorProvider.clearView(),
+    ),
   );
 
   // ===============================================================
   // ADD LISTENERS
   // ===============================================================
+
+  // Register a listener for configuration changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      handleConfigurationChange(event);
+    }),
+  );
 
   vscode.window.onDidChangeVisibleTextEditors(async (editors) => {
     handleEditorChanges(contextManager, editors);
@@ -164,14 +168,15 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeTextEditorSelection((event) => {
       console.log('Eco: Detected line selection event');
       lineSelectManager.commentLine(event.textEditor);
-    })
+    }),
   );
 
   // Updates directory of file states (for checking if modified)
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument(async (document) => {
+      console.log('Eco: Detected document saved event');
       await updateHash(contextManager, document);
-    })
+    }),
   );
 
   // Handles case of documents already being open on VS Code open
@@ -183,9 +188,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initializes first state of document when opened while extension is active
   context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument(
-      async (document) => await updateHash(contextManager, document)
-    )
+    vscode.workspace.onDidOpenTextDocument(async (document) => {
+      console.log('Eco: Detected document opened event');
+      await updateHash(contextManager, document);
+    }),
   );
 
   // ===============================================================
@@ -202,7 +208,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 }
 
-function showSettingsPopup() {
+function showSettingsPopup(): void {
   // Check if the required settings are already configured
   const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
   const workspacePath = config.get<string>('projectWorkspacePath', '');
@@ -216,26 +222,32 @@ function showSettingsPopup() {
         'Please configure the paths for your workspace and logs.',
         { modal: true },
         'Continue', // Button to open settings
-        'Skip for now' // Button to dismiss
+        'Skip', // Button to dismiss
+        'Never show this again',
       )
       .then((selection) => {
         if (selection === 'Continue') {
           // Open the settings page filtered to extension's settings
           vscode.commands.executeCommand(
             'workbench.action.openSettings',
-            'ecooptimizer-vs-code-plugin'
+            'ecooptimizer',
           );
-        } else if (selection === 'Skip for now') {
+        } else if (selection === 'Skip') {
           // Inform user they can configure later
           vscode.window.showInformationMessage(
-            'You can configure the paths later in the settings.'
+            'You can configure the paths later in the settings.',
+          );
+        } else if (selection === 'Never show this again') {
+          globalData.contextManager!.setGlobalData('showSettingsPopup', false);
+          vscode.window.showInformationMessage(
+            'You can re-enable this popup again in the settings.',
           );
         }
       });
   }
 }
 
-function handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
+function handleConfigurationChange(event: vscode.ConfigurationChangeEvent): void {
   // Check if any relevant setting was changed
   if (
     event.affectsConfiguration('ecooptimizer-vs-code-plugin.projectWorkspacePath') ||
@@ -244,12 +256,12 @@ function handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
   ) {
     // Display a warning message about changing critical settings
     vscode.window.showWarningMessage(
-      'You have changed a critical setting for the EcoOptimizer plugin. Ensure the new value is valid and correct for optimal functionality.'
+      'You have changed a critical setting for the EcoOptimizer plugin. Ensure the new value is valid and correct for optimal functionality.',
     );
   }
 }
 
-export function deactivate() {
+export function deactivate(): void {
   console.log('Eco: Deactivating Plugin - Stopping Log Watching');
   stopWatchingLogs();
 }

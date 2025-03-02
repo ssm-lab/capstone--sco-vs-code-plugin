@@ -13,25 +13,6 @@ export function getEditorAndFilePath(): {
   const filePath = activeEditor?.document.uri.fsPath;
   return { editor: activeEditor, filePath };
 }
-// /**
-//  * Gets the active editor, its file path and the workspace that contains it if an editor is open.
-//  * @returns {{ editor: vscode.TextEditor | undefined, filePath: string | undefined, workspace: string | undefined }}
-//  * An object containing the active editor, the file path and workspace, or undefined for all three if no editor is open.
-//  */
-// export function getEditorAndPaths(): {
-//   editor: vscode.TextEditor | undefined;
-//   filePath: string | undefined;
-//   workspace: string | undefined;
-// } {
-//   const activeEditor = vscode.window.activeTextEditor;
-//   const fileUri = activeEditor?.document.uri!;
-//   const workspace = vscode.workspace.getWorkspaceFolder(fileUri)?.uri.fsPath;
-//   return {
-//     editor: activeEditor,
-//     filePath: fileUri.fsPath,
-//     workspace: workspace
-//   };
-// }
 
 /**
  * Gets the active editor if an editor is open.

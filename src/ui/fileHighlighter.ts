@@ -12,7 +12,7 @@ export class FileHighlighter {
     this.contextManager = contextManager;
   }
 
-  public resetHighlights() {
+  public resetHighlights(): void {
     if (this.decorations.length > 0) {
       console.log('Removing decorations');
       this.decorations.forEach((decoration) => {
@@ -21,7 +21,7 @@ export class FileHighlighter {
     }
   }
 
-  public highlightSmells(editor: vscode.TextEditor, smells: Smell[]) {
+  public highlightSmells(editor: vscode.TextEditor, smells: Smell[]): void {
     this.resetHighlights();
 
     const activeSmells = new Set<string>(smells.map((smell) => smell.messageId));
@@ -36,12 +36,12 @@ export class FileHighlighter {
   public highlightSmell(
     editor: vscode.TextEditor,
     smells: Smell[],
-    targetSmell: string
-  ) {
+    targetSmell: string,
+  ): void {
     const smellLines: vscode.DecorationOptions[] = smells
       .filter((smell: Smell) => {
         const valid = smell.occurences.every((occurrence: { line: number }) =>
-          isValidLine(occurrence.line)
+          isValidLine(occurrence.line),
         );
         const isCorrectType = smell.messageId === targetSmell;
         return valid && isCorrectType;
@@ -65,15 +65,15 @@ export class FileHighlighter {
     editor.setDecorations(this.getDecoration(colorOfSmell), smellLines);
   }
 
-  private getDecoration(color: string) {
+  private getDecoration(color: string): vscode.TextEditorDecorationType {
     // ================= EXTRA DECORATIONS ===========================
-    const underline = vscode.window.createTextEditorDecorationType({
-      textDecoration: `wavy ${color} underline 1px`
+    const _underline = vscode.window.createTextEditorDecorationType({
+      textDecoration: `wavy ${color} underline 1px`,
     });
 
-    const flashlight = vscode.window.createTextEditorDecorationType({
+    const _flashlight = vscode.window.createTextEditorDecorationType({
       isWholeLine: true,
-      backgroundColor: color
+      backgroundColor: color,
     });
     // ================================================================
 
@@ -85,10 +85,10 @@ export class FileHighlighter {
         contentText: '▶', // Unicode right arrow
         margin: '0 0 0 5px', // Space between line and arrow
         color: color,
-        fontWeight: 'bold'
+        fontWeight: 'bold',
       },
       overviewRulerColor: color,
-      overviewRulerLane: vscode.OverviewRulerLane.Right
+      overviewRulerLane: vscode.OverviewRulerLane.Right,
     });
 
     const decoration = aLittleExtra; // Select decoration

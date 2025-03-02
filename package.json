@@ -58,8 +58,7 @@
       {
         "command": "ecooptimizer-vs-code-plugin.showRefactorSidebar",
         "title": "Show Refactor Sidebar",
-        "category": "Eco",
-        "when": "false"
+        "category": "Eco"
       },
       {
         "command": "ecooptimizer-vs-code-plugin.pauseRefactorSidebar",
@@ -71,17 +70,28 @@
         "command": "ecooptimizer-vs-code-plugin.clearRefactorSidebar",
         "title": "Clear Refactor Sidebar",
         "category": "Eco",
-        "when": "false"
+        "enablement": "false"
       },
       {
-        "command": "ecooptimizer-vs-code-plugin.showLogs",
+        "command": "ecooptimizer-vs-code-plugin.startLogging",
         "title": "Show Backend Logs",
-        "category": "Eco"
+        "category": "Eco",
+        "enablement": "false"
       }
     ],
     "configuration": {
       "title": "EcoOptimizer",
       "properties": {
+        "ecooptimizer.projectWorkspacePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the folder to be targeted, relative to current workspace. Defaults to the currently open folder in VS Code."
+        },
+        "ecooptimizer.logsOutputPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to store log files and output reports. Defaults to a 'logs' folder inside the workspace."
+        },
         "ecooptimizer.enableSmells": {
           "type": "object",
           "additionalProperties": false,
@@ -101,47 +111,47 @@
             "long-element-chain": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of Long Element Chain"
+              "description": "Long Element Chain"
             },
             "too-many-arguments": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of Long Parameter List"
+              "description": "Long Parameter List"
             },
             "long-lambda-expression": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of Long Lambda Expression"
+              "description": "Long Lambda Expression"
             },
             "long-message-chain": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of Long Message Chain"
+              "description": "Long Message Chain"
             },
             "unused-variables-and-attributes": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of Unused Variables and Attributes"
+              "description": "Unused Variables and Attributes"
             },
             "cached-repeated-calls": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of Cached Repeated Calls"
+              "description": "Cached Repeated Calls"
             },
             "string-concat-loop": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of String Concatenation in Loop"
+              "description": "String Concatenation in Loop"
             },
             "no-self-use": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of No Self Use"
+              "description": "No Self Use"
             },
             "use-a-generator": {
               "type": "boolean",
               "default": true,
-              "description": "Enable detection of Use a Generator"
+              "description": "Use a Generator"
             }
           }
         }
@@ -173,28 +183,59 @@
       ]
     }
   },
+  "directories": {
+    "src": "./src",
+    "test": "./test"
+  },
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
+    "test": "jest",
+    "test:watch": "jest --watchAll --no-cache",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "prepare": "husky"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "./test/setup.ts"
+    ],
+    "moduleNameMapper": {
+      "^vscode$": "<rootDir>/test/mocks/vscode-mock.ts"
+    }
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
+    "@types/jest": "^29.5.14",
     "@types/node": "20.x",
     "@types/vscode": "^1.92.0",
-    "@typescript-eslint/eslint-plugin": "^8.17.0",
-    "@typescript-eslint/parser": "^8.17.0",
+    "@types/ws": "^8.5.14",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "css-loader": "^7.1.2",
-    "eslint": "^9.16.0",
+    "eslint": "^9.21.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.2",
+    "prettier-plugin-tailwindcss": "^0.6.11",
     "style-loader": "^4.0.0",
+    "ts-jest": "^29.2.6",
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",
     "webpack": "^5.95.0",
@@ -202,7 +243,10 @@
   },
   "dependencies": {
     "@types/dotenv": "^6.1.1",
+    "bufferutil": "^4.0.9",
     "dotenv": "^16.4.7",
-    "dotenv-webpack": "^8.1.0"
+    "dotenv-webpack": "^8.1.0",
+    "utf-8-validate": "^6.0.5",
+    "ws": "^8.18.0"
   }
 }
