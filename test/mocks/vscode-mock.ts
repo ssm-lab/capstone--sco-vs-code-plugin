@@ -18,17 +18,23 @@ export const TextEditor = {
     getText: jest.fn(() => config.docText),
     fileName: config.filePath,
     languageId: 'python',
+    lineAt: jest.fn((line: number) => ({
+      text: `mock line content ${line}`,
+    })),
   },
   selection: {
     start: { line: 0, character: 0 },
     end: { line: 0, character: 0 },
+    isSingleLine: true,
   },
+  setDecorations: jest.fn(),
 };
 
 interface Window {
   showInformationMessage: jest.Mock;
   showErrorMessage: jest.Mock;
   showWarningMessage: jest.Mock;
+  createTextEditorDecorationType: jest.Mock;
   activeTextEditor: any;
   visibleTextEditors: any[];
 }
@@ -46,6 +52,9 @@ export const window = {
     console.log('MOCK showWarningMessage:', message);
     return message;
   }),
+  createTextEditorDecorationType: jest.fn(() => ({
+    dispose: jest.fn(),
+  })),
   activeTextEditor: TextEditor,
   visibleTextEditors: [],
 };
