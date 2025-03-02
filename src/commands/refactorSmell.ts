@@ -273,7 +273,7 @@ export async function refactorAllSmellsOfType(
 async function startRefactoringSession(
   contextManager: ContextManager,
   editor: vscode.TextEditor,
-  refactoredData: RefactoredData | MultiRefactoredData,
+  refactoredData: RefactoredData,
 ): Promise<void> {
   // Store only the diff editor state
   await contextManager.setWorkspaceData(

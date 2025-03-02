@@ -6,6 +6,7 @@ import {
   refactorSelectedSmell,
   refactorAllSmellsOfType,
 } from './commands/refactorSmell';
+import { refactorAllSmellType } from './commands/refactorAllSmellsOfType';
 import { wipeWorkCache } from './commands/wipeWorkCache';
 import { stopWatchingLogs } from './commands/showLogs';
 import { ContextManager } from './context/contextManager';
@@ -19,6 +20,7 @@ import { handleEditorChanges } from './utils/handleEditorChange';
 import { LineSelectionManager } from './ui/lineSelectionManager';
 import { checkServerStatus } from './api/backend';
 import { serverStatus } from './utils/serverStatus';
+
 
 export const globalData: { contextManager?: ContextManager } = {
   contextManager: undefined,

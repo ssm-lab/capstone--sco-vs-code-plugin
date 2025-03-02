@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import { getEditorAndFilePath } from '../utils/editorUtils';
 import { refactorAllSmellsOfAType } from '../api/backend';
 
-
 import { FileHighlighter } from '../ui/fileHighlighter';
 import { ContextManager } from '../context/contextManager';
 import { setTimeout } from 'timers/promises';
