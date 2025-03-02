@@ -20,7 +20,7 @@ export class HoverManager {
     return HoverManager.instance;
   }
 
-  private constructor(
+  public constructor(
     private contextManager: ContextManager,
     smells: Smell[],
   ) {
@@ -30,12 +30,12 @@ export class HoverManager {
     this.registerCommands();
   }
 
-  private updateSmells(smells: Smell[]): void {
+  public updateSmells(smells: Smell[]): void {
     this.smells = smells || [];
   }
 
   // Register hover provider for Python files
-  private registerHoverProvider(): void {
+  public registerHoverProvider(): void {
     this.vscodeContext.subscriptions.push(
       vscode.languages.registerHoverProvider(
         { scheme: 'file', language: 'python' },
@@ -55,7 +55,7 @@ export class HoverManager {
     position: vscode.Position,
   ): vscode.MarkdownString | null {
     const lineNumber = position.line + 1; // convert to 1-based index
-
+    console.log('line number: ' + position.line);
     // filter to find the smells on current line
     const smellsOnLine = this.smells.filter((smell) =>
       smell.occurences.some(
@@ -66,6 +66,8 @@ export class HoverManager {
             lineNumber <= occurrence.endLine),
       ),
     );
+
+    console.log('smells: ' + smellsOnLine);
 
     if (smellsOnLine.length === 0) {
       return null;
@@ -84,13 +86,14 @@ export class HoverManager {
             JSON.stringify(smell),
           )})\n\n`,
       );
+      console.log(hoverContent);
     });
 
     return hoverContent;
   }
 
   // Register commands for refactor actions
-  private registerCommands(): void {
+  public registerCommands(): void {
     this.vscodeContext.subscriptions.push(
       vscode.commands.registerCommand(
         'extension.refactorThisSmell',
