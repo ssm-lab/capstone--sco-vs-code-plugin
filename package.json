@@ -165,7 +165,7 @@
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
-    "test": "jest",
+    "test": "jest --silent --verbose",
     "test:watch": "jest --watchAll --no-cache",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
@@ -183,16 +183,13 @@
     "moduleNameMapper": {
       "^vscode$": "<rootDir>/test/mocks/vscode-mock.ts"
     },
-    "reporters": [
-      [
-        "jest-silent-reporter",
-        {
-          "useDots": true
-        },
-        {
-          "showPaths": true
-        }
-      ]
+    "moduleDirectories": [
+      "node_modules",
+      "tests/__mocks__"
+    ],
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/test"
     ],
     "collectCoverage": true,
     "coverageReporters": [

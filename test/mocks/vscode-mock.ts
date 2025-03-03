@@ -12,20 +12,22 @@ export const config: Config = {
   docText: 'Mock document text',
 };
 
+export const TextDocument = {
+  getText: jest.fn(() => config.docText),
+  fileName: config.filePath,
+  languageId: 'python',
+  lineAt: jest.fn((line: number) => {
+    console.log('MOCK lineAt:', line);
+    return {
+      text: 'Mock line text',
+    };
+  }),
+  lineCount: 10,
+};
+
 // Mock for `vscode.TextEditor`
 export const TextEditor = {
-  document: {
-    getText: jest.fn(() => config.docText),
-    fileName: config.filePath,
-    languageId: 'python',
-    lineAt: jest.fn((line: number) => {
-      console.log('MOCK lineAt:', line);
-      return {
-        text: 'Mock line text',
-      };
-    }),
-    lineCount: 10,
-  },
+  document: TextDocument,
   selection: {
     start: { line: 0, character: 0 },
     end: { line: 0, character: 0 },
@@ -146,6 +148,7 @@ export const Hover = MockHover;
 export interface Vscode {
   window: Window;
   workspace: Workspace;
+  TextDocument: typeof TextDocument;
   TextEditor: typeof TextEditor;
   TextEditorDecorationType: TextEditorDecorationType;
   languages: typeof languages;
@@ -159,6 +162,7 @@ export interface Vscode {
 const vscode: Vscode = {
   window,
   workspace,
+  TextDocument,
   TextEditor,
   TextEditorDecorationType: textEditorDecorationType,
   languages,
