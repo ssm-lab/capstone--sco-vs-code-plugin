@@ -29,6 +29,7 @@ export const TextEditor = {
   selection: {
     start: { line: 0, character: 0 },
     end: { line: 0, character: 0 },
+    isSingleLine: true,
   },
   setDecorations: jest.fn(),
 };
@@ -45,9 +46,9 @@ interface Window {
   showInformationMessage: jest.Mock;
   showErrorMessage: jest.Mock;
   showWarningMessage: jest.Mock;
+  createTextEditorDecorationType: jest.Mock;
   activeTextEditor: any;
   visibleTextEditors: any[];
-  createTextEditorDecorationType: jest.Mock;
 }
 
 export const window: Window = {
@@ -140,7 +141,6 @@ export class MockHover {
   constructor(public contents: MockMarkdownString) {}
 }
 
-// export const MarkdownString = MockMarkdownString;
 export const Hover = MockHover;
 
 export interface Vscode {
