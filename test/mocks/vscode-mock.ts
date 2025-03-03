@@ -18,11 +18,27 @@ export const TextEditor = {
     getText: jest.fn(() => config.docText),
     fileName: config.filePath,
     languageId: 'python',
+    lineAt: jest.fn((line: number) => {
+      console.log('MOCK lineAt:', line);
+      return {
+        text: 'Mock line text',
+      };
+    }),
+    lineCount: 10,
   },
   selection: {
     start: { line: 0, character: 0 },
     end: { line: 0, character: 0 },
   },
+  setDecorations: jest.fn(),
+};
+
+export interface TextEditorDecorationType {
+  dispose: jest.Mock;
+}
+
+const textEditorDecorationType: TextEditorDecorationType = {
+  dispose: jest.fn(),
 };
 
 interface Window {
@@ -31,9 +47,10 @@ interface Window {
   showWarningMessage: jest.Mock;
   activeTextEditor: any;
   visibleTextEditors: any[];
+  createTextEditorDecorationType: jest.Mock;
 }
 
-export const window = {
+export const window: Window = {
   showInformationMessage: jest.fn(async (message: string) => {
     console.log('MOCK showInformationMessage:', message);
     return message;
@@ -48,6 +65,10 @@ export const window = {
   }),
   activeTextEditor: TextEditor,
   visibleTextEditors: [],
+  createTextEditorDecorationType: jest.fn((_options: any) => {
+    console.log('MOCK createTextEditorDecorationType:');
+    return textEditorDecorationType;
+  }),
 };
 
 interface Workspace {
@@ -61,6 +82,19 @@ export const workspace: Workspace = {
       return config.configGet;
     }),
   })),
+};
+
+export const OverviewRulerLane = {
+  Right: 'Right',
+};
+
+export const Range = class MockRange {
+  constructor(
+    public startLine: number,
+    public startCharacter: number,
+    public endLine: number,
+    public endCharacter: number,
+  ) {}
 };
 
 // New mocks for hover functionality
@@ -112,8 +146,12 @@ export const Hover = MockHover;
 export interface Vscode {
   window: Window;
   workspace: Workspace;
+  TextEditor: typeof TextEditor;
+  TextEditorDecorationType: TextEditorDecorationType;
   languages: typeof languages;
   commands: typeof commands;
+  OverviewRulerLane: typeof OverviewRulerLane;
+  Range: typeof Range;
   Position: typeof Position;
   Hover: typeof Hover;
 }
@@ -121,8 +159,12 @@ export interface Vscode {
 const vscode: Vscode = {
   window,
   workspace,
+  TextEditor,
+  TextEditorDecorationType: textEditorDecorationType,
   languages,
   commands,
+  OverviewRulerLane,
+  Range,
   Position,
   Hover,
 };
