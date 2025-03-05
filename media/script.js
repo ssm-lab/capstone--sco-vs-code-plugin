@@ -8,7 +8,7 @@ function updateWebView(data, sep) {
   // Update Energy Saved
   document.getElementById(
     'energy'
-  ).textContent = `Energy Saved: ${data.energySaved.toExponential(3)} kg CO2`;
+  ).textContent = `Carbon Saved: ${data.energySaved.toExponential(3)} kg CO2`;
 
   // Populate Target File
   const targetFile = data.targetFile;
@@ -64,7 +64,7 @@ function updateWebView(data, sep) {
 
 // Function to clear the UI (for when refactoring is done)
 function clearWebview() {
-  document.getElementById('energy').textContent = 'Energy Saved: --';
+  document.getElementById('energy').textContent = 'Carbon Saved: --';
   document.getElementById('target-file-list').innerHTML = '';
   document.getElementById('affected-file-list').innerHTML = '';
 
