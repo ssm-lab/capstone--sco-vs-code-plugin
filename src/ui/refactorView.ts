@@ -188,7 +188,6 @@ export class RefactorSidebarProvider implements vscode.WebviewViewProvider {
       for (const [original, refactored] of this._file_map.entries()) {
         const content = await vscode.workspace.fs.readFile(refactored);
         await vscode.workspace.fs.writeFile(original, content);
-        await vscode.workspace.save(original);
         console.log(`Applied refactoring to ${original.fsPath}`);
       }
       vscode.window.showInformationMessage('Refactoring applied successfully!');

@@ -95,6 +95,8 @@ export async function refactorSelectedSmell(
     return;
   }
 
+  await vscode.workspace.save(editor.document.uri);
+
   const refactorResult = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
