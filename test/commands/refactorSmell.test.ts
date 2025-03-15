@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { refactorSelectedSmell } from '../../src/commands/refactorSmell';
+import * as fs from 'fs';
+
+import { refactorSelectedSmell, cleanTemps } from '../../src/commands/refactorSmell';
 import { ContextManager } from '../../src/context/contextManager';
 import { refactorSmell } from '../../src/api/backend';
 import { FileHighlighter } from '../../src/ui/fileHighlighter';
@@ -31,7 +33,7 @@ jest.mock('vscode', () => ({
   },
   Uri: {
     file: jest.fn((path) => ({
-      toString: () => `file://${path}`,
+      toString: (): string => `file://${path}`,
       fsPath: path,
     })),
   },
@@ -60,7 +62,7 @@ jest.mock('timers/promises', () => ({
   setTimeout: jest.fn().mockResolvedValue(undefined),
 }));
 
-describe('refactorSelectedSmell', () => {
+describe('refactorSmell', () => {
   let mockContextManager: jest.Mocked<ContextManager>;
   let mockEditor: any;
   let mockDocument: any;
@@ -118,180 +120,206 @@ describe('refactorSelectedSmell', () => {
     (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
   });
 
-  test('should show error when no active editor', async () => {
-    (vscode.window as any).activeTextEditor = undefined;
+  describe('refactorSelectedSmell', () => {
+    it('should show error when no active editor', async () => {
+      (vscode.window as any).activeTextEditor = undefined;
 
-    await refactorSelectedSmell(mockContextManager);
+      await refactorSelectedSmell(mockContextManager);
 
-    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-      'Eco: Unable to proceed as no active editor or file path found.',
-    );
-  });
-
-  test('should show error when no smells detected', async () => {
-    mockContextManager.getWorkspaceData.mockImplementation((key) => {
-      if (key === envConfig.SMELL_MAP_KEY) {
-        return {
-          '/test/file.ts': {
-            smells: [],
-          },
-        };
-      }
-      return null;
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        'Eco: Unable to proceed as no active editor or file path found.',
+      );
     });
 
-    await refactorSelectedSmell(mockContextManager);
+    it('should show error when no smells detected', async () => {
+      mockContextManager.getWorkspaceData.mockImplementation((key) => {
+        if (key === envConfig.SMELL_MAP_KEY) {
+          return {
+            '/test/file.ts': {
+              smells: [],
+            },
+          };
+        }
+        return undefined;
+      });
 
-    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-      'Eco: No smells detected in the file for refactoring.',
-    );
-  });
+      await refactorSelectedSmell(mockContextManager);
 
-  test('should show error when no matching smell found for selected line', async () => {
-    const mockSmells = [createMockSmell(5)];
-
-    mockContextManager.getWorkspaceData.mockImplementation((key) => {
-      if (key === envConfig.SMELL_MAP_KEY) {
-        return {
-          '/test/file.ts': {
-            smells: mockSmells,
-          },
-        };
-      }
-      return null;
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        'Eco: No smells detected in the file for refactoring.',
+      );
     });
 
-    await refactorSelectedSmell(mockContextManager);
+    it('should show error when no matching smell found for selected line', async () => {
+      const mockSmells = [createMockSmell(5)];
 
-    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-      'Eco: No matching smell found for refactoring.',
-    );
-  });
+      mockContextManager.getWorkspaceData.mockImplementation((key) => {
+        if (key === envConfig.SMELL_MAP_KEY) {
+          return {
+            '/test/file.ts': {
+              smells: mockSmells,
+            },
+          };
+        }
+        return undefined;
+      });
 
-  test('should successfully refactor a smell when found', async () => {
-    const mockSmells = [createMockSmell(1)];
+      await refactorSelectedSmell(mockContextManager);
 
-    const mockRefactorResult = {
-      refactoredData: {
-        tempDir: '/tmp/test',
-        targetFile: {
-          original: '/test/file.ts',
-          refactored: '/test/file.refactored.ts',
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        'Eco: No matching smell found for refactoring.',
+      );
+    });
+
+    it('should successfully refactor a smell when found', async () => {
+      const mockSmells = [createMockSmell(1)];
+
+      const mockRefactorResult = {
+        refactoredData: {
+          tempDir: '/tmp/test',
+          targetFile: {
+            original: '/test/file.ts',
+            refactored: '/test/file.refactored.ts',
+          },
+          affectedFiles: [
+            {
+              original: '/test/other.ts',
+              refactored: '/test/other.refactored.ts',
+            },
+          ],
+          energySaved: 10,
         },
-        affectedFiles: [
+        updatedSmells: [
           {
-            original: '/test/other.ts',
-            refactored: '/test/other.refactored.ts',
+            ...createMockSmell(1),
+            messageId: 'updated-smell',
+            symbol: 'UpdatedSmell',
+            message: 'Updated message',
           },
         ],
-        energySaved: 10,
-      },
-      updatedSmells: [
-        {
-          ...createMockSmell(1),
-          messageId: 'updated-smell',
-          symbol: 'UpdatedSmell',
-          message: 'Updated message',
-        },
-      ],
-    };
+      };
 
-    mockContextManager.getWorkspaceData.mockImplementation((key) => {
-      if (key === envConfig.SMELL_MAP_KEY) {
-        return {
-          '/test/file.ts': {
-            smells: mockSmells,
-          },
-        };
-      }
-      return null;
+      mockContextManager.getWorkspaceData.mockImplementation((key) => {
+        if (key === envConfig.SMELL_MAP_KEY) {
+          return {
+            '/test/file.ts': {
+              smells: mockSmells,
+            },
+          };
+        }
+        return undefined;
+      });
+
+      (refactorSmell as jest.Mock).mockResolvedValue(mockRefactorResult);
+
+      await refactorSelectedSmell(mockContextManager);
+
+      expect(vscode.workspace.save).toHaveBeenCalled();
+      expect(refactorSmell).toHaveBeenCalledWith('/test/file.ts', mockSmells[0]);
+      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+        'Refactoring report available in sidebar.',
+      );
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'extension.refactorSidebar.focus',
+      );
+      expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
+      expect(vscode.window.showTextDocument).toHaveBeenCalled();
+      expect(FileHighlighter).toHaveBeenCalled();
     });
 
-    (refactorSmell as jest.Mock).mockResolvedValue(mockRefactorResult);
+    it('should handle refactoring failure', async () => {
+      const mockSmells = [createMockSmell(1)];
 
-    await refactorSelectedSmell(mockContextManager);
+      mockContextManager.getWorkspaceData.mockImplementation((key) => {
+        if (key === envConfig.SMELL_MAP_KEY) {
+          return {
+            '/test/file.ts': {
+              smells: mockSmells,
+            },
+          };
+        }
+        return undefined;
+      });
 
-    expect(vscode.workspace.save).toHaveBeenCalled();
-    expect(refactorSmell).toHaveBeenCalledWith('/test/file.ts', mockSmells[0]);
-    expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-      'Refactoring report available in sidebar.',
-    );
-    expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-      'extension.refactorSidebar.focus',
-    );
-    expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
-    expect(vscode.window.showTextDocument).toHaveBeenCalled();
-    expect(FileHighlighter).toHaveBeenCalled();
+      (refactorSmell as jest.Mock).mockRejectedValue(
+        new Error('Refactoring failed'),
+      );
+
+      await refactorSelectedSmell(mockContextManager);
+
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        'Eco: Refactoring failed. See console for details.',
+      );
+    });
+
+    it('should handle given smell parameter', async () => {
+      const givenSmell = createMockSmell(3);
+      const mockSmells = [givenSmell];
+
+      mockContextManager.getWorkspaceData.mockImplementation((key) => {
+        if (key === envConfig.SMELL_MAP_KEY) {
+          return {
+            '/test/file.ts': {
+              smells: mockSmells,
+            },
+          };
+        }
+        return undefined;
+      });
+
+      const mockRefactorResult = {
+        refactoredData: {
+          tempDir: '/tmp/test',
+          targetFile: {
+            original: '/test/file.ts',
+            refactored: '/test/file.refactored.ts',
+          },
+          affectedFiles: [
+            {
+              original: '/test/other.ts',
+              refactored: '/test/other.refactored.ts',
+            },
+          ],
+          energySaved: 10,
+        },
+        updatedSmells: [],
+      };
+
+      (refactorSmell as jest.Mock).mockResolvedValue(mockRefactorResult);
+
+      await refactorSelectedSmell(mockContextManager, givenSmell);
+
+      expect(refactorSmell).toHaveBeenCalledWith('/test/file.ts', givenSmell);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'extension.refactorSidebar.focus',
+      );
+      expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
+      expect(vscode.window.showTextDocument).toHaveBeenCalled();
+      expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+        'Eco: No updated smells detected after refactoring.',
+      );
+    });
   });
 
-  test('should handle refactoring failure', async () => {
-    const mockSmells = [createMockSmell(1)];
+  describe('Clean Temp Directory', () => {
+    it('removes one temp directory', async () => {
+      const mockPastData = { tempDir: 'mock/temp/dir' };
 
-    mockContextManager.getWorkspaceData.mockImplementation((key) => {
-      if (key === envConfig.SMELL_MAP_KEY) {
-        return {
-          '/test/file.ts': {
-            smells: mockSmells,
-          },
-        };
-      }
-      return null;
+      jest.spyOn(fs.promises, 'rm').mockResolvedValueOnce();
+
+      await cleanTemps(mockPastData);
+
+      expect(fs.promises.rm).toHaveBeenCalled();
     });
 
-    (refactorSmell as jest.Mock).mockRejectedValue(new Error('Refactoring failed'));
+    it('removes multiple temp directory', async () => {
+      const mockPastData = { tempDirs: ['mock/temp/dir1', 'mock/temp/dir2'] };
 
-    await refactorSelectedSmell(mockContextManager);
+      jest.spyOn(fs.promises, 'rm').mockResolvedValueOnce();
 
-    expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-      'Eco: Refactoring failed. See console for details.',
-    );
-  });
+      await cleanTemps(mockPastData);
 
-  test('should handle given smell parameter', async () => {
-    const givenSmell = createMockSmell(3);
-    const mockSmells = [givenSmell];
-
-    mockContextManager.getWorkspaceData.mockImplementation((key) => {
-      if (key === envConfig.SMELL_MAP_KEY) {
-        return {
-          '/test/file.ts': {
-            smells: mockSmells,
-          },
-        };
-      }
-      return null;
+      expect(fs.promises.rm).toHaveBeenCalledTimes(2);
     });
-
-    const mockRefactorResult = {
-      refactoredData: {
-        tempDir: '/tmp/test',
-        targetFile: {
-          original: '/test/file.ts',
-          refactored: '/test/file.refactored.ts',
-        },
-        affectedFiles: [
-          {
-            original: '/test/other.ts',
-            refactored: '/test/other.refactored.ts',
-          },
-        ],
-        energySaved: 10,
-      },
-      updatedSmells: [],
-    };
-
-    (refactorSmell as jest.Mock).mockResolvedValue(mockRefactorResult);
-
-    await refactorSelectedSmell(mockContextManager, givenSmell);
-
-    expect(refactorSmell).toHaveBeenCalledWith('/test/file.ts', givenSmell);
-    expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-      'extension.refactorSidebar.focus',
-    );
-    expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
-    expect(vscode.window.showTextDocument).toHaveBeenCalled();
-    expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-      'Eco: No updated smells detected after refactoring.',
-    );
   });
 });
