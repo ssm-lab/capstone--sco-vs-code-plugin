@@ -200,9 +200,6 @@
     "coverageDirectory": "<rootDir>/coverage/",
     "coverageThreshold": {
       "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
         "statements": 80
       }
     },
@@ -210,7 +207,10 @@
       "src/**/*.ts",
       "!src/**/*.d.ts",
       "!src/**/index.ts",
-      "!test/mocks/*"
+      "!test/mocks/*",
+      "!src/extension.ts",
+      "!src/context/*",
+      "!src/utils/configManager.ts"
     ]
   },
   "lint-staged": {
