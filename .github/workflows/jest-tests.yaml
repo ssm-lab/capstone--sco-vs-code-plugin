@@ -2,8 +2,8 @@ name: Jest Tests and Coverage Check
 
 on:
   pull_request:
-    branches:
-      - dev
+    types: [opened, reopened, synchronize]
+    branches: [dev]
 
 jobs:
   test:
