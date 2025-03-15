@@ -74,7 +74,7 @@ export async function fetchSmells(
         `Eco: API request failed (${response.status} - ${response.statusText})`,
       );
       vscode.window.showErrorMessage(
-        `Eco: Failed to fetch smells (HTTP ${response.status})`,
+        `Eco: Failed to fetch smells`,
       );
       return [];
     }
@@ -83,7 +83,7 @@ export async function fetchSmells(
 
     if (!Array.isArray(smellsList)) {
       console.error('Eco: Invalid response format from backend.');
-      vscode.window.showErrorMessage('Eco: Unexpected response from backend.');
+      vscode.window.showErrorMessage('Eco: Failed to fetch smells');
       return [];
     }
 
@@ -92,7 +92,7 @@ export async function fetchSmells(
   } catch (error: any) {
     console.error(`Eco: Network error while fetching smells: ${error.message}`);
     vscode.window.showErrorMessage(
-      'Eco: Unable to reach the backend. Please check your connection.',
+      'Eco: Failed to fetch smells',
     );
     return [];
   }
@@ -105,23 +105,25 @@ export async function refactorSmell(
 ): Promise<RefactorOutput> {
   const url = `${BASE_URL}/refactor`;
 
-  const workspace_folder = vscode.workspace.workspaceFolders?.find((folder) =>
+  const workspaceFolder = vscode.workspace.workspaceFolders?.find((folder) =>
     filePath.includes(folder.uri.fsPath),
-  )?.uri.fsPath;
+  )
 
-  if (!workspace_folder) {
+  if (!workspaceFolder) {
     console.error('Eco: Error - Unable to determine workspace folder for', filePath);
     throw new Error(
       `Eco: Unable to find a matching workspace folder for file: ${filePath}`,
     );
   }
 
+  const workspaceFolderPath = workspaceFolder.uri.fsPath;
+
   console.log(
-    `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspace_folder}"`,
+    `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspaceFolderPath}"`,
   );
 
   const payload = {
-    source_dir: workspace_folder,
+    source_dir: workspaceFolderPath,
     smell,
   };
 
