@@ -2,10 +2,7 @@ import { envConfig } from './utils/envConfig';
 import * as vscode from 'vscode';
 
 import { detectSmells } from './commands/detectSmells';
-import {
-  refactorSelectedSmell,
-  refactorAllSmellsOfType,
-} from './commands/refactorSmell';
+import { refactorSelectedSmell } from './commands/refactorSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
 import { stopWatchingLogs } from './commands/showLogs';
 import { ContextManager } from './context/contextManager';
@@ -75,7 +72,7 @@ export function activate(context: vscode.ExtensionContext): void {
       () => {
         if (serverStatus.getStatus() === 'up') {
           console.log('Eco: Refactor Selected Smell Command Triggered');
-          refactorSelectedSmell(contextManager);
+          refactorSelectedSmell(contextManager, false);
         } else {
           vscode.window.showWarningMessage('Action blocked: Server is down.');
         }
@@ -92,7 +89,7 @@ export function activate(context: vscode.ExtensionContext): void {
           console.log(
             `Eco: Refactor All Smells of Type Command Triggered for ${smellId}`,
           );
-          refactorAllSmellsOfType(contextManager, smellId);
+          refactorSelectedSmell(contextManager, true);
         } else {
           vscode.window.showWarningMessage('Action blocked: Server is down.');
         }
