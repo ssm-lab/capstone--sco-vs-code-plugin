@@ -121,7 +121,7 @@ describe('refactorSelectedSmell', () => {
   test('should show error when no active editor', async () => {
     (vscode.window as any).activeTextEditor = undefined;
 
-    await refactorSelectedSmell(mockContextManager);
+    await refactorSelectedSmell(mockContextManager, false);
 
     expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
       'Eco: Unable to proceed as no active editor or file path found.',
@@ -140,7 +140,7 @@ describe('refactorSelectedSmell', () => {
       return null;
     });
 
-    await refactorSelectedSmell(mockContextManager);
+    await refactorSelectedSmell(mockContextManager, false);
 
     expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
       'Eco: No smells detected in the file for refactoring.',
@@ -161,7 +161,7 @@ describe('refactorSelectedSmell', () => {
       return null;
     });
 
-    await refactorSelectedSmell(mockContextManager);
+    await refactorSelectedSmell(mockContextManager, false);
 
     expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
       'Eco: No matching smell found for refactoring.',
@@ -209,7 +209,7 @@ describe('refactorSelectedSmell', () => {
 
     (refactorSmell as jest.Mock).mockResolvedValue(mockRefactorResult);
 
-    await refactorSelectedSmell(mockContextManager);
+    await refactorSelectedSmell(mockContextManager, false);
 
     expect(vscode.workspace.save).toHaveBeenCalled();
     expect(refactorSmell).toHaveBeenCalledWith('/test/file.ts', mockSmells[0]);
@@ -240,7 +240,7 @@ describe('refactorSelectedSmell', () => {
 
     (refactorSmell as jest.Mock).mockRejectedValue(new Error('Refactoring failed'));
 
-    await refactorSelectedSmell(mockContextManager);
+    await refactorSelectedSmell(mockContextManager, false);
 
     expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
       'Eco: Refactoring failed. See console for details.',
@@ -282,7 +282,7 @@ describe('refactorSelectedSmell', () => {
 
     (refactorSmell as jest.Mock).mockResolvedValue(mockRefactorResult);
 
-    await refactorSelectedSmell(mockContextManager, givenSmell);
+    await refactorSelectedSmell(mockContextManager, false, givenSmell);
 
     expect(refactorSmell).toHaveBeenCalledWith('/test/file.ts', givenSmell);
     expect(vscode.commands.executeCommand).toHaveBeenCalledWith(

@@ -149,3 +149,55 @@ export async function refactorSmell(
     throw error;
   }
 }
+
+// Request refactoring for a specific smell
+export async function refactorSmellsByType(
+  filePath: string,
+  smell: Smell,
+): Promise<RefactorOutput> {
+  const url = `${BASE_URL}/refactor-by-type`;
+
+  const workspace_folder = vscode.workspace.workspaceFolders?.find((folder) =>
+    filePath.includes(folder.uri.fsPath),
+  )?.uri.fsPath;
+
+  if (!workspace_folder) {
+    console.error('Eco: Error - Unable to determine workspace folder for', filePath);
+    throw new Error(
+      `Eco: Unable to find a matching workspace folder for file: ${filePath}`,
+    );
+  }
+
+  console.log(
+    `Eco: Initiating refactoring for smell type "${smell.messageId}" in "${workspace_folder}"`,
+  );
+
+  const payload = {
+    source_dir: workspace_folder,
+    smell,
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Eco: Error - Refactoring smells of type "${smell.messageId}": ${errorText}`,
+      );
+      throw new Error(`Eco: Error refactoring smells of type: ${errorText}`);
+    }
+
+    const refactorResult = (await response.json()) as RefactorOutput;
+    return refactorResult;
+  } catch (error) {
+    console.error('Eco: Unexpected error in refactorSmellsByType:', error);
+    throw error;
+  }
+}
