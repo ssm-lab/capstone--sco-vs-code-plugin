@@ -22,20 +22,37 @@ class WebSocketInitializationError extends Error {
 
 const WEBSOCKET_BASE_URL = `ws://${envConfig.SERVER_URL}/logs`;
 
-let websockets: WebSocket[] = [];
+let websockets: { [key: string]: WebSocket | undefined } = {
+  main: undefined,
+  detect: undefined,
+  refactor: undefined,
+};
 
-let mainLogChannel: vscode.OutputChannel | undefined;
-let detectSmellsChannel: vscode.OutputChannel | undefined;
-let refactorSmellChannel: vscode.OutputChannel | undefined;
+let channels: {
+  [key: string]: { name: string; channel: vscode.LogOutputChannel | undefined };
+} = {
+  main: {
+    name: 'EcoOptimizer: Main',
+    channel: undefined,
+  },
+  detect: {
+    name: 'EcoOptimizer: Detect',
+    channel: undefined,
+  },
+  refactor: {
+    name: 'EcoOptimizer: Refactor',
+    channel: undefined,
+  },
+};
 
 let CHANNELS_CREATED = false;
 
 serverStatus.on('change', async (newStatus: ServerStatusType) => {
   console.log('Server status changed:', newStatus);
   if (newStatus === ServerStatusType.DOWN) {
-    mainLogChannel?.appendLine('Server connection lost');
+    channels.main.channel?.appendLine('Server connection lost');
   } else {
-    mainLogChannel?.appendLine('Server connection re-established.');
+    channels.main.channel?.appendLine('Server connection re-established.');
     await startLogging();
   }
 });
@@ -43,6 +60,7 @@ serverStatus.on('change', async (newStatus: ServerStatusType) => {
 export async function startLogging(retries = 3, delay = 1000): Promise<void> {
   let logInitialized = false;
   const logPath = globalData.contextManager?.context.logUri?.fsPath;
+  console.log('log path:', logPath);
 
   if (!logPath) {
     console.error('Missing contextManager or logUri. Cannot initialize logging.');
@@ -62,18 +80,10 @@ export async function startLogging(retries = 3, delay = 1000): Promise<void> {
         console.log('Log initialization successful.');
       }
 
-      if (CHANNELS_CREATED) {
-        console.warn(
-          'Logging channels already initialized. Skipping WebSocket setup.',
-        );
-        return;
-      }
-
-      // Try initializing WebSockets separately
       try {
         initializeWebSockets();
         console.log('Successfully initialized WebSockets. Logging is now active.');
-        return; // Exit function if everything is successful
+        return;
       } catch {
         throw new WebSocketInitializationError('Failed to initialize WebSockets.');
       }
@@ -93,46 +103,78 @@ export async function startLogging(retries = 3, delay = 1000): Promise<void> {
 }
 
 function initializeWebSockets(): void {
-  startWebSocket('main', 'EcoOptimizer: Main Logs');
-  startWebSocket('detect', 'EcoOptimizer: Detect Smells');
-  startWebSocket('refactor', 'EcoOptimizer: Refactor Smell');
-
-  CHANNELS_CREATED = true;
+  if (!CHANNELS_CREATED) {
+    createOutputChannels();
+    CHANNELS_CREATED = true;
+  }
+  startWebSocket('main');
+  startWebSocket('detect');
+  startWebSocket('refactor');
 }
 
-function startWebSocket(logType: string, channelName: string): void {
+function createOutputChannels(): void {
+  console.log('Creating ouput channels');
+  for (const channel of Object.keys(channels)) {
+    channels[channel].channel = vscode.window.createOutputChannel(
+      channels[channel].name,
+      { log: true },
+    );
+  }
+}
+
+function startWebSocket(logType: string): void {
   const url = `${WEBSOCKET_BASE_URL}/${logType}`;
   const ws = new WebSocket(url);
-  websockets.push(ws);
-
-  let channel: vscode.OutputChannel;
-  if (logType === 'main') {
-    mainLogChannel = vscode.window.createOutputChannel(channelName);
-    channel = mainLogChannel;
-  } else if (logType === 'detect') {
-    detectSmellsChannel = vscode.window.createOutputChannel(channelName);
-    channel = detectSmellsChannel;
-  } else if (logType === 'refactor') {
-    refactorSmellChannel = vscode.window.createOutputChannel(channelName);
-    channel = refactorSmellChannel;
-  } else {
-    return;
-  }
+  websockets[logType] = ws;
 
   ws.on('message', function message(data) {
-    channel.append(data.toString('utf8'));
+    const logEvent = data.toString('utf8');
+    const level =
+      logEvent.match(/\b(ERROR|DEBUG|INFO|WARNING|TRACE)\b/i)?.[0].trim() ||
+      'UNKNOWN';
+    const msg = logEvent.split(`[${level}]`, 2)[1].trim();
+
+    console.log(logEvent);
+    console.log('Level:', level);
+
+    switch (level) {
+      case 'ERROR': {
+        channels[logType].channel!.error(msg);
+        break;
+      }
+      case 'DEBUG': {
+        console.log('logging debug');
+        channels[logType].channel!.debug(msg);
+        break;
+      }
+      case 'WARNING': {
+        channels[logType].channel!.warn(msg);
+        break;
+      }
+      case 'CRITICAL': {
+        channels[logType].channel!.error(msg);
+        break;
+      }
+      default: {
+        console.log('Logging info');
+        channels[logType].channel!.info(msg);
+        break;
+      }
+    }
   });
 
   ws.on('error', function error(err) {
-    channel.appendLine(`WebSocket error: ${err}`);
+    channels[logType].channel!.error(err);
   });
 
   ws.on('close', function close() {
-    channel.appendLine(`WebSocket connection closed for ${logType}`);
+    channels[logType].channel!.appendLine(
+      `WebSocket connection closed for ${channels[logType].name}`,
+    );
   });
 
   ws.on('open', function open() {
-    channel.appendLine(`Connected to ${channelName} via WebSocket`);
+    channels[logType].channel!.appendLine(`Connected to ${logType} via WebSocket`);
   });
 }
 
@@ -140,9 +182,7 @@ function startWebSocket(logType: string, channelName: string): void {
  * Stops watching log files when the extension is deactivated.
  */
 export function stopWatchingLogs(): void {
-  websockets.forEach((ws) => ws.close());
+  Object.values(websockets).forEach((ws) => ws?.close());
 
-  mainLogChannel?.dispose();
-  detectSmellsChannel?.dispose();
-  refactorSmellChannel?.dispose();
+  Object.values(channels).forEach((channel) => channel.channel?.dispose());
 }
