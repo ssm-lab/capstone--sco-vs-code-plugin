@@ -210,7 +210,8 @@
       "!test/mocks/*",
       "!src/extension.ts",
       "!src/context/*",
-      "!src/utils/configManager.ts"
+      "!src/utils/configManager.ts",
+      "!src/commands/showLogs.ts"
     ]
   },
   "lint-staged": {
