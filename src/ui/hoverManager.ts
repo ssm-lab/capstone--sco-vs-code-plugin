@@ -104,7 +104,7 @@ export class HoverManager {
         'extension.refactorAllSmellsOfType',
         async (smell: Smell) => {
           const contextManager = new ContextManager(this.vscodeContext);
-          await refactorSelectedSmell(contextManager, false, smell);
+          await refactorSelectedSmell(contextManager, true, smell);
         },
       ),
     );
