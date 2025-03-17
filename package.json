@@ -211,7 +211,9 @@
       "!src/extension.ts",
       "!src/context/*",
       "!src/utils/configManager.ts",
-      "!src/commands/showLogs.ts"
+      "!src/commands/showLogs.ts",
+      "!src/ui/refactorView.ts",
+      "!src/utils/handleEditorChange.ts"
     ]
   },
   "lint-staged": {
