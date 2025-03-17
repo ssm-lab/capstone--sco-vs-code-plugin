@@ -242,7 +242,8 @@
       "!src/utils/configManager.ts",
       "!src/commands/showLogs.ts",
       "!src/ui/refactorView.ts",
-      "!src/utils/handleEditorChange.ts"
+      "!src/utils/handleEditorChange.ts",
+      "!src/commands/toggleSmellLinting.ts"
     ]
   },
   "lint-staged": {
