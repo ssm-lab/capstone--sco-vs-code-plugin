@@ -25,7 +25,7 @@ describe('File Highlighter', () => {
 
   it('should create decorations', () => {
     const color = 'red';
-    const decoration = fileHighlighter['getDecoration'](color);
+    const decoration = fileHighlighter['getDecoration'](color, 'underline');
 
     // Assert decoration was created
     expect(vscode.window.createTextEditorDecorationType).toHaveBeenCalled();
@@ -35,28 +35,50 @@ describe('File Highlighter', () => {
   it('should highlight smells', () => {
     const smells = [
       {
-        messageId: 'smell1',
+        symbol: 'smell1',
         occurences: [{ line: 1 }],
       },
     ] as unknown as Smell[];
+    const currentConfig = {
+      smell1: {
+        enabled: true,
+        colour: 'rgba(88, 101, 200, 0.5)',
+      },
+    };
+
+    jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
+      get: jest.fn().mockReturnValue(currentConfig),
+    } as any);
 
     jest.spyOn(HoverManager, 'getInstance').mockReturnValueOnce({
       hoverContent: 'hover content' as unknown as MarkdownString,
     } as unknown as HoverManager);
 
-    fileHighlighter.highlightSmell(vscode.window.activeTextEditor, smells, 'R1729');
+    fileHighlighter.highlightSmells(vscode.window.activeTextEditor, smells);
 
-    // Assert decorations were set
     expect(vscode.window.activeTextEditor.setDecorations).toHaveBeenCalled();
+    expect(
+      vscode.window.activeTextEditor.setDecorations.mock.calls[0][1],
+    ).toHaveLength(1);
   });
 
   it('should not reset highlight decorations on first init', () => {
     const smells = [
       {
-        messageId: 'R1729',
+        symbol: 'smell1',
         occurences: [{ line: 1 }],
       },
     ] as unknown as Smell[];
+    const currentConfig = {
+      smell1: {
+        enabled: true,
+        colour: 'rgba(1, 50, 0, 0.5)',
+      },
+    };
+
+    jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
+      get: jest.fn().mockReturnValue(currentConfig),
+    } as any);
 
     jest.spyOn(HoverManager, 'getInstance').mockReturnValueOnce({
       hoverContent: 'hover content' as unknown as MarkdownString,
@@ -71,12 +93,22 @@ describe('File Highlighter', () => {
   it('should reset highlight decorations on subsequent calls', () => {
     const smells = [
       {
-        messageId: 'R1729',
+        symbol: 'smell1',
         occurences: [{ line: 1 }],
       },
     ] as unknown as Smell[];
+    const currentConfig = {
+      smell1: {
+        enabled: true,
+        colour: 'rgba(255, 204, 0, 0.5)',
+      },
+    };
 
-    jest.spyOn(HoverManager, 'getInstance').mockReturnValueOnce({
+    jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+      get: jest.fn().mockReturnValue(currentConfig),
+    } as any);
+
+    jest.spyOn(HoverManager, 'getInstance').mockReturnValue({
       hoverContent: 'hover content' as unknown as MarkdownString,
     } as unknown as HoverManager);
 

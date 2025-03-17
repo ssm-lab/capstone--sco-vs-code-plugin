@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import { getEditor } from '../utils/editorUtils';
 import { ContextManager } from '../context/contextManager';
 import { HoverManager } from './hoverManager';
-import { SMELL_MAP } from '../utils/smellDetails';
 
 export class FileHighlighter {
-  private contextManager;
+  private contextManager: ContextManager;
   private decorations: vscode.TextEditorDecorationType[] = [];
 
   public constructor(contextManager: ContextManager) {
@@ -13,89 +12,100 @@ export class FileHighlighter {
   }
 
   public resetHighlights(): void {
-    if (this.decorations.length > 0) {
-      console.log('Removing decorations');
-      this.decorations.forEach((decoration) => {
-        decoration.dispose();
-      });
-    }
+    this.decorations.forEach((decoration) => decoration.dispose());
+    this.decorations = [];
   }
 
   public highlightSmells(editor: vscode.TextEditor, smells: Smell[]): void {
     this.resetHighlights();
 
-    const activeSmells = new Set<string>(smells.map((smell) => smell.messageId));
+    const config = vscode.workspace.getConfiguration('ecooptimizer.detection');
+    const smellsConfig = config.get<{
+      [key: string]: { enabled: boolean; colour: string };
+    }>('smells', {});
+    const useSingleColour = config.get<boolean>('useSingleColour', false);
+    const singleHighlightColour = config.get<string>(
+      'singleHighlightColour',
+      'rgba(255, 204, 0, 0.5)',
+    );
+    const highlightStyle = config.get<string>('highlightStyle', 'underline');
+
+    const activeSmells = new Set<string>(smells.map((smell) => smell.symbol));
 
     activeSmells.forEach((smellType) => {
-      this.highlightSmell(editor, smells, smellType);
+      const smellConfig = smellsConfig[smellType];
+      if (smellConfig?.enabled) {
+        const colour = useSingleColour ? singleHighlightColour : smellConfig.colour;
+        this.highlightSmell(editor, smells, smellType, colour, highlightStyle);
+      }
     });
-
-    console.log('Updated smell line highlights');
   }
 
-  public highlightSmell(
+  private highlightSmell(
     editor: vscode.TextEditor,
     smells: Smell[],
     targetSmell: string,
+    colour: string,
+    style: string,
   ): void {
     const smellLines: vscode.DecorationOptions[] = smells
       .filter((smell: Smell) => {
         const valid = smell.occurences.every((occurrence: { line: number }) =>
           isValidLine(occurrence.line),
         );
-        const isCorrectType = smell.messageId === targetSmell;
+        const isCorrectType = smell.symbol === targetSmell;
         return valid && isCorrectType;
       })
       .map((smell: Smell) => {
         const line = smell.occurences[0].line - 1; // convert to zero-based line index for VS editor
-
-        const line_text = editor.document.lineAt(line).text;
-        const line_length = line_text.length;
-        const indexStart = line_length - line_text.trimStart().length;
-        const indexEnd = line_text.trimEnd().length + 2;
-
+        const lineText = editor.document.lineAt(line).text;
+        const indexStart = lineText.length - lineText.trimStart().length;
+        const indexEnd = lineText.trimEnd().length + 2;
         const range = new vscode.Range(line, indexStart, line, indexEnd);
 
         const hoverManager = HoverManager.getInstance(this.contextManager, smells);
-        return { range, hoverMessage: hoverManager.hoverContent || undefined }; // option to hover over and read smell details
+        return { range, hoverMessage: hoverManager.hoverContent || undefined };
       });
 
-    const colorOfSmell = SMELL_MAP.get(targetSmell)!.colour;
-
-    editor.setDecorations(this.getDecoration(colorOfSmell), smellLines);
+    console.log('Highlighting smell:', targetSmell, colour, style, smellLines);
+    const decoration = this.getDecoration(colour, style);
+    editor.setDecorations(decoration, smellLines);
+    this.decorations.push(decoration);
   }
 
-  private getDecoration(color: string): vscode.TextEditorDecorationType {
-    // ================= EXTRA DECORATIONS ===========================
-    const _underline = vscode.window.createTextEditorDecorationType({
-      textDecoration: `wavy ${color} underline 1px`,
-    });
-
-    const _flashlight = vscode.window.createTextEditorDecorationType({
-      isWholeLine: true,
-      backgroundColor: color,
-    });
-    // ================================================================
-
-    const aLittleExtra = vscode.window.createTextEditorDecorationType({
-      borderWidth: '1px 2px 1px 0', // Top, Right, Bottom, No Left border
-      borderStyle: 'solid',
-      borderColor: color, // Change as needed
-      after: {
-        contentText: '▶', // Unicode right arrow
-        margin: '0 0 0 5px', // Space between line and arrow
-        color: color,
-        fontWeight: 'bold',
-      },
-      overviewRulerColor: color,
-      overviewRulerLane: vscode.OverviewRulerLane.Right,
-    });
-
-    const decoration = aLittleExtra; // Select decoration
-
-    this.decorations.push(decoration);
-
-    return decoration;
+  private getDecoration(
+    colour: string,
+    style: string,
+  ): vscode.TextEditorDecorationType {
+    switch (style) {
+      case 'underline':
+        return vscode.window.createTextEditorDecorationType({
+          textDecoration: `wavy ${colour} underline 1px`,
+        });
+      case 'flashlight':
+        return vscode.window.createTextEditorDecorationType({
+          isWholeLine: true,
+          backgroundColor: colour,
+        });
+      case 'border-arrow':
+        return vscode.window.createTextEditorDecorationType({
+          borderWidth: '1px 2px 1px 0',
+          borderStyle: 'solid',
+          borderColor: colour,
+          after: {
+            contentText: '▶',
+            margin: '0 0 0 5px',
+            color: colour,
+            fontWeight: 'bold',
+          },
+          overviewRulerColor: colour,
+          overviewRulerLane: vscode.OverviewRulerLane.Right,
+        });
+      default:
+        return vscode.window.createTextEditorDecorationType({
+          textDecoration: `wavy ${colour} underline 1px`,
+        });
+    }
   }
 }
 

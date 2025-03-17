@@ -5,8 +5,16 @@ import { ContextManager } from '../context/contextManager';
 /**
  * Fetches the current enabled smells from VS Code settings.
  */
-export function getEnabledSmells(): { [key: string]: boolean } {
-  return vscode.workspace.getConfiguration('ecooptimizer').get('enableSmells', {});
+export function getEnabledSmells(): {
+  [key: string]: boolean;
+} {
+  const smellConfig = vscode.workspace
+    .getConfiguration('ecooptimizer.detection')
+    .get('smells', {}) as { [key: string]: { enabled: boolean; colour: string } };
+
+  return Object.fromEntries(
+    Object.entries(smellConfig).map(([smell, config]) => [smell, config.enabled]),
+  );
 }
 
 /**
@@ -31,7 +39,6 @@ export function handleSmellFilterUpdate(
     }
   });
 
-  // If any smell preference changed, wipe the cache
   if (smellsChanged) {
     console.log('Eco: Smell preferences changed! Wiping cache.');
     wipeWorkCache(contextManager, 'settings');
@@ -42,7 +49,5 @@ export function handleSmellFilterUpdate(
  * Formats the smell name from kebab-case to a readable format.
  */
 export function formatSmellName(smellKey: string): string {
-  return smellKey
-    .replace(/-/g, ' ') // Replace hyphens with spaces
-    .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter
+  return smellKey.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
