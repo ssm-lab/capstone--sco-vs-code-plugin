@@ -22,7 +22,7 @@ export async function toggleSmellLinting(
   try {
     if (newState) {
       // Run detection and update state on success
-      await detectSmells(contextManager);
+      await detectSmells(contextManager); // in the future recieve a true/false
 
       await contextManager.setWorkspaceData(
         envConfig.SMELL_LINTING_ENABLED_KEY,
