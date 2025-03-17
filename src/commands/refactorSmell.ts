@@ -127,7 +127,7 @@ export async function refactorSelectedSmell(
   await startRefactoringSession(contextManager, editor, refactoredData);
 
   if (refactorResult.updatedSmells.length) {
-    const fileHighlighter = new FileHighlighter(contextManager);
+    const fileHighlighter = FileHighlighter.getInstance(contextManager);
     fileHighlighter.highlightSmells(editor, refactorResult.updatedSmells);
   } else {
     vscode.window.showWarningMessage(
@@ -263,7 +263,7 @@ export async function refactorAllSmellsOfType(
   }
 
   if (allUpdatedSmells.length) {
-    const fileHighlighter = new FileHighlighter(contextManager);
+    const fileHighlighter = FileHighlighter.getInstance(contextManager);
     fileHighlighter.highlightSmells(editor, allUpdatedSmells);
   } else {
     vscode.window.showWarningMessage(

@@ -5,11 +5,19 @@ import { HoverManager } from './hoverManager';
 import { SMELL_MAP } from '../utils/smellDetails';
 
 export class FileHighlighter {
-  private contextManager;
+  private static instance: FileHighlighter;
+  private contextManager: ContextManager;
   private decorations: vscode.TextEditorDecorationType[] = [];
 
-  public constructor(contextManager: ContextManager) {
+  private constructor(contextManager: ContextManager) {
     this.contextManager = contextManager;
+  }
+
+  public static getInstance(contextManager: ContextManager): FileHighlighter {
+    if (!FileHighlighter.instance) {
+      FileHighlighter.instance = new FileHighlighter(contextManager);
+    }
+    return FileHighlighter.instance;
   }
 
   public resetHighlights(): void {
@@ -18,6 +26,7 @@ export class FileHighlighter {
       this.decorations.forEach((decoration) => {
         decoration.dispose();
       });
+      this.decorations = []; // Clear the decorations array
     }
   }
 
@@ -66,17 +75,6 @@ export class FileHighlighter {
   }
 
   private getDecoration(color: string): vscode.TextEditorDecorationType {
-    // ================= EXTRA DECORATIONS ===========================
-    const _underline = vscode.window.createTextEditorDecorationType({
-      textDecoration: `wavy ${color} underline 1px`,
-    });
-
-    const _flashlight = vscode.window.createTextEditorDecorationType({
-      isWholeLine: true,
-      backgroundColor: color,
-    });
-    // ================================================================
-
     const aLittleExtra = vscode.window.createTextEditorDecorationType({
       borderWidth: '1px 2px 1px 0', // Top, Right, Bottom, No Left border
       borderStyle: 'solid',
@@ -91,11 +89,8 @@ export class FileHighlighter {
       overviewRulerLane: vscode.OverviewRulerLane.Right,
     });
 
-    const decoration = aLittleExtra; // Select decoration
-
-    this.decorations.push(decoration);
-
-    return decoration;
+    this.decorations.push(aLittleExtra); // Add the decoration to the list
+    return aLittleExtra;
   }
 }
 

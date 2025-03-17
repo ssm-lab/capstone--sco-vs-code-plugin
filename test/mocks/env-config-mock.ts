@@ -8,6 +8,7 @@ jest.mock('../../src/utils/envConfig', () => {
     LAST_USED_SMELLS_KEY: 'last-used-smells-key',
     CURRENT_REFACTOR_DATA_KEY: 'current-refactor-data-key',
     ACTIVE_DIFF_KEY: 'active-diff-key',
+    SMELL_LINTING_ENABLED_KEY: 'smellLintingEnabledKey', 
   };
 
   return { envConfig: mockEnvConfig };

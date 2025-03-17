@@ -20,7 +20,7 @@ describe('File Highlighter', () => {
       setWorkspaceData: jest.fn(),
     } as unknown as ContextManager;
 
-    fileHighlighter = new FileHighlighter(contextManagerMock);
+    fileHighlighter = FileHighlighter.getInstance(contextManagerMock);
   });
 
   it('should create decorations', () => {
