@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="${vscodeCssUri}">
+    <link rel="stylesheet" href="${customCssUri}">
+    <title>Refactoring Navigator</title>
+</head>
+
+<body>
+    <p id="no-data">Nothing to see here. If you are currently refactoring a file, make sure the diff view is selected.
+    </p>
+    <div id="container">
+        <h2>Refactoring Summary</h2>
+        <p id="energy" class="body-text">Carbon Saved: --</p>
+        <h3>Target File</h3>
+        <ul id="target-file-list" class="body-text"></ul>
+        <h3 id="other-files-head">Other Modified Files</h3>
+        <ul id="affected-file-list" class="body-text"></ul>
+        <div id="buttons">
+            <button id="accept-btn">Accept</button>
+            <button id="reject-btn">Reject</button>
+        </div>
+    </div>
+    <script src="${scriptUri}"></script>
+</body>
+
+</html>

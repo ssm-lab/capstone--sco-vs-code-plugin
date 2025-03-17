@@ -1,53 +1,120 @@
-import * as vscode from "vscode";
-import { FileHighlighter } from "../ui/fileHighlighter";
-import { getEditorAndFilePath } from "../utils/editorUtils";
-import * as fs from "fs"; 
-import { Smell } from "../types";
-import { fetchSmells } from "../api/backend";
+import * as vscode from 'vscode';
 
-export  async function getSmells(filePath: string, context: vscode.ExtensionContext) {
-    try {
-        const smellsList : Smell[] = await fetchSmells(filePath);
-        if (smellsList.length === 0) {
-            throw new Error("Detected smells data is invalid or empty.");
-        }
+import { FileHighlighter } from '../ui/fileHighlighter';
+import { getEditorAndFilePath } from '../utils/editorUtils';
+import { fetchSmells } from '../api/backend';
+import { ContextManager } from '../context/contextManager';
+import { envConfig } from '../utils/envConfig';
+import { hashContent, updateHash } from '../utils/hashDocs';
+import { wipeWorkCache } from './wipeWorkCache'; // ✅ Import cache wipe function
+import { serverStatus, ServerStatusType } from '../utils/serverStatus';
 
-        return smellsList;
-    } catch(error) {
-        console.error("Error detecting smells:", error);
-        vscode.window.showErrorMessage(`Eco: Error detecting smells: ${error}`);
-        return;
-    }
+serverStatus.on('change', (newStatus: ServerStatusType) => {
+  console.log('Server status changed:', newStatus);
+  if (newStatus === ServerStatusType.DOWN) {
+    vscode.window.showWarningMessage(
+      'Smell detection limited. Only cached smells will be shown.',
+    );
+  }
+});
+
+export interface SmellDetectRecord {
+  hash: string;
+  smells: Smell[];
 }
 
-export async function detectSmells(context: vscode.ExtensionContext){
-    const {editor, filePath} = getEditorAndFilePath();
+let fileHighlighter: FileHighlighter;
 
-    if (!editor) {
-        vscode.window.showErrorMessage("Eco: Unable to proceed as no active editor found.");
-        console.error("No active editor found to detect smells. Returning back.");
-        return;
+export async function detectSmells(contextManager: ContextManager): Promise<void> {
+  const { editor, filePath } = getEditorAndFilePath();
+
+  // ✅ Ensure an active editor exists
+  if (!editor) {
+    vscode.window.showErrorMessage('Eco: No active editor found.');
+    console.error('Eco: No active editor found to detect smells.');
+    return;
+  }
+
+  // ✅ Ensure filePath is valid
+  if (!filePath) {
+    vscode.window.showErrorMessage('Eco: Active editor has no valid file path.');
+    console.error('Eco: No valid file path found for smell detection.');
+    return;
+  }
+
+  console.log(`Eco: Detecting smells in file: ${filePath}`);
+
+  const enabledSmells = getEnabledSmells();
+  if (!Object.values(enabledSmells).includes(true)) {
+    vscode.window.showWarningMessage(
+      'Eco: No smells are enabled! Detection skipped.',
+    );
+    return;
+  }
+
+  // ✅ Check if the enabled smells have changed
+  const lastUsedSmells = contextManager.getWorkspaceData(
+    envConfig.LAST_USED_SMELLS_KEY!,
+    {},
+  );
+  if (JSON.stringify(lastUsedSmells) !== JSON.stringify(enabledSmells)) {
+    console.log('Eco: Smell settings have changed! Wiping cache.');
+    await wipeWorkCache(contextManager, 'settings');
+    contextManager.setWorkspaceData(envConfig.LAST_USED_SMELLS_KEY!, enabledSmells);
+  }
+
+  // Handle cache and previous smells
+  const allSmells: Record<string, SmellDetectRecord> =
+    contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
+  const fileSmells = allSmells[filePath];
+  const currentFileHash = hashContent(editor.document.getText());
+
+  let smellsData: Smell[] | undefined;
+
+  if (fileSmells && currentFileHash === fileSmells.hash) {
+    vscode.window.showInformationMessage(`Eco: Using cached smells for ${filePath}`);
+
+    smellsData = fileSmells.smells;
+  } else if (serverStatus.getStatus() === ServerStatusType.UP) {
+    updateHash(contextManager, editor.document);
+
+    try {
+      smellsData = await fetchSmells(
+        filePath,
+        Object.keys(enabledSmells).filter((s) => enabledSmells[s]),
+      );
+    } catch (err) {
+      console.error(err);
+      return;
     }
-    if (!filePath) {
-        vscode.window.showErrorMessage("Eco: Unable to proceed as active editor does not have a valid file path.");
-        console.error("No valid file path found to detect smells. Returning back.");
-        return;
+
+    if (smellsData) {
+      allSmells[filePath] = { hash: currentFileHash, smells: smellsData };
+      contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, allSmells);
     }
+  } else {
+    vscode.window.showWarningMessage(
+      'Action blocked: Server is down and no cached smells exist for this file version.',
+    );
+    return;
+  }
 
-    vscode.window.showInformationMessage("Eco: Detecting smells...");
-    console.log("Detecting smells in detectSmells");
-    
-    const smellsData = await getSmells(filePath, context);
+  if (!smellsData || smellsData.length === 0) {
+    vscode.window.showInformationMessage('Eco: No code smells detected.');
+    return;
+  }
 
-    if (!smellsData){
-        console.log("No valid smells data found. Returning.");
-        vscode.window.showErrorMessage("Eco: No smells are present in current file.");
-        return;
-    }
+  console.log(`Eco: Highlighting detected smells in ${filePath}.`);
+  if (!fileHighlighter) {
+    fileHighlighter = new FileHighlighter(contextManager);
+  }
+  fileHighlighter.highlightSmells(editor, smellsData);
 
-    console.log("Detected smells data: ", smellsData);
-    vscode.window.showInformationMessage(`Eco: Detected ${smellsData.length} smells in the file.`);
+  vscode.window.showInformationMessage(
+    `Eco: Highlighted ${smellsData.length} smells.`,
+  );
+}
 
-    FileHighlighter.highlightSmells(editor, smellsData);
-    vscode.window.showInformationMessage("Eco: Detected code smells have been highlighted.");
+export function getEnabledSmells(): { [key: string]: boolean } {
+  return vscode.workspace.getConfiguration('ecooptimizer').get('enableSmells', {});
 }

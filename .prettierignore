@@ -1,0 +1,10 @@
+node_modules
+dist
+.vscode
+.husky
+media
+.env
+**/*.config.js
+**/*.mjs'
+**/*d.ts
+coverage/
