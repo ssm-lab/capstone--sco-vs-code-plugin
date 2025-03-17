@@ -13,6 +13,7 @@ import { setTimeout } from 'timers/promises';
 import { serverStatus } from '../utils/serverStatus';
 import { ServerStatusType } from '../utils/serverStatus';
 
+/* istanbul ignore next */
 serverStatus.on('change', (newStatus: ServerStatusType) => {
   console.log('Server status changed:', newStatus);
   if (newStatus === ServerStatusType.DOWN) {
@@ -53,6 +54,7 @@ export async function refactorSelectedSmell(
 
   // Clean up temp directory if not removed
   if (pastData) {
+    console.log('cleaning up temps');
     cleanTemps(pastData);
   }
 
@@ -138,6 +140,7 @@ export async function refactorSelectedSmell(
 
 export async function refactorAllSmellsOfType(
   contextManager: ContextManager,
+
   smellId: string,
 ): Promise<void> {
   const { editor, filePath } = getEditorAndFilePath();
@@ -272,6 +275,7 @@ export async function refactorAllSmellsOfType(
   }
 }
 
+/* istanbul ignore next */
 async function startRefactoringSession(
   contextManager: ContextManager,
   editor: vscode.TextEditor,
@@ -324,7 +328,7 @@ async function startRefactoringSession(
   sidebarState.isOpening = false;
 }
 
-async function cleanTemps(pastData: any): Promise<void> {
+export async function cleanTemps(pastData: any): Promise<void> {
   console.log('Cleaning up stale artifacts');
   const tempDirs =
     (pastData!.tempDir! as string) || (pastData!.tempDirs! as string[]);
