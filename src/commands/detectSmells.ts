@@ -107,11 +107,15 @@ export async function detectSmells(contextManager: ContextManager): Promise<void
 
   console.log(`Eco: Highlighting detected smells in ${filePath}.`);
   if (!fileHighlighter) {
-    fileHighlighter = new FileHighlighter(contextManager);
+    fileHighlighter = FileHighlighter.getInstance(contextManager);
   }
   fileHighlighter.highlightSmells(editor, smellsData);
 
   vscode.window.showInformationMessage(
     `Eco: Highlighted ${smellsData.length} smells.`,
   );
+
+  // Set the linting state to enabled
+  contextManager.setWorkspaceData(envConfig.SMELL_LINTING_ENABLED_KEY, true);
+  vscode.commands.executeCommand('setContext', 'eco.smellLintingEnabled', true);
 }

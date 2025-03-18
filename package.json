@@ -52,8 +52,35 @@
         "title": "Show Backend Logs",
         "category": "Eco",
         "enablement": "false"
+      },
+      {
+        "command": "eco.toggleSmellLinting",
+        "title": "🍃 Toggle Smell Linting",
+        "category": "Eco"
       }
     ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "eco.toggleSmellLinting",
+          "group": "navigation",
+          "when": "eco.smellLintingEnabled == false",
+          "icon": {
+            "light": "off.svg",
+            "dark": "off.svg"
+          }
+        },
+        {
+          "command": "eco.toggleSmellLinting",
+          "group": "navigation",
+          "when": "eco.smellLintingEnabled == true",
+          "icon": {
+            "light": "on.svg",
+            "dark": "on.svg"
+          }
+        }
+      ]
+    },
     "configuration": {
       "title": "EcoOptimizer",
       "properties": {
@@ -370,7 +397,8 @@
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",
     "webpack": "^5.95.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "webpack-node-externals": "^3.0.0"
   },
   "dependencies": {
     "@types/dotenv": "^6.1.1",

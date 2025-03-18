@@ -106,6 +106,7 @@ export const languages = {
 
 export const commands = {
   registerCommand: jest.fn(),
+  executeCommand: jest.fn(),
 };
 
 // Mock VS Code classes

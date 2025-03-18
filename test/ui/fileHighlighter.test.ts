@@ -20,7 +20,35 @@ describe('File Highlighter', () => {
       setWorkspaceData: jest.fn(),
     } as unknown as ContextManager;
 
-    fileHighlighter = new FileHighlighter(contextManagerMock);
+    fileHighlighter = FileHighlighter.getInstance(contextManagerMock);
+  });
+
+  it('should not reset highlight decorations on first init', () => {
+    const smells = [
+      {
+        symbol: 'smell1',
+        occurences: [{ line: 1 }],
+      },
+    ] as unknown as Smell[];
+    const currentConfig = {
+      smell1: {
+        enabled: true,
+        colour: 'rgba(1, 50, 0, 0.5)',
+      },
+    };
+
+    jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
+      get: jest.fn().mockReturnValue(currentConfig),
+    } as any);
+
+    jest.spyOn(HoverManager, 'getInstance').mockReturnValueOnce({
+      hoverContent: 'hover content' as unknown as MarkdownString,
+    } as unknown as HoverManager);
+
+    fileHighlighter.highlightSmells(vscode.window.activeTextEditor, smells);
+
+    // Assert decorations were set
+    expect(fileHighlighter['decorations'][0].dispose).not.toHaveBeenCalled();
   });
 
   it('should create decorations', () => {
@@ -60,34 +88,6 @@ describe('File Highlighter', () => {
     expect(
       vscode.window.activeTextEditor.setDecorations.mock.calls[0][1],
     ).toHaveLength(1);
-  });
-
-  it('should not reset highlight decorations on first init', () => {
-    const smells = [
-      {
-        symbol: 'smell1',
-        occurences: [{ line: 1 }],
-      },
-    ] as unknown as Smell[];
-    const currentConfig = {
-      smell1: {
-        enabled: true,
-        colour: 'rgba(1, 50, 0, 0.5)',
-      },
-    };
-
-    jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
-      get: jest.fn().mockReturnValue(currentConfig),
-    } as any);
-
-    jest.spyOn(HoverManager, 'getInstance').mockReturnValueOnce({
-      hoverContent: 'hover content' as unknown as MarkdownString,
-    } as unknown as HoverManager);
-
-    fileHighlighter.highlightSmells(vscode.window.activeTextEditor, smells);
-
-    // Assert decorations were set
-    expect(fileHighlighter['decorations'][0].dispose).not.toHaveBeenCalled();
   });
 
   it('should reset highlight decorations on subsequent calls', () => {

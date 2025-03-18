@@ -9,6 +9,7 @@ export interface EnvConfig {
   LAST_USED_SMELLS_KEY?: string;
   CURRENT_REFACTOR_DATA_KEY?: string;
   ACTIVE_DIFF_KEY?: string;
+  SMELL_LINTING_ENABLED_KEY: string;
 }
 
 export const envConfig: EnvConfig = {
@@ -18,4 +19,6 @@ export const envConfig: EnvConfig = {
   LAST_USED_SMELLS_KEY: process.env.LAST_USED_SMELLS_KEY,
   CURRENT_REFACTOR_DATA_KEY: process.env.CURRENT_REFACTOR_DATA_KEY,
   ACTIVE_DIFF_KEY: process.env.ACTIVE_DIFF_KEY,
+  SMELL_LINTING_ENABLED_KEY:
+    process.env.SMELL_LINTING_ENABLED_KEY || 'eco.smellLintingEnabled',
 };

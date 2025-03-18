@@ -4,11 +4,19 @@ import { ContextManager } from '../context/contextManager';
 import { HoverManager } from './hoverManager';
 
 export class FileHighlighter {
+  private static instance: FileHighlighter;
   private contextManager: ContextManager;
   private decorations: vscode.TextEditorDecorationType[] = [];
 
-  public constructor(contextManager: ContextManager) {
+  private constructor(contextManager: ContextManager) {
     this.contextManager = contextManager;
+  }
+
+  public static getInstance(contextManager: ContextManager): FileHighlighter {
+    if (!FileHighlighter.instance) {
+      FileHighlighter.instance = new FileHighlighter(contextManager);
+    }
+    return FileHighlighter.instance;
   }
 
   public resetHighlights(): void {

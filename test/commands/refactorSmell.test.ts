@@ -50,13 +50,6 @@ jest.mock('../../src/api/backend', () => ({
   refactorSmell: jest.fn(),
 }));
 
-// mock FileHighlighter
-jest.mock('../../src/ui/fileHighlighter', () => ({
-  FileHighlighter: jest.fn().mockImplementation(() => ({
-    highlightSmells: jest.fn(),
-  })),
-}));
-
 // mock setTimeout
 jest.mock('timers/promises', () => ({
   setTimeout: jest.fn().mockResolvedValue(undefined),
@@ -64,6 +57,7 @@ jest.mock('timers/promises', () => ({
 
 describe('refactorSmell', () => {
   let mockContextManager: jest.Mocked<ContextManager>;
+  let fileHighlighterSpy: jest.SpyInstance;
   let mockEditor: any;
   let mockDocument: any;
   let mockSelection: any;
@@ -106,6 +100,10 @@ describe('refactorSmell', () => {
       getText: jest.fn().mockReturnValue('mock content'),
       uri: { fsPath: '/test/file.ts' },
     };
+
+    fileHighlighterSpy = jest.spyOn(FileHighlighter, 'getInstance').mockReturnValue({
+      highlightSmells: jest.fn(),
+    } as any);
 
     // setup mock editor
     mockEditor = {
@@ -224,7 +222,7 @@ describe('refactorSmell', () => {
       );
       expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
       expect(vscode.window.showTextDocument).toHaveBeenCalled();
-      expect(FileHighlighter).toHaveBeenCalled();
+      expect(fileHighlighterSpy).toHaveBeenCalled();
     });
 
     it('should handle refactoring failure', async () => {
