@@ -11,6 +11,7 @@ import * as editorUtils from '../../src/utils/editorUtils';
 import { detectSmells } from '../../src/commands/detectSmells';
 import { serverStatus, ServerStatusType } from '../../src/utils/serverStatus';
 import { wipeWorkCache } from '../../src/commands/wipeWorkCache';
+import { envConfig } from '../../src/utils/envConfig';
 
 jest.mock('../../src/commands/wipeWorkCache', () => ({
   wipeWorkCache: jest.fn(),
@@ -227,5 +228,14 @@ describe('detectSmells', () => {
     );
 
     expect(mockHighlightSmells).toHaveBeenCalled();
+    expect(contextManagerMock.setWorkspaceData).toHaveBeenCalledWith(
+      envConfig.SMELL_LINTING_ENABLED_KEY,
+      true,
+    );
+    expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+      'setContext',
+      'eco.smellLintingEnabled',
+      true,
+    );
   });
 });
