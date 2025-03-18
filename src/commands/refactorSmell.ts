@@ -304,7 +304,7 @@ async function startRefactoringSession(
     refactoredCode,
     'Refactoring Comparison',
   );
-  vscode.commands.executeCommand('ecooptimizer-vs-code-plugin.showRefactorSidebar');
+  vscode.commands.executeCommand('ecooptimizer.showRefactorSidebar');
   sidebarState.isOpening = false;
 }
 

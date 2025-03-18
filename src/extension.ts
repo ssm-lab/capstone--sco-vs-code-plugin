@@ -61,34 +61,28 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Detect Smells Command
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.detectSmells',
-      async () => {
-        console.log('Eco: Detect Smells Command Triggered');
-        detectSmells(contextManager);
-      },
-    ),
+    vscode.commands.registerCommand('ecooptimizer.detectSmells', async () => {
+      console.log('Eco: Detect Smells Command Triggered');
+      detectSmells(contextManager);
+    }),
   );
 
   // Refactor Selected Smell Command
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.refactorSmell',
-      () => {
-        if (serverStatus.getStatus() === 'up') {
-          console.log('Eco: Refactor Selected Smell Command Triggered');
-          refactorSelectedSmell(contextManager);
-        } else {
-          vscode.window.showWarningMessage('Action blocked: Server is down.');
-        }
-      },
-    ),
+    vscode.commands.registerCommand('ecooptimizer.refactorSmell', () => {
+      if (serverStatus.getStatus() === 'up') {
+        console.log('Eco: Refactor Selected Smell Command Triggered');
+        refactorSelectedSmell(contextManager);
+      } else {
+        vscode.window.showWarningMessage('Action blocked: Server is down.');
+      }
+    }),
   );
 
   // Refactor All Smells of Type Command
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.refactorAllSmellsOfType',
+      'ecooptimizer.refactorAllSmellsOfType',
       async (smellId: string) => {
         if (serverStatus.getStatus() === 'up') {
           console.log(
@@ -104,21 +98,18 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Wipe Cache Command
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.wipeWorkCache',
-      async () => {
-        console.log('Eco: Wipe Work Cache Command Triggered');
-        vscode.window.showInformationMessage(
-          'Eco: Manually wiping workspace memory... ✅',
-        );
-        await wipeWorkCache(contextManager, 'manual');
-      },
-    ),
+    vscode.commands.registerCommand('ecooptimizer.wipeWorkCache', async () => {
+      console.log('Eco: Wipe Work Cache Command Triggered');
+      vscode.window.showInformationMessage(
+        'Eco: Manually wiping workspace memory... ✅',
+      );
+      await wipeWorkCache(contextManager, 'manual');
+    }),
   );
 
   // screen button go brr
   context.subscriptions.push(
-    vscode.commands.registerCommand('eco.toggleSmellLinting', () => {
+    vscode.commands.registerCommand('ecooptimizer.toggleSmellLinting', () => {
       console.log('Eco: Toggle Smell Linting Command Triggered');
       toggleSmellLinting(contextManager);
     }),
@@ -137,23 +128,20 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.showRefactorSidebar',
-      () => refactorProvider.updateView(),
+    vscode.commands.registerCommand('ecooptimizer.showRefactorSidebar', () =>
+      refactorProvider.updateView(),
     ),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.pauseRefactorSidebar',
-      () => refactorProvider.pauseView(),
+    vscode.commands.registerCommand('ecooptimizer.pauseRefactorSidebar', () =>
+      refactorProvider.pauseView(),
     ),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'ecooptimizer-vs-code-plugin.clearRefactorSidebar',
-      () => refactorProvider.clearView(),
+    vscode.commands.registerCommand('ecooptimizer.clearRefactorSidebar', () =>
+      refactorProvider.clearView(),
     ),
   );
 
@@ -261,7 +249,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 function showSettingsPopup(): void {
   // Check if the required settings are already configured
-  const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
+  const config = vscode.workspace.getConfiguration('ecooptimizer');
   const workspacePath = config.get<string>('projectWorkspacePath', '');
   const logsOutputPath = config.get<string>('logsOutputPath', '');
   const unitTestPath = config.get<string>('unitTestPath', '');
@@ -301,9 +289,9 @@ function showSettingsPopup(): void {
 function handleConfigurationChange(event: vscode.ConfigurationChangeEvent): void {
   // Check if any relevant setting was changed
   if (
-    event.affectsConfiguration('ecooptimizer-vs-code-plugin.projectWorkspacePath') ||
-    event.affectsConfiguration('ecooptimizer-vs-code-plugin.unitTestCommand') ||
-    event.affectsConfiguration('ecooptimizer-vs-code-plugin.logsOutputPath')
+    event.affectsConfiguration('ecooptimizer.projectWorkspacePath') ||
+    event.affectsConfiguration('ecooptimizer.unitTestCommand') ||
+    event.affectsConfiguration('ecooptimizer.logsOutputPath')
   ) {
     // Display a warning message about changing critical settings
     vscode.window.showWarningMessage(

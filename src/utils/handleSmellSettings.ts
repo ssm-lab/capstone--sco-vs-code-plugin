@@ -9,7 +9,7 @@ export function getEnabledSmells(): {
   [key: string]: boolean;
 } {
   const smellConfig = vscode.workspace
-    .getConfiguration('ecooptimizer.detection')
+    .getConfiguration('detection')
     .get('smells', {}) as { [key: string]: { enabled: boolean; colour: string } };
 
   return Object.fromEntries(
