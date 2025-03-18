@@ -20,6 +20,8 @@ import { LineSelectionManager } from './ui/lineSelectionManager';
 import { checkServerStatus } from './api/backend';
 import { serverStatus } from './utils/serverStatus';
 
+import { toggleSmellLinting } from './commands/toggleSmellLinting';
+
 export const globalData: { contextManager?: ContextManager } = {
   contextManager: undefined,
 };
@@ -114,6 +116,14 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
+  // screen button go brr
+  context.subscriptions.push(
+    vscode.commands.registerCommand('eco.toggleSmellLinting', () => {
+      console.log('Eco: Toggle Smell Linting Command Triggered');
+      toggleSmellLinting(contextManager);
+    }),
+  );
+
   // ===============================================================
   // REGISTER VIEWS
   // ===============================================================
@@ -191,6 +201,47 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidOpenTextDocument(async (document) => {
       console.log('Eco: Detected document opened event');
       await updateHash(contextManager, document);
+    }),
+  );
+
+  // Listen for file save events
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(async (document) => {
+      console.log('Eco: Detected document saved event');
+
+      // Check if smell linting is enabled
+      const isEnabled = contextManager.getWorkspaceData(
+        envConfig.SMELL_LINTING_ENABLED_KEY,
+        false,
+      );
+      if (isEnabled) {
+        console.log('Eco: Smell linting is enabled. Detecting smells...');
+        await detectSmells(contextManager);
+      }
+    }),
+  );
+
+  // Listen for editor changes
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+      if (editor) {
+        console.log('Eco: Detected editor change event');
+
+        // Check if the file is a Python file
+        if (editor.document.languageId === 'python') {
+          console.log('Eco: Active file is a Python file.');
+
+          // Check if smell linting is enabled
+          const isEnabled = contextManager.getWorkspaceData(
+            envConfig.SMELL_LINTING_ENABLED_KEY,
+            false,
+          );
+          if (isEnabled) {
+            console.log('Eco: Smell linting is enabled. Detecting smells...');
+            await detectSmells(contextManager);
+          }
+        }
+      }
     }),
   );
 
