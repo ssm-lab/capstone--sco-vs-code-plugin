@@ -58,28 +58,26 @@
         "title": "🍃 Toggle Smell Linting",
         "category": "Eco"
       }
-      
     ],
-  "menus": {
-    "editor/title": [
+    "menus": {
+      "editor/title": [
         {
-            "command": "eco.toggleSmellLinting",
-            "group": "navigation",
-            "when": "eco.smellLintingEnabled == false",
-            "icon": {
-                "light": "off.svg",
-                "dark": "off.svg"
-            }
-
+          "command": "eco.toggleSmellLinting",
+          "group": "navigation",
+          "when": "eco.smellLintingEnabled == false",
+          "icon": {
+            "light": "off.svg",
+            "dark": "off.svg"
+          }
         },
         {
-            "command": "eco.toggleSmellLinting",
-            "group": "navigation",
-            "when": "eco.smellLintingEnabled == true",
-            "icon": {
-                "light": "on.svg",
-                "dark": "on.svg"
-            }
+          "command": "eco.toggleSmellLinting",
+          "group": "navigation",
+          "when": "eco.smellLintingEnabled == true",
+          "icon": {
+            "light": "on.svg",
+            "dark": "on.svg"
+          }
         }
       ]
     },
@@ -242,8 +240,7 @@
       "!src/utils/configManager.ts",
       "!src/commands/showLogs.ts",
       "!src/ui/refactorView.ts",
-      "!src/utils/handleEditorChange.ts",
-      "!src/commands/toggleSmellLinting.ts"
+      "!src/utils/handleEditorChange.ts"
     ]
   },
   "lint-staged": {
