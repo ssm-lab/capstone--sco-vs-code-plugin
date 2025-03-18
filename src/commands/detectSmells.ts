@@ -6,7 +6,8 @@ import { fetchSmells } from '../api/backend';
 import { ContextManager } from '../context/contextManager';
 import { envConfig } from '../utils/envConfig';
 import { hashContent, updateHash } from '../utils/hashDocs';
-import { wipeWorkCache } from './wipeWorkCache'; // ✅ Import cache wipe function
+import { wipeWorkCache } from './wipeWorkCache';
+import { getEnabledSmells } from '../utils/handleSmellSettings';
 import { serverStatus, ServerStatusType } from '../utils/serverStatus';
 
 serverStatus.on('change', (newStatus: ServerStatusType) => {
@@ -117,8 +118,4 @@ export async function detectSmells(contextManager: ContextManager): Promise<void
   // Set the linting state to enabled
   contextManager.setWorkspaceData(envConfig.SMELL_LINTING_ENABLED_KEY, true);
   vscode.commands.executeCommand('setContext', 'eco.smellLintingEnabled', true);
-}
-
-export function getEnabledSmells(): { [key: string]: boolean } {
-  return vscode.workspace.getConfiguration('ecooptimizer').get('enableSmells', {});
 }

@@ -1,6 +1,13 @@
 {
-  "name": "ecooptimizer-vs-code-plugin",
+  "name": "ecooptimizer",
   "displayName": "EcoOptimizer VS Code Plugin",
+  "contributors": [
+    "Sevhena Walker",
+    "Tanveer Brar",
+    "Ayushi Amin",
+    "Mya Hussain",
+    "Nivetah Kuruparan"
+  ],
   "description": "VS Code Plugin for EcoOptimizer Refactoring Tool",
   "version": "0.0.1",
   "engines": {
@@ -16,45 +23,45 @@
   "contributes": {
     "commands": [
       {
-        "command": "ecooptimizer-vs-code-plugin.detectSmells",
+        "command": "ecooptimizer.detectSmells",
         "title": "Detect Smells",
         "category": "Eco"
       },
       {
-        "command": "ecooptimizer-vs-code-plugin.refactorSmell",
+        "command": "ecooptimizer.refactorSmell",
         "title": "Refactor Smell",
         "category": "Eco"
       },
       {
-        "command": "ecooptimizer-vs-code-plugin.wipeWorkCache",
+        "command": "ecooptimizer.wipeWorkCache",
         "title": "Wipe Workspace Cache",
         "category": "Eco"
       },
       {
-        "command": "ecooptimizer-vs-code-plugin.showRefactorSidebar",
+        "command": "ecooptimizer.showRefactorSidebar",
         "title": "Show Refactor Sidebar",
         "category": "Eco"
       },
       {
-        "command": "ecooptimizer-vs-code-plugin.pauseRefactorSidebar",
+        "command": "ecooptimizer.pauseRefactorSidebar",
         "title": "Pause Refactor Sidebar",
         "category": "Eco",
         "enablement": "false"
       },
       {
-        "command": "ecooptimizer-vs-code-plugin.clearRefactorSidebar",
+        "command": "ecooptimizer.clearRefactorSidebar",
         "title": "Clear Refactor Sidebar",
         "category": "Eco",
         "enablement": "false"
       },
       {
-        "command": "ecooptimizer-vs-code-plugin.startLogging",
+        "command": "ecooptimizer.startLogging",
         "title": "Show Backend Logs",
         "category": "Eco",
         "enablement": "false"
       },
       {
-        "command": "eco.toggleSmellLinting",
+        "command": "ecooptimizer.toggleSmellLinting",
         "title": "🍃 Toggle Smell Linting",
         "category": "Eco"
       }
@@ -62,7 +69,7 @@
     "menus": {
       "editor/title": [
         {
-          "command": "eco.toggleSmellLinting",
+          "command": "ecooptimizer.toggleSmellLinting",
           "group": "navigation",
           "when": "eco.smellLintingEnabled == false",
           "icon": {
@@ -71,7 +78,7 @@
           }
         },
         {
-          "command": "eco.toggleSmellLinting",
+          "command": "ecooptimizer.toggleSmellLinting",
           "group": "navigation",
           "when": "eco.smellLintingEnabled == true",
           "icon": {
@@ -94,74 +101,201 @@
           "default": "",
           "description": "Path to store log files and output reports. Defaults to a 'logs' folder inside the workspace."
         },
-        "ecooptimizer.enableSmells": {
+        "detection.smells": {
+          "order": 1,
           "type": "object",
           "additionalProperties": false,
-          "description": "Enable or disable specific code smell detections.",
+          "description": "Configure which smells to detect and their highlight colours.",
           "default": {
-            "long-element-chain": true,
-            "too-many-arguments": true,
-            "long-lambda-expression": true,
-            "long-message-chain": true,
-            "unused-variables-and-attributes": true,
-            "cached-repeated-calls": true,
-            "string-concat-loop": true,
-            "no-self-use": true,
-            "use-a-generator": true
+            "long-element-chain": {
+              "enabled": true,
+              "colour": "lightblue"
+            },
+            "too-many-arguments": {
+              "enabled": true,
+              "colour": "lightcoral"
+            },
+            "long-lambda-expression": {
+              "enabled": true,
+              "colour": "mediumpurple"
+            },
+            "long-message-chain": {
+              "enabled": true,
+              "colour": "lightpink"
+            },
+            "cached-repeated-calls": {
+              "enabled": true,
+              "colour": "lightgreen"
+            },
+            "string-concat-loop": {
+              "enabled": true,
+              "colour": "lightsalmon"
+            },
+            "no-self-use": {
+              "enabled": true,
+              "colour": "lightcyan"
+            },
+            "use-a-generator": {
+              "enabled": true,
+              "colour": "yellow"
+            }
           },
           "properties": {
             "long-element-chain": {
-              "type": "boolean",
-              "default": true,
-              "description": "Long Element Chain"
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable detection of long element chains."
+                },
+                "colour": {
+                  "type": "string",
+                  "default": "lightblue",
+                  "description": "Colour (css syntax) for highlighting long element chains."
+                }
+              }
             },
             "too-many-arguments": {
-              "type": "boolean",
-              "default": true,
-              "description": "Long Parameter List"
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable detection of functions with too many arguments."
+                },
+                "colour": {
+                  "type": "string",
+                  "default": "lightcoral",
+                  "description": "Colour (css syntax) for highlighting functions with too many arguments."
+                }
+              }
             },
             "long-lambda-expression": {
-              "type": "boolean",
-              "default": true,
-              "description": "Long Lambda Expression"
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable detection of long lambda expressions."
+                },
+                "colour": {
+                  "type": "string",
+                  "default": "mediumpurple",
+                  "description": "Colour (css syntax) for highlighting long lambda expressions."
+                }
+              }
             },
             "long-message-chain": {
-              "type": "boolean",
-              "default": true,
-              "description": "Long Message Chain"
-            },
-            "unused-variables-and-attributes": {
-              "type": "boolean",
-              "default": true,
-              "description": "Unused Variables and Attributes"
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable detection of long message chains."
+                },
+                "colour": {
+                  "type": "string",
+                  "default": "lightpink",
+                  "description": "Colour (css syntax) for highlighting long message chains."
+                }
+              }
             },
             "cached-repeated-calls": {
-              "type": "boolean",
-              "default": true,
-              "description": "Cached Repeated Calls"
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable detection of cached repeated calls."
+                },
+                "colour": {
+                  "type": "string",
+                  "default": "lightgreen",
+                  "description": "Colour (css syntax) for highlighting cached repeated calls."
+                }
+              }
             },
             "string-concat-loop": {
-              "type": "boolean",
-              "default": true,
-              "description": "String Concatenation in Loop"
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable detection of string concatenation in loops."
+                },
+                "colour": {
+                  "type": "string",
+                  "default": "lightsalmon",
+                  "description": "Colour (css syntax) for highlighting string concatenation in loops."
+                }
+              }
             },
             "no-self-use": {
-              "type": "boolean",
-              "default": true,
-              "description": "No Self Use"
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable detection of methods with no self-use."
+                },
+                "colour": {
+                  "type": "string",
+                  "default": "lightcyan",
+                  "description": "Colour (css syntax) for highlighting methods with no self-use."
+                }
+              }
             },
             "use-a-generator": {
-              "type": "boolean",
-              "default": true,
-              "description": "Use a Generator"
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable detection of places where a generator could be used."
+                },
+                "colour": {
+                  "type": "string",
+                  "default": "yellow",
+                  "description": "Colour (css syntax) for highlighting places where a generator could be used."
+                }
+              }
             }
           }
+        },
+        "ecooptimizer.detection.useSingleColour": {
+          "order": 2,
+          "type": "boolean",
+          "default": false,
+          "description": "Use a single colour for all smells. If enabled, the colour defined below will be used."
+        },
+        "ecooptimizer.detection.singleHighlightColour": {
+          "order": 3,
+          "type": "string",
+          "default": "yellow",
+          "markdownDescription": "Colour (css syntax) to use for all smells if **Use Single Colour** is enabled."
+        },
+        "ecooptimizer.detection.highlightStyle": {
+          "order": 0,
+          "type": "string",
+          "enum": [
+            "underline",
+            "flashlight",
+            "border-arrow"
+          ],
+          "markdownEnumDescriptions": [
+            "Your average wavy line",
+            "No pixel left untouched",
+            "Basically how it sounds"
+          ],
+          "default": "underline",
+          "description": "Choose a highlight style for all smells."
         }
       }
     },
     "keybindings": [
       {
-        "command": "ecooptimizer-vs-code-plugin.refactorSmell",
+        "command": "ecooptimizer.refactorSmell",
         "key": "ctrl+shift+r",
         "when": "editorTextFocus && resourceExtname == '.py'"
       }

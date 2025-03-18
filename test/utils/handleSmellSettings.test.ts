@@ -1,4 +1,3 @@
-import * as vscode from 'vscode';
 import {
   handleSmellFilterUpdate,
   getEnabledSmells,
@@ -6,7 +5,7 @@ import {
 } from '../../src/utils/handleSmellSettings';
 import { wipeWorkCache } from '../../src/commands/wipeWorkCache';
 import { ContextManager } from '../../src/context/contextManager';
-import vscodeMock from '../mocks/vscode-mock';
+import vscode from '../mocks/vscode-mock';
 
 jest.mock('../../src/commands/wipeWorkCache', () => ({
   wipeWorkCache: jest.fn(),
@@ -25,18 +24,27 @@ describe('Settings Page - handleSmellSettings.ts', () => {
 
   describe('getEnabledSmells', () => {
     it('should return the current enabled smells from settings', () => {
-      const mockSmells = {
-        'cached-repeated-calls': true,
-        'long-element-chain': false,
+      const currentConfig = {
+        'cached-repeated-calls': {
+          enabled: true,
+          colour: 'rgba(255, 204, 0, 0.5)',
+        },
+        'long-element-chain': {
+          enabled: false,
+          colour: 'rgba(255, 204, 0, 0.5)',
+        },
       };
 
       jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
-        get: jest.fn().mockReturnValue(mockSmells),
+        get: jest.fn().mockReturnValue(currentConfig),
       } as any);
 
       const enabledSmells = getEnabledSmells();
 
-      expect(enabledSmells).toEqual(mockSmells);
+      expect(enabledSmells).toEqual({
+        'cached-repeated-calls': true,
+        'long-element-chain': false,
+      });
     });
 
     it('should return an empty object if no smells are set', () => {
@@ -52,10 +60,15 @@ describe('Settings Page - handleSmellSettings.ts', () => {
   describe('handleSmellFilterUpdate', () => {
     it('should detect when a smell is enabled and notify the user', () => {
       const previousSmells = { 'cached-repeated-calls': false };
-      const currentSmells = { 'cached-repeated-calls': true };
+      const currentConfig = {
+        'cached-repeated-calls': {
+          enabled: true,
+          colour: 'rgba(255, 204, 0, 0.5)',
+        },
+      };
 
       jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
-        get: jest.fn().mockReturnValue(currentSmells),
+        get: jest.fn().mockReturnValue(currentConfig),
       } as any);
 
       handleSmellFilterUpdate(previousSmells, contextManagerMock);
@@ -68,10 +81,15 @@ describe('Settings Page - handleSmellSettings.ts', () => {
 
     it('should detect when a smell is disabled and notify the user', () => {
       const previousSmells = { 'long-element-chain': true };
-      const currentSmells = { 'long-element-chain': false };
+      const currentConfig = {
+        'long-element-chain': {
+          enabled: false,
+          colour: 'rgba(255, 204, 0, 0.5)',
+        },
+      };
 
       jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
-        get: jest.fn().mockReturnValue(currentSmells),
+        get: jest.fn().mockReturnValue(currentConfig),
       } as any);
 
       handleSmellFilterUpdate(previousSmells, contextManagerMock);
@@ -84,10 +102,15 @@ describe('Settings Page - handleSmellSettings.ts', () => {
 
     it('should not wipe cache if no smells changed', () => {
       const previousSmells = { 'cached-repeated-calls': true };
-      const currentSmells = { 'cached-repeated-calls': true };
+      const currentConfig = {
+        'cached-repeated-calls': {
+          enabled: true,
+          colour: 'rgba(255, 204, 0, 0.5)',
+        },
+      };
 
       jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
-        get: jest.fn().mockReturnValue(currentSmells),
+        get: jest.fn().mockReturnValue(currentConfig),
       } as any);
 
       handleSmellFilterUpdate(previousSmells, contextManagerMock);

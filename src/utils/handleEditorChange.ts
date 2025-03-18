@@ -56,7 +56,7 @@ export async function handleEditorChanges(
       contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, diffState);
       await setTimeout(500);
       // vscode.commands.executeCommand(
-      //   'ecooptimizer-vs-code-plugin.pauseRefactorSidebar'
+      //   'ecooptimizer.pauseRefactorSidebar'
       // );
       return;
     }
@@ -78,9 +78,7 @@ export async function handleEditorChanges(
     // console.log(`diffstate: ${JSON.stringify(diffState)}`);
     contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, diffState);
     await setTimeout(500);
-    vscode.commands.executeCommand(
-      'ecooptimizer-vs-code-plugin.showRefactorSidebar',
-    );
+    vscode.commands.executeCommand('ecooptimizer.showRefactorSidebar');
   }
   console.log('Doing nothing');
 }

@@ -80,10 +80,7 @@ interface Workspace {
 
 export const workspace: Workspace = {
   getConfiguration: jest.fn((section?: string) => ({
-    get: jest.fn((key: string, _defaultReturn: any) => {
-      console.log(`MOCK getConfiguration: ${section}.${key}`);
-      return config.configGet;
-    }),
+    get: jest.fn(),
   })),
 };
 

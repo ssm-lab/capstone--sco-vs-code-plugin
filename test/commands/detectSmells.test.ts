@@ -2,11 +2,12 @@
 import { ContextManager } from '../../src/context/contextManager';
 import { FileHighlighter } from '../../src/ui/fileHighlighter';
 
-import vscode, { config } from '../mocks/vscode-mock';
+import vscode from '../mocks/vscode-mock';
 
 import * as backend from '../../src/api/backend';
 import * as hashDocs from '../../src/utils/hashDocs';
 import * as editorUtils from '../../src/utils/editorUtils';
+import * as SmellSettings from '../../src/utils/handleSmellSettings';
 
 import { detectSmells } from '../../src/commands/detectSmells';
 import { serverStatus, ServerStatusType } from '../../src/utils/serverStatus';
@@ -15,6 +16,13 @@ import { envConfig } from '../../src/utils/envConfig';
 
 jest.mock('../../src/commands/wipeWorkCache', () => ({
   wipeWorkCache: jest.fn(),
+}));
+
+jest.mock('../../src/utils/handleSmellSettings.ts', () => ({
+  getEnabledSmells: jest.fn().mockImplementation(() => ({
+    smell1: true,
+    smell2: true,
+  })),
 }));
 
 describe('detectSmells', () => {
@@ -64,9 +72,9 @@ describe('detectSmells', () => {
       filePath: 'fake.path',
     });
 
-    jest.spyOn(vscode.workspace, 'getConfiguration').mockReturnValueOnce({
-      get: jest.fn().mockReturnValue({ smell1: false, smell2: false }),
-    });
+    jest
+      .spyOn(SmellSettings, 'getEnabledSmells')
+      .mockReturnValueOnce({ smell1: false, smell2: false });
 
     await detectSmells(contextManagerMock);
 
@@ -86,7 +94,7 @@ describe('detectSmells', () => {
 
     jest
       .spyOn(contextManagerMock, 'getWorkspaceData')
-      .mockReturnValueOnce(config.configGet)
+      .mockReturnValueOnce({ smell1: true, smell2: true })
       .mockReturnValueOnce({
         'fake.path': {
           hash: 'someHash',
@@ -122,9 +130,6 @@ describe('detectSmells', () => {
 
     jest.spyOn(serverStatus, 'getStatus').mockReturnValue(ServerStatusType.UP);
 
-    // Simulate no smells enabled
-    // config.configGet = { smell1: false, smell2: false };
-
     await detectSmells(contextManagerMock);
 
     expect(wipeWorkCache).toHaveBeenCalled();
@@ -133,7 +138,7 @@ describe('detectSmells', () => {
     expect(contextManagerMock.setWorkspaceData).toHaveBeenCalledTimes(2);
   });
 
-  it('should fetch new smells hash change, same enabled smells', async () => {
+  it('should fetch new smells on hash change, same enabled smells', async () => {
     jest.spyOn(editorUtils, 'getEditorAndFilePath').mockReturnValueOnce({
       editor: vscode.window.activeTextEditor,
       filePath: 'fake.path',
@@ -144,7 +149,7 @@ describe('detectSmells', () => {
 
     jest
       .spyOn(contextManagerMock, 'getWorkspaceData')
-      .mockReturnValueOnce(config.configGet)
+      .mockReturnValueOnce({ smell1: true, smell2: true })
       .mockReturnValueOnce({
         'fake.path': {
           hash: 'differentHash',
@@ -155,9 +160,6 @@ describe('detectSmells', () => {
     jest.spyOn(serverStatus, 'getStatus').mockReturnValue(ServerStatusType.UP);
 
     jest.spyOn(backend, 'fetchSmells').mockResolvedValueOnce([]);
-
-    // Simulate no smells enabled
-    // config.configGet = { smell1: false, smell2: false };
 
     await detectSmells(contextManagerMock);
 
@@ -177,7 +179,7 @@ describe('detectSmells', () => {
 
     jest
       .spyOn(contextManagerMock, 'getWorkspaceData')
-      .mockReturnValueOnce(config.configGet)
+      .mockReturnValueOnce({ smell1: true, smell2: true })
       .mockReturnValueOnce({});
 
     jest.spyOn(serverStatus, 'getStatus').mockReturnValue(ServerStatusType.DOWN);
@@ -199,7 +201,7 @@ describe('detectSmells', () => {
 
     jest
       .spyOn(contextManagerMock, 'getWorkspaceData')
-      .mockReturnValueOnce(config.configGet)
+      .mockReturnValueOnce({ smell1: true, smell2: true })
       .mockReturnValueOnce({
         'fake.path': {
           hash: 'someHash',

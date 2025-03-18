@@ -10,7 +10,7 @@ export class ConfigManager {
   // get workspace path
   static getWorkspacePath(): string {
     const rawPath = vscode.workspace
-      .getConfiguration('ecooptimizer-vs-code-plugin')
+      .getConfiguration('ecooptimizer')
       .get<string>('projectWorkspacePath', '');
     const resolvedPath =
       rawPath || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
@@ -24,7 +24,7 @@ export class ConfigManager {
   // get logs output path
   static getLogsOutputPath(): string {
     const rawPath = vscode.workspace
-      .getConfiguration('ecooptimizer-vs-code-plugin')
+      .getConfiguration('ecooptimizer')
       .get<string>('logsOutputPath', '');
     const workspacePath = this.getWorkspacePath();
     const resolvedPath = rawPath || `${workspacePath}/logs`;
@@ -39,10 +39,8 @@ export class ConfigManager {
   static onConfigChange(callback: () => void): void {
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (
-        event.affectsConfiguration(
-          'ecooptimizer-vs-code-plugin.projectWorkspacePath',
-        ) ||
-        event.affectsConfiguration('ecooptimizer-vs-code-plugin.logsOutputPath')
+        event.affectsConfiguration('ecooptimizer.projectWorkspacePath') ||
+        event.affectsConfiguration('ecooptimizer.logsOutputPath')
       ) {
         callback();
       }
@@ -51,7 +49,7 @@ export class ConfigManager {
 
   // write settings to both User and Workspace if necessary
   private static writeSetting(setting: string, value: string): void {
-    const config = vscode.workspace.getConfiguration('ecooptimizer-vs-code-plugin');
+    const config = vscode.workspace.getConfiguration('ecooptimizer');
 
     // inspect current values in both User and Workspace settings
     const currentValueGlobal = config.inspect<string>(setting)?.globalValue;
