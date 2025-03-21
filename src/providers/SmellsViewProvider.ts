@@ -60,7 +60,7 @@ export class SmellsViewProvider implements vscode.TreeDataProvider<string> {
     // If the file is not outdated, return the detected smells
     const smells = this.stateManager.getSmellsForFile(element);
     return smells.map((smell) => {
-      const smellItem = `${smell.acronym}: Line ${smell.occurrences
+      const smellItem = `${smell.messageId}: Line ${smell.occurences
         .map((o) => o.line)
         .join(', ')}`;
       this.stateManager.mapSmellToFile(smellItem, element);
@@ -72,14 +72,9 @@ export class SmellsViewProvider implements vscode.TreeDataProvider<string> {
    * Updates the detected smells for a file and refreshes the tree view.
    * @param filePath - The analyzed file path.
    * @param smells - The detected smells in the file.
-   * @param smellMetadata - Metadata containing message ID and acronym for each smell.
    */
-  updateSmells(
-    filePath: string,
-    smells: Smell[],
-    smellMetadata: Record<string, { message_id: string; acronym: string }>,
-  ): void {
-    this.stateManager.updateSmells(filePath, smells, smellMetadata);
+  updateSmells(filePath: string, smells: Smell[]): void {
+    this.stateManager.updateSmells(filePath, smells);
     this.refresh();
   }
 

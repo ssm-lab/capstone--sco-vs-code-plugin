@@ -59,7 +59,7 @@ export async function detectSmellsFile(
     );
 
     if (cachedSmells.length > 0) {
-      treeDataProvider.updateSmells(filePath, cachedSmells, enabledSmells);
+      treeDataProvider.updateSmells(filePath, cachedSmells);
     } else {
       treeDataProvider.updateStatus(filePath, 'no_issues');
     }
@@ -96,7 +96,7 @@ export async function detectSmellsFile(
       treeDataProvider.clearOutdatedStatus(filePath);
 
       if (smells.length > 0) {
-        treeDataProvider.updateSmells(filePath, smells, enabledSmells);
+        treeDataProvider.updateSmells(filePath, smells);
         vscode.window.showInformationMessage(
           `Analysis complete: Detected ${
             smells.length
