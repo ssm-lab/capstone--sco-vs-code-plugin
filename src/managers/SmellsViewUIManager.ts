@@ -46,6 +46,11 @@ export class SmellsUIManager {
       item.contextValue = 'ecoOptimizerFile';
       this.assignOpenFileCommand(item, element);
       this.updateFileItem(item, status, isOutdated);
+
+      // Add a context value for files with smells
+      if (hasSmells && status === 'passed') {
+        item.contextValue = 'ecoOptimizerFile-hasSmells'; // Append 'hasSmells' to the context value
+      }
     } else {
       item.contextValue = 'ecoOptimizerSmell';
       const parentFile = this.stateManager.getFileForSmell(element);

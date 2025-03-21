@@ -197,11 +197,6 @@
         "category": "Eco Optimizer"
       },
       {
-        "command": "ecooptimizer.refactorSmell",
-        "title": "Refactor Smell",
-        "category": "Eco"
-      },
-      {
         "command": "ecooptimizer.refactorAllSmellsOfType",
         "title": "Refactor Smells By Type",
         "icon": "$(tools)",
@@ -254,12 +249,12 @@
         },
         {
           "command": "ecooptimizer.detectSmellsFile",
-          "when": "viewItem == ecoOptimizerFile",
+          "when": "viewItem == ecoOptimizerFile || viewItem == ecoOptimizerFile-hasSmells",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.refactorAllSmellsOfType",
-          "when": "viewItem == ecoOptimizerFile",
+          "when": "viewItem == ecoOptimizerFile-hasSmells",
           "group": "inline"
         }
       ]
