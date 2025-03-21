@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { SmellsDisplayProvider } from '../providers/SmellsViewProvider';
+import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 
 // 📌 Refactor Code Smells for a File
 export async function refactorSmellsByType(
-  treeDataProvider: SmellsDisplayProvider,
+  treeDataProvider: SmellsViewProvider,
   fileUri: vscode.Uri | string,
 ) {
   if (!fileUri) {

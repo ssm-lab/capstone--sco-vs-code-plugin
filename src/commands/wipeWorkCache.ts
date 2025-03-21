@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import { SmellsDisplayProvider } from '../providers/SmellsViewProvider';
+import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 
 /**
  * Clears the smells cache and refreshes the UI.
@@ -9,7 +9,7 @@ import { SmellsDisplayProvider } from '../providers/SmellsViewProvider';
  */
 export async function wipeWorkCache(
   smellsCacheManager: SmellsCacheManager,
-  smellsDisplayProvider: SmellsDisplayProvider,
+  smellsDisplayProvider: SmellsViewProvider,
 ) {
   const userResponse = await vscode.window.showWarningMessage(
     'Are you sure you want to clear the smells cache? This action cannot be undone.',

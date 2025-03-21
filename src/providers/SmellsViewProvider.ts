@@ -4,7 +4,7 @@ import * as path from 'path';
 import { SmellsStateManager } from '../managers/SmellsViewStateManager';
 import { SmellsUIManager } from '../managers/SmellsViewUIManager';
 
-export class SmellsDisplayProvider implements vscode.TreeDataProvider<string> {
+export class SmellsViewProvider implements vscode.TreeDataProvider<string> {
   private _onDidChangeTreeData = new vscode.EventEmitter<string | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 

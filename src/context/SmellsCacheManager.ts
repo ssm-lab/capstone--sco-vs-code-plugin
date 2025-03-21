@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { createHash } from 'crypto';
-import { SmellsDisplayProvider } from '../providers/SmellsViewProvider';
+import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { envConfig } from '../utils/envConfig';
 
 /**
@@ -122,7 +122,7 @@ export class SmellsCacheManager {
    * @param smellsDisplayProvider - The tree view provider responsible for the UI.
    */
   public async clearCacheAndRefreshUI(
-    smellsDisplayProvider: SmellsDisplayProvider,
+    smellsDisplayProvider: SmellsViewProvider,
   ): Promise<void> {
     // Remove all cached smells from the workspace state
     await this.clearSmellsCache();

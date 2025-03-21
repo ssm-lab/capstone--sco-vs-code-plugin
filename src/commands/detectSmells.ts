@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fetchSmells } from '../api/backend';
-import { SmellsDisplayProvider } from '../providers/SmellsViewProvider';
+import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { getEnabledSmells } from '../utils/smellsData';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { serverStatus, ServerStatusType } from '../utils/serverStatus';
@@ -17,7 +17,7 @@ import { serverStatus, ServerStatusType } from '../utils/serverStatus';
  */
 export async function detectSmellsFile(
   smellsCacheManager: SmellsCacheManager,
-  treeDataProvider: SmellsDisplayProvider,
+  treeDataProvider: SmellsViewProvider,
   fileUri: vscode.Uri | string,
 ) {
   // Validate the file URI or path
@@ -128,7 +128,7 @@ export async function detectSmellsFile(
  */
 export async function detectSmellsFolder(
   smellsCacheManager: SmellsCacheManager,
-  treeDataProvider: SmellsDisplayProvider,
+  treeDataProvider: SmellsViewProvider,
   folderPath: string,
 ) {
   // Notify the user that folder analysis has started
@@ -181,7 +181,7 @@ export async function detectSmellsFolder(
 async function handleOutdatedFile(
   filePath: string,
   smellsCacheManager: SmellsCacheManager,
-  smellsDisplayProvider: SmellsDisplayProvider,
+  smellsDisplayProvider: SmellsViewProvider,
 ) {
   // Check if the file is marked as outdated
   if (smellsDisplayProvider.isFileOutdated(filePath)) {

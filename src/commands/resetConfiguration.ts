@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SmellsCacheManager } from '../context/SmellsCacheManager'; // Updated import
-import { SmellsDisplayProvider } from '../providers/SmellsViewProvider';
+import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 
 /**
  * Resets the workspace configuration by clearing the stored path and wiping cached smells.
@@ -13,7 +13,7 @@ import { SmellsDisplayProvider } from '../providers/SmellsViewProvider';
 export async function resetConfiguration(
   context: vscode.ExtensionContext,
   smellsCacheManager: SmellsCacheManager,
-  treeDataProvider: SmellsDisplayProvider,
+  treeDataProvider: SmellsViewProvider,
 ) {
   const confirm = await vscode.window.showWarningMessage(
     'Are you sure you want to reset the workspace configuration? This will remove the currently selected folder and wipe cached smells.',

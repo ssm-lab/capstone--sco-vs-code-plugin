@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import { SmellsDisplayProvider } from '../providers/SmellsViewProvider';
+import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import path from 'path';
 
 /**
@@ -10,7 +10,7 @@ import path from 'path';
  */
 export function registerFileSaveListener(
   smellsCacheManager: SmellsCacheManager,
-  smellsDisplayProvider: SmellsDisplayProvider,
+  smellsDisplayProvider: SmellsViewProvider,
 ): vscode.Disposable {
   return vscode.workspace.onDidSaveTextDocument(async (document) => {
     const filePath = document.fileName;

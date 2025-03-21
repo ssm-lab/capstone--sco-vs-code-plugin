@@ -10,7 +10,7 @@ import { openFile } from './commands/openFile';
 import { registerFilterSmellCommands } from './commands/filterSmells';
 import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
-import { SmellsDisplayProvider } from './providers/SmellsViewProvider';
+import { SmellsViewProvider } from './providers/SmellsViewProvider';
 import { checkServerStatus } from './api/backend';
 import { FilterSmellsProvider } from './providers/FilterViewProvider';
 import { SmellsCacheManager } from './context/SmellsCacheManager';
@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const smellsCacheManager = new SmellsCacheManager(context);
 
   // Initialize the Code Smells View.
-  const smellsDisplayProvider = new SmellsDisplayProvider(context);
+  const smellsDisplayProvider = new SmellsViewProvider(context);
   const codeSmellsView = vscode.window.createTreeView('ecooptimizer.view', {
     treeDataProvider: smellsDisplayProvider,
   });
