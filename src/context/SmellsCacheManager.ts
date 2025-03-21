@@ -21,12 +21,8 @@ export class SmellsCacheManager {
    * @returns An array of detected smells or `undefined` if the file has not been analyzed.
    */
   public getCachedSmells(filePath: string): Smell[] | undefined {
-    const cache = this.context.workspaceState.get<Record<string, any[]>>(
-      envConfig.SMELL_CACHE_KEY!,
-      {},
-    );
-
-    return cache[filePath]; // Returns an array of smells or `undefined` if not cached
+    const cache = this.getFullSmellCache();
+    return cache[filePath]; // May be undefined
   }
 
   /**
@@ -37,13 +33,8 @@ export class SmellsCacheManager {
    * @param smells - The detected smells to store (empty array if no smells found).
    */
   public async setCachedSmells(filePath: string, smells: Smell[]): Promise<void> {
-    const cache = this.context.workspaceState.get<Record<string, any[]>>(
-      envConfig.SMELL_CACHE_KEY!,
-      {},
-    );
-
-    cache[filePath] = smells; // Store detected smells or an empty array if clean
-
+    const cache = this.getFullSmellCache();
+    cache[filePath] = smells;
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
   }
 
@@ -61,14 +52,20 @@ export class SmellsCacheManager {
    * @param filePath - The path of the file to clear.
    */
   public async clearCachedSmellsForFile(filePath: string): Promise<void> {
-    const cache = this.context.workspaceState.get<Record<string, any[]>>(
+    const cache = this.getFullSmellCache();
+    delete cache[filePath];
+    await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
+  }
+
+  /**
+   * Retrieves the entire smell cache.
+   * @returns A record of file paths to cached smells.
+   */
+  public getFullSmellCache(): Record<string, Smell[]> {
+    return this.context.workspaceState.get<Record<string, Smell[]>>(
       envConfig.SMELL_CACHE_KEY!,
       {},
     );
-
-    delete cache[filePath]; // Remove the file's cached smells
-
-    await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
   }
 
   // ============================
@@ -90,10 +87,7 @@ export class SmellsCacheManager {
    * @param hash - The computed file hash.
    */
   public async storeFileHash(filePath: string, hash: string): Promise<void> {
-    const hashes = this.context.workspaceState.get<Record<string, string>>(
-      envConfig.FILE_HASH_CACHE_KEY!,
-      {},
-    );
+    const hashes = this.getFullFileHashCache();
     hashes[filePath] = hash;
     await this.context.workspaceState.update(envConfig.FILE_HASH_CACHE_KEY!, hashes);
   }
@@ -104,11 +98,19 @@ export class SmellsCacheManager {
    * @returns The stored hash or undefined if not found.
    */
   public getStoredFileHash(filePath: string): string | undefined {
-    const hashes = this.context.workspaceState.get<Record<string, string>>(
+    const hashes = this.getFullFileHashCache();
+    return hashes[filePath];
+  }
+
+  /**
+   * Retrieves the entire file hash cache.
+   * @returns A record of file paths to SHA256 hashes.
+   */
+  private getFullFileHashCache(): Record<string, string> {
+    return this.context.workspaceState.get<Record<string, string>>(
       envConfig.FILE_HASH_CACHE_KEY!,
       {},
     );
-    return hashes[filePath];
   }
 
   // ============================
