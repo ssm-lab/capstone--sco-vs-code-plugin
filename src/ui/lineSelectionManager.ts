@@ -1,16 +1,10 @@
 import * as vscode from 'vscode';
-import { ContextManager } from '../context/contextManager';
-import { envConfig } from '../utils/envConfig';
-import { SmellDetectRecord } from '../commands/detectSmells';
-import { hashContent } from '../utils/hashDocs';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
 
 export class LineSelectionManager {
-  private contextManager;
   private decoration: vscode.TextEditorDecorationType | null = null;
 
-  public constructor(contextManager: ContextManager) {
-    this.contextManager = contextManager;
-  }
+  public constructor(private smellsCacheManager: SmellsCacheManager) {}
 
   public removeLastComment(): void {
     if (this.decoration) {
@@ -27,15 +21,9 @@ export class LineSelectionManager {
     }
 
     const filePath = editor.document.fileName;
-    const smellsDetectRecord = this.contextManager.getWorkspaceData(
-      envConfig.SMELL_MAP_KEY!,
-    )[filePath] as SmellDetectRecord;
+    const smells = this.smellsCacheManager.getCachedSmells(filePath);
 
-    if (!smellsDetectRecord) {
-      return;
-    }
-
-    if (smellsDetectRecord.hash !== hashContent(editor.document.getText())) {
+    if (!smells || smells.length === 0) {
       return;
     }
 
@@ -48,8 +36,6 @@ export class LineSelectionManager {
     const selectedLine = selection.start.line;
     console.log(`selection: ${selectedLine}`);
 
-    const smells = smellsDetectRecord.smells;
-
     const smellsAtLine = smells.filter((smell) => {
       return smell.occurences[0].line === selectedLine + 1;
     });
@@ -59,7 +45,6 @@ export class LineSelectionManager {
     }
 
     let comment;
-
     if (smellsAtLine.length > 1) {
       comment = `🍂 Smell: ${smellsAtLine[0].symbol} | (+${
         smellsAtLine.length - 1

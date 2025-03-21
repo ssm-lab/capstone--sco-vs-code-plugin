@@ -19,12 +19,17 @@ export async function checkServerStatus(): Promise<void> {
   }
 }
 
+/**
+ * Initializes and synchronizes logs with the backend.
+ * 
+ * @param {string} log_dir - The directory where logs are stored.
+ * @returns {Promise<boolean>} - Returns `true` if the logs are successfully initialized and synchronized, otherwise throws an error.
+ * @throws {Error} - Throws an error if the initialization fails due to network issues or backend errors.
+ */
 export async function initLogs(log_dir: string): Promise<boolean> {
   const url = `${BASE_URL}/logs/init`;
 
   try {
-    console.log('Initializing and synching logs with backend');
-
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -34,71 +39,73 @@ export async function initLogs(log_dir: string): Promise<boolean> {
     });
 
     if (!response.ok) {
-      console.error(`Unable to initialize logging: ${JSON.stringify(response)}`);
-
-      return false;
+      throw new Error(`Unable to initialize logging: ${response.statusText}`);
     }
 
     return true;
   } catch (error: any) {
-    console.error(`Eco: Unable to initialize logging: ${error.message}`);
-    vscode.window.showErrorMessage(
-      'Eco: Unable to reach the backend. Please check your connection.',
-    );
-    return false;
+    if (error instanceof Error) {
+      throw new Error(`Eco: Unable to initialize logging: ${error.message}`);
+    } else {
+      throw new Error('Eco: An unexpected error occurred while initializing logs.');
+    }
   }
 }
 
-// ✅ Fetch detected smells for a given file (only enabled smells)
+/**
+ * Sends a request to the backend to detect code smells in the specified file.
+ * 
+ * @param filePath - The absolute path to the file being analyzed.
+ * @param enabledSmells - A dictionary containing enabled smells and their configured options.
+ * @returns A promise resolving to the backend response or throwing an error if unsuccessful.
+ */
 export async function fetchSmells(
   filePath: string,
-  enabledSmells: string[],
-): Promise<Smell[]> {
+  enabledSmells: Record<string, Record<string, number | string>>
+): Promise<{ smells: Smell[]; status: number }> {
   const url = `${BASE_URL}/smells`;
 
   try {
-    console.log(
-      `Eco: Requesting smells for file: ${filePath} with filters: ${enabledSmells}`,
-    );
-
     const response = await fetch(url, {
-      method: 'POST', // ✅ Send enabled smells in the request body
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ file_path: filePath, enabled_smells: enabledSmells }), // ✅ Include enabled smells
+      body: JSON.stringify({
+        file_path: filePath,
+        enabled_smells: enabledSmells,
+      }),
     });
 
     if (!response.ok) {
-      console.error(
-        `Eco: API request failed (${response.status} - ${response.statusText})`,
+      throw new Error(
+        `Backend request failed with status ${response.status}: ${response.statusText}`
       );
-      vscode.window.showErrorMessage(
-        `Eco: Failed to fetch smells`,
-      );
-      return [];
     }
 
-    const smellsList = (await response.json()) as Smell[];
+    const smellsList = await response.json();
 
     if (!Array.isArray(smellsList)) {
-      console.error('Eco: Invalid response format from backend.');
-      vscode.window.showErrorMessage('Eco: Failed to fetch smells');
-      return [];
+      throw new Error("Unexpected response format from backend.");
     }
 
-    console.log(`Eco: Successfully retrieved ${smellsList.length} smells.`);
-    return smellsList;
+    return { smells: smellsList, status: response.status };
   } catch (error: any) {
-    console.error(`Eco: Network error while fetching smells: ${error.message}`);
-    vscode.window.showErrorMessage(
-      'Eco: Failed to fetch smells',
+    throw new Error(
+      `Failed to connect to the backend: ${error.message}. Please check your network and try again.`
     );
-    return [];
   }
 }
 
-// Request refactoring for a specific smell
+
+/**
+ * Refactors a specific code smell in a given file.
+ * 
+ * @param {string} filePath - The path to the file containing the code smell.
+ * @param {Smell} smell - The code smell to refactor.
+ * @returns {Promise<RefactorOutput>} - The result of the refactoring operation.
+ * @throws {Error} - Throws an error if the workspace folder cannot be determined, the API request fails, or an unexpected error occurs.
+ */
 export async function refactorSmell(
   filePath: string,
   smell: Smell,
@@ -107,20 +114,13 @@ export async function refactorSmell(
 
   const workspaceFolder = vscode.workspace.workspaceFolders?.find((folder) =>
     filePath.includes(folder.uri.fsPath),
-  )
+  );
 
   if (!workspaceFolder) {
-    console.error('Eco: Error - Unable to determine workspace folder for', filePath);
-    throw new Error(
-      `Eco: Unable to find a matching workspace folder for file: ${filePath}`,
-    );
+    throw new Error(`Unable to determine workspace folder for file: ${filePath}`);
   }
 
   const workspaceFolderPath = workspaceFolder.uri.fsPath;
-
-  console.log(
-    `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspaceFolderPath}"`,
-  );
 
   const payload = {
     source_dir: workspaceFolderPath,
@@ -138,16 +138,16 @@ export async function refactorSmell(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(
-        `Eco: Error - Refactoring smell "${smell.symbol}": ${errorText}`,
-      );
-      throw new Error(`Eco: Error refactoring smell: ${errorText}`);
+      throw new Error(`Refactoring failed for smell "${smell.symbol}": ${errorText}`);
     }
 
     const refactorResult = (await response.json()) as RefactorOutput;
     return refactorResult;
   } catch (error) {
-    console.error('Eco: Unexpected error in refactorSmell:', error);
-    throw error;
+    if (error instanceof Error) {
+      throw new Error(`Unexpected error during refactoring: ${error.message}`);
+    } else {
+      throw new Error('An unexpected error occurred during refactoring.');
+    }
   }
 }

@@ -3,17 +3,20 @@ import {
   refactorSelectedSmell,
   refactorAllSmellsOfType,
 } from '../commands/refactorSmell';
-import { ContextManager } from '../context/contextManager';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
 
 export class HoverManager {
   private static instance: HoverManager;
   private smells: Smell[];
   public hoverContent: vscode.MarkdownString;
-  private vscodeContext: vscode.ExtensionContext;
 
-  static getInstance(contextManager: ContextManager, smells: Smell[]): HoverManager {
+  static getInstance(
+    context: vscode.ExtensionContext,
+    smellsCacheManager: SmellsCacheManager,
+    smells: Smell[],
+  ): HoverManager {
     if (!HoverManager.instance) {
-      HoverManager.instance = new HoverManager(contextManager, smells);
+      HoverManager.instance = new HoverManager(context, smellsCacheManager, smells);
     } else {
       HoverManager.instance.updateSmells(smells);
     }
@@ -21,11 +24,11 @@ export class HoverManager {
   }
 
   public constructor(
-    private contextManager: ContextManager,
+    private context: vscode.ExtensionContext,
+    private smellsCacheManager: SmellsCacheManager,
     smells: Smell[],
   ) {
     this.smells = smells || [];
-    this.vscodeContext = contextManager.context;
     this.hoverContent = this.registerHoverProvider() ?? new vscode.MarkdownString();
     this.registerCommands();
   }
@@ -36,7 +39,7 @@ export class HoverManager {
 
   // Register hover provider for Python files
   public registerHoverProvider(): void {
-    this.vscodeContext.subscriptions.push(
+    this.context.subscriptions.push(
       vscode.languages.registerHoverProvider(
         { scheme: 'file', language: 'python' },
         {
@@ -94,20 +97,22 @@ export class HoverManager {
 
   // Register commands for refactor actions
   public registerCommands(): void {
-    this.vscodeContext.subscriptions.push(
+    this.context.subscriptions.push(
       vscode.commands.registerCommand(
         'extension.refactorThisSmell',
         async (smell: Smell) => {
-          const contextManager = new ContextManager(this.vscodeContext);
-          await refactorSelectedSmell(contextManager, smell);
+          await refactorSelectedSmell(this.context, this.smellsCacheManager, smell);
         },
       ),
       // clicking "Refactor All Smells of this Type..."
       vscode.commands.registerCommand(
         'extension.refactorAllSmellsOfType',
         async (smell: Smell) => {
-          const contextManager = new ContextManager(this.vscodeContext);
-          await refactorAllSmellsOfType(contextManager, smell.messageId);
+          await refactorAllSmellsOfType(
+            this.context,
+            this.smellsCacheManager,
+            smell.messageId,
+          );
         },
       ),
     );

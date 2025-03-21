@@ -1,70 +1,107 @@
+// eslint-disable-next-line unused-imports/no-unused-imports
 import { envConfig } from './utils/envConfig';
+
 import * as vscode from 'vscode';
 
-import { detectSmells } from './commands/detectSmells';
-import {
-  refactorSelectedSmell,
-  refactorAllSmellsOfType,
-} from './commands/refactorSmell';
+import { configureWorkspace } from './commands/configureWorkspace';
+import { resetConfiguration } from './commands/resetConfiguration';
+import { detectSmellsFile, detectSmellsFolder } from './commands/detectSmells';
+import { openFile } from './commands/openFile';
+import { registerFilterSmellCommands } from './commands/filterSmells';
+import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
-import { stopWatchingLogs } from './commands/showLogs';
-import { ContextManager } from './context/contextManager';
-import {
-  getEnabledSmells,
-  handleSmellFilterUpdate,
-} from './utils/handleSmellSettings';
-import { updateHash } from './utils/hashDocs';
-import { RefactorSidebarProvider } from './ui/refactorView';
-import { handleEditorChanges } from './utils/handleEditorChange';
-import { LineSelectionManager } from './ui/lineSelectionManager';
+import { SmellsDisplayProvider } from './providers/SmellsViewProvider';
 import { checkServerStatus } from './api/backend';
+import { FilterSmellsProvider } from './providers/FilterSmellsProvider';
+import { SmellsCacheManager } from './context/SmellsCacheManager';
+import { registerFileSaveListener } from './listeners/fileSaveListener';
 import { serverStatus } from './utils/serverStatus';
+import {
+  refactorAllSmellsOfType,
+  refactorSelectedSmell,
+} from './commands/refactorSmell';
+import { LogManager } from './commands/showLogs';
+import { LineSelectionManager } from './ui/lineSelectionManager';
 
-import { toggleSmellLinting } from './commands/toggleSmellLinting';
+let logManager: LogManager;
 
-export const globalData: { contextManager?: ContextManager } = {
-  contextManager: undefined,
-};
-
+/**
+ * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
+ * @param context - The VS Code extension context.
+ */
 export function activate(context: vscode.ExtensionContext): void {
-  console.log('Eco: Refactor Plugin Activated Successfully');
-  const contextManager = new ContextManager(context);
+  console.log('Activating Eco-Optimizer extension...');
 
-  globalData.contextManager = contextManager;
+  // Iniiialize the log manager
+  logManager = new LogManager(context);
 
-  // Show the settings popup if needed
-  // TODO: Setting to re-enable popup if disabled
-  const settingsPopupChoice =
-    contextManager.getGlobalData<boolean>('showSettingsPopup');
+  // Initialize the SmellsCacheManager for managing caching of smells and file hashes.
+  const smellsCacheManager = new SmellsCacheManager(context);
 
-  if (settingsPopupChoice === undefined || settingsPopupChoice) {
-    showSettingsPopup();
-  }
+  // Initialize the Code Smells View.
+  const smellsDisplayProvider = new SmellsDisplayProvider(context);
+  const codeSmellsView = vscode.window.createTreeView('ecooptimizer.view', {
+    treeDataProvider: smellsDisplayProvider,
+  });
+  context.subscriptions.push(codeSmellsView);
 
-  console.log('environment variables:', envConfig);
-
+  // Start periodic backend status checks (every 10 seconds).
   checkServerStatus();
-
-  let smellsData = contextManager.getWorkspaceData(envConfig.SMELL_MAP_KEY!) || {};
-  contextManager.setWorkspaceData(envConfig.SMELL_MAP_KEY!, smellsData);
-
-  let fileHashes =
-    contextManager.getWorkspaceData(envConfig.FILE_CHANGES_KEY!) || {};
-  contextManager.setWorkspaceData(envConfig.FILE_CHANGES_KEY!, fileHashes);
-
-  // Check server health every 10 seconds
   setInterval(checkServerStatus, 10000);
 
-  // ===============================================================
-  // REGISTER COMMANDS
-  // ===============================================================
+  // Track the workspace configuration state.
+  const workspaceConfigured = Boolean(
+    context.workspaceState.get<string>('workspaceConfiguredPath'),
+  );
+  vscode.commands.executeCommand(
+    'setContext',
+    'workspaceState.workspaceConfigured',
+    workspaceConfigured,
+  );
 
-  // Detect Smells Command
+  // Register workspace-related commands.
   context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.detectSmells', async () => {
-      console.log('Eco: Detect Smells Command Triggered');
-      detectSmells(contextManager);
-    }),
+    vscode.commands.registerCommand('ecooptimizer.configureWorkspace', () =>
+      configureWorkspace(context, smellsDisplayProvider),
+    ),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.resetConfiguration', () =>
+      resetConfiguration(context, smellsCacheManager, smellsDisplayProvider),
+    ),
+  );
+
+  // Initialize the Filter Smells View.
+  const filterSmellsProvider = new FilterSmellsProvider(context);
+  const filterSmellsView = vscode.window.createTreeView('ecooptimizer.filterView', {
+    treeDataProvider: filterSmellsProvider,
+    showCollapseAll: true,
+  });
+
+  // Associate the TreeView instance with the provider.
+  filterSmellsProvider.setTreeView(filterSmellsView);
+
+  // Register filter-related commands.
+  registerFilterSmellCommands(context, filterSmellsProvider);
+
+  // Register code smell analysis commands.
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.openFile', openFile),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer.detectSmellsFolder',
+      (folderPath) =>
+        detectSmellsFolder(smellsCacheManager, smellsDisplayProvider, folderPath),
+    ),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileUri) =>
+      detectSmellsFile(smellsCacheManager, smellsDisplayProvider, fileUri),
+    ),
   );
 
   // Refactor Selected Smell Command
@@ -72,7 +109,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('ecooptimizer.refactorSmell', () => {
       if (serverStatus.getStatus() === 'up') {
         console.log('Eco: Refactor Selected Smell Command Triggered');
-        refactorSelectedSmell(contextManager);
+        refactorSelectedSmell(context, smellsCacheManager);
       } else {
         vscode.window.showWarningMessage('Action blocked: Server is down.');
       }
@@ -88,7 +125,7 @@ export function activate(context: vscode.ExtensionContext): void {
           console.log(
             `Eco: Refactor All Smells of Type Command Triggered for ${smellId}`,
           );
-          refactorAllSmellsOfType(contextManager, smellId);
+          refactorAllSmellsOfType(context, smellsCacheManager, smellId);
         } else {
           vscode.window.showWarningMessage('Action blocked: Server is down.');
         }
@@ -96,58 +133,35 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
-  // Wipe Cache Command
+  // Register the "Toggle Smell Auto Lint" command.
+  // TODO: Uncomment this block after implementing smell linting
+  // context.subscriptions.push(
+  //   vscode.commands.registerCommand('ecooptimizer.toggleSmellLinting', () => {
+  //     console.log('Eco: Toggle Smell Linting Command Triggered');
+  //     toggleSmellLinting(contextManager);
+  //   }),
+  // );
+
+  // Register the "Jump to Smell" command.
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.jumpToSmell', jumpToSmell),
+  );
+
+  // Register the "Clear Smells Cache" command.
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.wipeWorkCache', async () => {
-      console.log('Eco: Wipe Work Cache Command Triggered');
-      vscode.window.showInformationMessage(
-        'Eco: Manually wiping workspace memory... ✅',
-      );
-      await wipeWorkCache(contextManager, 'manual');
+      await wipeWorkCache(smellsCacheManager, smellsDisplayProvider);
     }),
   );
 
-  // screen button go brr
+  // Adds comments to lines describing the smell
+  const lineSelectManager = new LineSelectionManager(smellsCacheManager);
   context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.toggleSmellLinting', () => {
-      console.log('Eco: Toggle Smell Linting Command Triggered');
-      toggleSmellLinting(contextManager);
+    vscode.window.onDidChangeTextEditorSelection((event) => {
+      console.log('Eco: Detected line selection event');
+      lineSelectManager.commentLine(event.textEditor);
     }),
   );
-
-  // ===============================================================
-  // REGISTER VIEWS
-  // ===============================================================
-
-  const refactorProvider = new RefactorSidebarProvider(context);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      RefactorSidebarProvider.viewType,
-      refactorProvider,
-    ),
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.showRefactorSidebar', () =>
-      refactorProvider.updateView(),
-    ),
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.pauseRefactorSidebar', () =>
-      refactorProvider.pauseView(),
-    ),
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.clearRefactorSidebar', () =>
-      refactorProvider.clearView(),
-    ),
-  );
-
-  // ===============================================================
-  // ADD LISTENERS
-  // ===============================================================
 
   // Register a listener for configuration changes
   context.subscriptions.push(
@@ -156,98 +170,47 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  vscode.window.onDidChangeVisibleTextEditors(async (editors) => {
-    handleEditorChanges(contextManager, editors);
-  });
-
-  // Adds comments to lines describing the smell
-  const lineSelectManager = new LineSelectionManager(contextManager);
-  context.subscriptions.push(
-    vscode.window.onDidChangeTextEditorSelection((event) => {
-      console.log('Eco: Detected line selection event');
-      lineSelectManager.commentLine(event.textEditor);
-    }),
-  );
-
-  // Updates directory of file states (for checking if modified)
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(async (document) => {
-      console.log('Eco: Detected document saved event');
-      await updateHash(contextManager, document);
-    }),
-  );
-
-  // Handles case of documents already being open on VS Code open
-  vscode.window.visibleTextEditors.forEach(async (editor) => {
-    if (editor.document) {
-      await updateHash(contextManager, editor.document);
-    }
-  });
-
-  // Initializes first state of document when opened while extension is active
-  context.subscriptions.push(
-    vscode.workspace.onDidOpenTextDocument(async (document) => {
-      console.log('Eco: Detected document opened event');
-      await updateHash(contextManager, document);
-    }),
-  );
-
-  // Listen for file save events
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(async (document) => {
-      console.log('Eco: Detected document saved event');
-
-      // Check if smell linting is enabled
-      const isEnabled = contextManager.getWorkspaceData(
-        envConfig.SMELL_LINTING_ENABLED_KEY,
-        false,
-      );
-      if (isEnabled) {
-        console.log('Eco: Smell linting is enabled. Detecting smells...');
-        await detectSmells(contextManager);
-      }
-    }),
-  );
-
   // Listen for editor changes
-  context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-      if (editor) {
-        console.log('Eco: Detected editor change event');
+  // TODO: Uncomment this block after implementing smell linting
+  // context.subscriptions.push(
+  //   vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+  //     if (editor) {
+  //       console.log('Eco: Detected editor change event');
 
-        // Check if the file is a Python file
-        if (editor.document.languageId === 'python') {
-          console.log('Eco: Active file is a Python file.');
+  //       // Check if the file is a Python file
+  //       if (editor.document.languageId === 'python') {
+  //         console.log('Eco: Active file is a Python file.');
 
-          // Check if smell linting is enabled
-          const isEnabled = contextManager.getWorkspaceData(
-            envConfig.SMELL_LINTING_ENABLED_KEY,
-            false,
-          );
-          if (isEnabled) {
-            console.log('Eco: Smell linting is enabled. Detecting smells...');
-            await detectSmells(contextManager);
-          }
-        }
-      }
-    }),
+  //         // Check if smell linting is enabled
+  //         const isEnabled = context.workspaceState.get<boolean>(
+  //           envConfig.SMELL_LINTING_ENABLED_KEY,
+  //           false,
+  //         );
+  //         if (isEnabled) {
+  //           console.log('Eco: Smell linting is enabled. Detecting smells...');
+  //           await detectSmells(contextManager);
+  //         }
+  //       }
+  //     }
+  //   }),
+  // );
+
+  // Register the file save listener to detect outdated files.
+  const fileSaveListener = registerFileSaveListener(
+    smellsCacheManager,
+    smellsDisplayProvider,
   );
+  context.subscriptions.push(fileSaveListener);
 
-  // ===============================================================
-  // HANDLE SMELL FILTER CHANGES
-  // ===============================================================
+  // TODO: Setting to re-enable popup if disabled
+  const settingsPopupChoice = context.globalState.get<boolean>('showSettingsPopup');
 
-  let previousSmells = getEnabledSmells();
-  vscode.workspace.onDidChangeConfiguration((event) => {
-    if (event.affectsConfiguration('ecooptimizer.enableSmells')) {
-      console.log('Eco: Smell preferences changed! Wiping cache.');
-      handleSmellFilterUpdate(previousSmells, contextManager);
-      previousSmells = getEnabledSmells();
-    }
-  });
+  if (settingsPopupChoice === undefined || settingsPopupChoice) {
+    showSettingsPopup(context);
+  }
 }
 
-function showSettingsPopup(): void {
+function showSettingsPopup(context: vscode.ExtensionContext): void {
   // Check if the required settings are already configured
   const config = vscode.workspace.getConfiguration('ecooptimizer');
   const workspacePath = config.get<string>('projectWorkspacePath', '');
@@ -277,7 +240,7 @@ function showSettingsPopup(): void {
             'You can configure the paths later in the settings.',
           );
         } else if (selection === 'Never show this again') {
-          globalData.contextManager!.setGlobalData('showSettingsPopup', false);
+          context.globalState.update('showSettingsPopup', false);
           vscode.window.showInformationMessage(
             'You can re-enable this popup again in the settings.',
           );
@@ -290,7 +253,6 @@ function handleConfigurationChange(event: vscode.ConfigurationChangeEvent): void
   // Check if any relevant setting was changed
   if (
     event.affectsConfiguration('ecooptimizer.projectWorkspacePath') ||
-    event.affectsConfiguration('ecooptimizer.unitTestCommand') ||
     event.affectsConfiguration('ecooptimizer.logsOutputPath')
   ) {
     // Display a warning message about changing critical settings
@@ -300,7 +262,10 @@ function handleConfigurationChange(event: vscode.ConfigurationChangeEvent): void
   }
 }
 
+/**
+ * Deactivates the Eco-Optimizer extension.
+ */
 export function deactivate(): void {
-  console.log('Eco: Deactivating Plugin - Stopping Log Watching');
-  stopWatchingLogs();
+  console.log('Deactivating Eco-Optimizer extension...');
+  logManager.stopWatchingLogs();
 }

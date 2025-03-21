@@ -1,20 +1,23 @@
 import * as vscode from 'vscode';
 import { getEditor } from '../utils/editorUtils';
-import { ContextManager } from '../context/contextManager';
 import { HoverManager } from './hoverManager';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
 
 export class FileHighlighter {
   private static instance: FileHighlighter;
-  private contextManager: ContextManager;
   private decorations: vscode.TextEditorDecorationType[] = [];
 
-  private constructor(contextManager: ContextManager) {
-    this.contextManager = contextManager;
-  }
+  constructor(
+    private context: vscode.ExtensionContext,
+    private smellsCacheManager: SmellsCacheManager,
+  ) {}
 
-  public static getInstance(contextManager: ContextManager): FileHighlighter {
+  public static getInstance(
+    context: vscode.ExtensionContext,
+    smellsCacheManager: SmellsCacheManager,
+  ): FileHighlighter {
     if (!FileHighlighter.instance) {
-      FileHighlighter.instance = new FileHighlighter(contextManager);
+      FileHighlighter.instance = new FileHighlighter(context, smellsCacheManager);
     }
     return FileHighlighter.instance;
   }
@@ -71,7 +74,11 @@ export class FileHighlighter {
         const indexEnd = lineText.trimEnd().length + 2;
         const range = new vscode.Range(line, indexStart, line, indexEnd);
 
-        const hoverManager = HoverManager.getInstance(this.contextManager, smells);
+        const hoverManager = HoverManager.getInstance(
+          this.context,
+          this.smellsCacheManager,
+          smells,
+        );
         return { range, hoverMessage: hoverManager.hoverContent || undefined };
       });
 

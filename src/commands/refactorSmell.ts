@@ -5,13 +5,11 @@ import { envConfig } from '../utils/envConfig';
 
 import { getEditorAndFilePath } from '../utils/editorUtils';
 import { refactorSmell } from '../api/backend';
-import { sidebarState } from '../utils/handleEditorChange';
 
 import { FileHighlighter } from '../ui/fileHighlighter';
-import { ContextManager } from '../context/contextManager';
-import { setTimeout } from 'timers/promises';
 import { serverStatus } from '../utils/serverStatus';
 import { ServerStatusType } from '../utils/serverStatus';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
 
 /* istanbul ignore next */
 serverStatus.on('change', (newStatus: ServerStatusType) => {
@@ -43,12 +41,13 @@ async function refactorLine(
 }
 
 export async function refactorSelectedSmell(
-  contextManager: ContextManager,
+  context: vscode.ExtensionContext,
+  smellsCacheManager: SmellsCacheManager,
   smellGiven?: Smell,
 ): Promise<void> {
   const { editor, filePath } = getEditorAndFilePath();
 
-  const pastData = contextManager.getWorkspaceData(
+  const pastData = context.workspaceState.get<RefactoredData>(
     envConfig.CURRENT_REFACTOR_DATA_KEY!,
   );
 
@@ -67,9 +66,7 @@ export async function refactorSelectedSmell(
 
   const selectedLine = editor.selection.start.line + 1; // Update to VS Code editor indexing
 
-  const smellsData: Smell[] = contextManager.getWorkspaceData(
-    envConfig.SMELL_MAP_KEY!,
-  )[filePath].smells;
+  const smellsData = smellsCacheManager.getCachedSmells(filePath);
 
   if (!smellsData || smellsData.length === 0) {
     vscode.window.showErrorMessage(
@@ -126,10 +123,10 @@ export async function refactorSelectedSmell(
 
   const { refactoredData } = refactorResult;
 
-  await startRefactoringSession(contextManager, editor, refactoredData);
+  await startRefactoringSession(context, editor, refactoredData);
 
   if (refactorResult.updatedSmells.length) {
-    const fileHighlighter = FileHighlighter.getInstance(contextManager);
+    const fileHighlighter = FileHighlighter.getInstance(context, smellsCacheManager);
     fileHighlighter.highlightSmells(editor, refactorResult.updatedSmells);
   } else {
     vscode.window.showWarningMessage(
@@ -140,7 +137,9 @@ export async function refactorSelectedSmell(
 
 export async function refactorAllSmellsOfType(
   // eslint-disable-next-line unused-imports/no-unused-vars
-  contextManager: ContextManager,
+  context: vscode.ExtensionContext,
+  // eslint-disable-next-line unused-imports/no-unused-vars
+  smellsCacheManager: SmellsCacheManager,
   // eslint-disable-next-line unused-imports/no-unused-vars
   smellId: string,
 ): Promise<void> {
@@ -257,55 +256,59 @@ export async function refactorAllSmellsOfType(
 
 /* istanbul ignore next */
 async function startRefactoringSession(
-  contextManager: ContextManager,
+  context: vscode.ExtensionContext,
   editor: vscode.TextEditor,
   refactoredData: RefactoredData | MultiRefactoredData,
 ): Promise<void> {
   // Store only the diff editor state
-  await contextManager.setWorkspaceData(
+  await context.workspaceState.update(
     envConfig.CURRENT_REFACTOR_DATA_KEY!,
     refactoredData,
   );
 
-  await vscode.commands.executeCommand('extension.refactorSidebar.focus');
-
-  //Read the refactored code
-  const refactoredCode = vscode.Uri.file(refactoredData.targetFile.refactored);
-
-  //Get the original code from the editor
-  const originalCode = editor.document.uri;
-
-  const allFiles: ChangedFile[] = [
-    refactoredData.targetFile,
-    ...refactoredData.affectedFiles,
-  ].map((file) => {
-    return {
-      original: vscode.Uri.file(file.original).toString(),
-      refactored: vscode.Uri.file(file.refactored).toString(),
-    };
-  });
-
-  await contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, {
-    files: allFiles,
-    firstOpen: true,
-    isOpen: true,
-  });
-
-  await setTimeout(500);
-
-  const doc = await vscode.workspace.openTextDocument(originalCode);
-  await vscode.window.showTextDocument(doc, { preview: false });
-
-  //Show the diff viewer
-  sidebarState.isOpening = true;
-  vscode.commands.executeCommand(
-    'vscode.diff',
-    originalCode,
-    refactoredCode,
-    'Refactoring Comparison',
+  vscode.window.showInformationMessage(
+    'Hey Niv, this needs to be connected to the new refactor sidebar :)',
   );
-  vscode.commands.executeCommand('ecooptimizer.showRefactorSidebar');
-  sidebarState.isOpening = false;
+
+  // await vscode.commands.executeCommand('extension.refactorSidebar.focus');
+
+  // //Read the refactored code
+  // const refactoredCode = vscode.Uri.file(refactoredData.targetFile.refactored);
+
+  // //Get the original code from the editor
+  // const originalCode = editor.document.uri;
+
+  // const allFiles: ChangedFile[] = [
+  //   refactoredData.targetFile,
+  //   ...refactoredData.affectedFiles,
+  // ].map((file) => {
+  //   return {
+  //     original: vscode.Uri.file(file.original).toString(),
+  //     refactored: vscode.Uri.file(file.refactored).toString(),
+  //   };
+  // });
+
+  // await contextManager.setWorkspaceData(envConfig.ACTIVE_DIFF_KEY!, {
+  //   files: allFiles,
+  //   firstOpen: true,
+  //   isOpen: true,
+  // });
+
+  // await setTimeout(500);
+
+  // const doc = await vscode.workspace.openTextDocument(originalCode);
+  // await vscode.window.showTextDocument(doc, { preview: false });
+
+  // //Show the diff viewer
+  // sidebarState.isOpening = true;
+  // vscode.commands.executeCommand(
+  //   'vscode.diff',
+  //   originalCode,
+  //   refactoredCode,
+  //   'Refactoring Comparison',
+  // );
+  // vscode.commands.executeCommand('ecooptimizer.showRefactorSidebar');
+  // sidebarState.isOpening = false;
 }
 
 export async function cleanTemps(pastData: any): Promise<void> {
