@@ -173,6 +173,13 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
     }
   }
 
+  /**
+   * Prompts the user to confirm a smell filter change.
+   * Displays a modal warning that changing filters will invalidate cached analysis results.
+   * If the user confirms, returns true. If the user cancels, returns false.
+   *
+   * @returns Whether the user chose to proceed with the filter change.
+   */
   private async confirmFilterChange(): Promise<boolean> {
     const result = await vscode.window.showWarningMessage(
       'Changing smell filters will invalidate existing analysis results. Do you want to continue?',
