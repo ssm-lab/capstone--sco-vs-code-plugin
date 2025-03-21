@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { FilterSmellsProvider } from '../providers/FilterSmellsProvider';
+import { FilterSmellsProvider } from '../providers/FilterViewProvider';
 
 /**
  * Registers VS Code commands for managing smell filters.

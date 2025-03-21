@@ -12,7 +12,7 @@ import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
 import { SmellsDisplayProvider } from './providers/SmellsViewProvider';
 import { checkServerStatus } from './api/backend';
-import { FilterSmellsProvider } from './providers/FilterSmellsProvider';
+import { FilterSmellsProvider } from './providers/FilterViewProvider';
 import { SmellsCacheManager } from './context/SmellsCacheManager';
 import { registerFileSaveListener } from './listeners/fileSaveListener';
 
