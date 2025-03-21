@@ -48,7 +48,7 @@ export class SmellsUIManager {
       this.updateFileItem(item, status, isOutdated);
 
       // Add a context value for files with smells
-      if (hasSmells && status === 'passed') {
+      if (hasSmells && status === 'passed' && !isOutdated) {
         item.contextValue = 'ecoOptimizerFile-hasSmells'; // Append 'hasSmells' to the context value
       }
     } else {
@@ -62,7 +62,6 @@ export class SmellsUIManager {
       }
       this.setSmellTooltip(item, element);
     }
-
     return item;
   }
 
@@ -96,12 +95,13 @@ export class SmellsUIManager {
         'warning',
         new vscode.ThemeColor('charts.orange'),
       );
+      item.tooltip = `${path.basename(this.getStatusMessage('outdated'))}`;
     } else {
       item.iconPath = this.getStatusIcon(status);
+      item.tooltip = `${path.basename(
+        item.label as string,
+      )} (${this.getStatusMessage(status)})`;
     }
-    item.tooltip = `${path.basename(
-      item.label as string,
-    )} (${this.getStatusMessage(status)})`;
   }
 
   /**

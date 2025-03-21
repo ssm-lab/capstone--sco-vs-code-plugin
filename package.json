@@ -203,6 +203,12 @@
         "category": "Eco Optimizer"
       },
       {
+        "command": "ecooptimizer.refactorSmell",
+        "title": "Refactor Smell",
+        "icon": "$(tools)",
+        "category": "Eco Optimizer"
+      },
+      {
         "command": "ecooptimizer.jumpToSmell",
         "title": "Jump to Smell in File",
         "category": "Eco Optimizer"
@@ -255,6 +261,11 @@
         {
           "command": "ecooptimizer.refactorAllSmellsOfType",
           "when": "viewItem == ecoOptimizerFile-hasSmells",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.refactorSmell",
+          "when": "viewItem == ecoOptimizerSmell",
           "group": "inline"
         }
       ]
