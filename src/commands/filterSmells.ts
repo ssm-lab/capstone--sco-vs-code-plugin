@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { FilterSmellsProvider } from '../providers/FilterViewProvider';
+import { FilterViewProvider } from '../providers/FilterViewProvider';
 
 /**
  * Registers VS Code commands for managing smell filters.
@@ -8,7 +8,7 @@ import { FilterSmellsProvider } from '../providers/FilterViewProvider';
  */
 export function registerFilterSmellCommands(
   context: vscode.ExtensionContext,
-  filterSmellsProvider: FilterSmellsProvider,
+  filterSmellsProvider: FilterViewProvider,
 ) {
   /**
    * Toggles the state of a specific smell filter.

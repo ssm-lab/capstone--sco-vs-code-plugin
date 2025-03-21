@@ -4,9 +4,7 @@ import { FilterSmellConfig, loadSmells, saveSmells } from '../utils/smellsData';
 /**
  * Provides a tree view for filtering code smells within the VS Code extension.
  */
-export class FilterSmellsProvider
-  implements vscode.TreeDataProvider<vscode.TreeItem>
-{
+export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<
     vscode.TreeItem | undefined | void
   > = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();

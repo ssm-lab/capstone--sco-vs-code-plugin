@@ -12,7 +12,7 @@ import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
 import { SmellsViewProvider } from './providers/SmellsViewProvider';
 import { checkServerStatus } from './api/backend';
-import { FilterSmellsProvider } from './providers/FilterViewProvider';
+import { FilterViewProvider } from './providers/FilterViewProvider';
 import { SmellsCacheManager } from './context/SmellsCacheManager';
 import { registerFileSaveListener } from './listeners/fileSaveListener';
 
@@ -61,7 +61,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   // Initialize the Filter Smells View.
-  const filterSmellsProvider = new FilterSmellsProvider(context);
+  const filterSmellsProvider = new FilterViewProvider(context);
   const filterSmellsView = vscode.window.createTreeView('ecooptimizer.filterView', {
     treeDataProvider: filterSmellsProvider,
     showCollapseAll: true,
