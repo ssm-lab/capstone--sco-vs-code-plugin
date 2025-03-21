@@ -31,12 +31,18 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
   setTreeView(treeView: vscode.TreeView<vscode.TreeItem>): void {
     this.treeView = treeView;
 
-    this.treeView.onDidChangeCheckboxState((event) => {
-      event.items.forEach((item) => {
-        if (item[0] instanceof SmellItem) {
-          this.toggleSmell(item[0].key);
+    this.treeView.onDidChangeCheckboxState(async (event) => {
+      for (const [item] of event.items) {
+        if (item instanceof SmellItem) {
+          const confirmed = await this.confirmFilterChange();
+          if (confirmed) {
+            await this.toggleSmell(item.key);
+          } else {
+            // Cancelled — refresh the tree to revert the checkbox UI
+            this._onDidChangeTreeData.fire();
+          }
         }
-      });
+      }
     });
   }
 
@@ -116,6 +122,9 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
     optionKey: string,
     newValue: number | string,
   ): Promise<void> {
+    const confirmed = await this.confirmFilterChange();
+    if (!confirmed) return;
+
     if (this.smells[smellKey]?.analyzer_options?.[optionKey]) {
       this.smells[smellKey].analyzer_options[optionKey].value = newValue;
       saveSmells(this.smells);
@@ -141,6 +150,9 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
    * @param enabled - Whether all smells should be enabled or disabled.
    */
   async setAllSmellsEnabled(enabled: boolean): Promise<void> {
+    const confirmed = await this.confirmFilterChange();
+    if (!confirmed) return;
+
     Object.keys(this.smells).forEach((key) => {
       this.smells[key].enabled = enabled;
     });
@@ -159,6 +171,15 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
       await this.cacheManager.clearCachedSmellsForFile(filePath);
       this.smellsViewProvider.markFileAsOutdated(filePath);
     }
+  }
+
+  private async confirmFilterChange(): Promise<boolean> {
+    const result = await vscode.window.showWarningMessage(
+      'Changing smell filters will invalidate existing analysis results. Do you want to continue?',
+      { modal: true },
+      'Yes',
+    );
+    return result === 'Yes';
   }
 }
 
