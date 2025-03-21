@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { FilterSmellConfig, loadSmells, saveSmells } from '../utils/smellsData';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
+import { SmellsViewProvider } from './SmellsViewProvider';
 
 /**
  * Provides a tree view for filtering code smells within the VS Code extension.
@@ -14,7 +16,11 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
   private treeView?: vscode.TreeView<vscode.TreeItem>;
   private smells: Record<string, FilterSmellConfig> = {};
 
-  constructor(private context: vscode.ExtensionContext) {
+  constructor(
+    private context: vscode.ExtensionContext,
+    private cacheManager: SmellsCacheManager,
+    private smellsViewProvider: SmellsViewProvider,
+  ) {
     this.smells = loadSmells();
   }
 
@@ -50,17 +56,20 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
   getChildren(element?: SmellItem): Thenable<vscode.TreeItem[]> {
     if (!element) {
       return Promise.resolve(
-        Object.keys(this.smells).map((smellKey) => {
-          const smell = this.smells[smellKey];
-          return new SmellItem(
-            smellKey,
-            smell.name,
-            smell.enabled,
-            smell.analyzer_options && Object.keys(smell.analyzer_options).length > 0
-              ? vscode.TreeItemCollapsibleState.Collapsed
-              : vscode.TreeItemCollapsibleState.None,
-          );
-        }),
+        Object.keys(this.smells)
+          .sort((a, b) => this.smells[a].name.localeCompare(this.smells[b].name))
+          .map((smellKey) => {
+            const smell = this.smells[smellKey];
+            return new SmellItem(
+              smellKey,
+              smell.name,
+              smell.enabled,
+              smell.analyzer_options &&
+              Object.keys(smell.analyzer_options).length > 0
+                ? vscode.TreeItemCollapsibleState.Collapsed
+                : vscode.TreeItemCollapsibleState.None,
+            );
+          }),
       );
     }
 
@@ -83,30 +92,34 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
   /**
    * Toggles the enabled state of a specific smell and updates the configuration file.
+   * Also clears the smell cache for affected files.
    * @param smellKey - The key of the smell to toggle.
    */
-  toggleSmell(smellKey: string): void {
+  async toggleSmell(smellKey: string): Promise<void> {
     if (this.smells[smellKey]) {
       this.smells[smellKey].enabled = !this.smells[smellKey].enabled;
       saveSmells(this.smells);
+      await this.invalidateCachedSmellsForAffectedFiles();
       this._onDidChangeTreeData.fire();
     }
   }
 
   /**
    * Updates the value of a specific smell option and saves the configuration.
+   * Also clears the smell cache for affected files.
    * @param smellKey - The key of the smell.
    * @param optionKey - The key of the option.
    * @param newValue - The new value to set.
    */
-  updateOption(
+  async updateOption(
     smellKey: string,
     optionKey: string,
     newValue: number | string,
-  ): void {
+  ): Promise<void> {
     if (this.smells[smellKey]?.analyzer_options?.[optionKey]) {
       this.smells[smellKey].analyzer_options[optionKey].value = newValue;
       saveSmells(this.smells);
+      await this.invalidateCachedSmellsForAffectedFiles();
       this._onDidChangeTreeData.fire();
     } else {
       vscode.window.showErrorMessage(
@@ -124,14 +137,28 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
   /**
    * Enables or disables all smells in the filter and updates the configuration.
+   * Also clears the smell cache for affected files.
    * @param enabled - Whether all smells should be enabled or disabled.
    */
-  setAllSmellsEnabled(enabled: boolean): void {
+  async setAllSmellsEnabled(enabled: boolean): Promise<void> {
     Object.keys(this.smells).forEach((key) => {
       this.smells[key].enabled = enabled;
     });
     saveSmells(this.smells);
+    await this.invalidateCachedSmellsForAffectedFiles();
     this._onDidChangeTreeData.fire();
+  }
+
+  /**
+   * Clears smell cache and marks all cached file results as outdated.
+   */
+  async invalidateCachedSmellsForAffectedFiles(): Promise<void> {
+    const cache = this.cacheManager.getFullSmellCache();
+
+    for (const [filePath, smells] of Object.entries(cache)) {
+      await this.cacheManager.clearCachedSmellsForFile(filePath);
+      this.smellsViewProvider.markFileAsOutdated(filePath);
+    }
   }
 }
 

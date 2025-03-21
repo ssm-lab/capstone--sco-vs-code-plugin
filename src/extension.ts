@@ -27,9 +27,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const smellsCacheManager = new SmellsCacheManager(context);
 
   // Initialize the Code Smells View.
-  const smellsDisplayProvider = new SmellsViewProvider(context);
+  const smellsViewProvider = new SmellsViewProvider(context);
   const codeSmellsView = vscode.window.createTreeView('ecooptimizer.view', {
-    treeDataProvider: smellsDisplayProvider,
+    treeDataProvider: smellsViewProvider,
   });
   context.subscriptions.push(codeSmellsView);
 
@@ -50,18 +50,22 @@ export function activate(context: vscode.ExtensionContext): void {
   // Register workspace-related commands.
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.configureWorkspace', () =>
-      configureWorkspace(context, smellsDisplayProvider),
+      configureWorkspace(context, smellsViewProvider),
     ),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.resetConfiguration', () =>
-      resetConfiguration(context, smellsCacheManager, smellsDisplayProvider),
+      resetConfiguration(context, smellsCacheManager, smellsViewProvider),
     ),
   );
 
   // Initialize the Filter Smells View.
-  const filterSmellsProvider = new FilterViewProvider(context);
+  const filterSmellsProvider = new FilterViewProvider(
+    context,
+    smellsCacheManager,
+    smellsViewProvider,
+  );
   const filterSmellsView = vscode.window.createTreeView('ecooptimizer.filterView', {
     treeDataProvider: filterSmellsProvider,
     showCollapseAll: true,
@@ -82,13 +86,13 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       'ecooptimizer.detectSmellsFolder',
       (folderPath) =>
-        detectSmellsFolder(smellsCacheManager, smellsDisplayProvider, folderPath),
+        detectSmellsFolder(smellsCacheManager, smellsViewProvider, folderPath),
     ),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileUri) =>
-      detectSmellsFile(smellsCacheManager, smellsDisplayProvider, fileUri),
+      detectSmellsFile(smellsCacheManager, smellsViewProvider, fileUri),
     ),
   );
 
@@ -100,14 +104,14 @@ export function activate(context: vscode.ExtensionContext): void {
   // Register the "Clear Smells Cache" command.
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.wipeWorkCache', async () => {
-      await wipeWorkCache(smellsCacheManager, smellsDisplayProvider);
+      await wipeWorkCache(smellsCacheManager, smellsViewProvider);
     }),
   );
 
   // Register the file save listener to detect outdated files.
   const fileSaveListener = registerFileSaveListener(
     smellsCacheManager,
-    smellsDisplayProvider,
+    smellsViewProvider,
   );
   context.subscriptions.push(fileSaveListener);
 }
