@@ -71,11 +71,7 @@
       "!src/**/index.ts",
       "!test/mocks/*",
       "!src/extension.ts",
-      "!src/context/*",
-      "!src/utils/configManager.ts",
-      "!src/commands/showLogs.ts",
-      "!src/ui/refactorView.ts",
-      "!src/utils/handleEditorChange.ts"
+      "!src/context/*"
     ]
   },
   "lint-staged": {
@@ -220,17 +216,6 @@
         "command": "ecooptimizer.wipeWorkCache",
         "title": "Clear Smells Cache",
         "category": "Eco Optimizer"
-      },
-      {
-        "command": "ecooptimizer.startLogging",
-        "title": "Show Backend Logs",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.toggleSmellLinting",
-        "title": "🍃 Toggle Smell Linting",
-        "category": "Eco"
       }
     ],
     "menus": {
@@ -277,120 +262,7 @@
           "when": "viewItem == ecoOptimizerFile",
           "group": "inline"
         }
-      ],
-      "editor/title": [
-        {
-          "command": "ecooptimizer.toggleSmellLinting",
-          "group": "navigation",
-          "when": "eco.smellLintingEnabled == false",
-          "icon": {
-            "light": "off.svg",
-            "dark": "off.svg"
-          }
-        },
-        {
-          "command": "ecooptimizer.toggleSmellLinting",
-          "group": "navigation",
-          "when": "eco.smellLintingEnabled == true",
-          "icon": {
-            "light": "on.svg",
-            "dark": "on.svg"
-          }
-        }
       ]
-    },
-    "configuration": {
-      "title": "EcoOptimizer",
-      "properties": {
-        "ecooptimizer.projectWorkspacePath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to the folder to be targeted, relative to current workspace. Defaults to the currently open folder in VS Code."
-        },
-        "ecooptimizer.logsOutputPath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to store log files and output reports. Defaults to a 'logs' folder inside the workspace."
-        },
-        "detection.smellColours": {
-          "order": 1,
-          "type": "object",
-          "additionalProperties": false,
-          "description": "Configure the highlight colours of each smell (css syntax).",
-          "default": {
-            "long-element-chain": "lightblue",
-            "too-many-arguments": "lightcoral",
-            "long-lambda-expression": "mediumpurple",
-            "long-message-chain": "lightpink",
-            "cached-repeated-calls": "lightgreen",
-            "string-concat-loop": "lightsalmon",
-            "no-self-use": "lightcyan",
-            "use-a-generator": "yellow"
-          },
-          "properties": {
-            "long-element-chain": {
-              "type": "string",
-              "default": "lightblue"
-            },
-            "too-many-arguments": {
-              "type": "string",
-              "default": "lightcoral"
-            },
-            "long-lambda-expression": {
-              "type": "string",
-              "default": "mediumpurple"
-            },
-            "long-message-chain": {
-              "type": "string",
-              "default": "lightpink"
-            },
-            "cached-repeated-calls": {
-              "type": "string",
-              "default": "lightgreen"
-            },
-            "string-concat-loop": {
-              "type": "string",
-              "default": "lightsalmon"
-            },
-            "no-self-use": {
-              "type": "string",
-              "default": "lightcyan"
-            },
-            "use-a-generator": {
-              "type": "string",
-              "default": "yellow"
-            }
-          }
-        },
-        "ecooptimizer.detection.useSingleColour": {
-          "order": 2,
-          "type": "boolean",
-          "default": false,
-          "description": "Use a single colour for all smells. If enabled, the colour defined below will be used."
-        },
-        "ecooptimizer.detection.singleHighlightColour": {
-          "order": 3,
-          "type": "string",
-          "default": "yellow",
-          "markdownDescription": "Colour (css syntax) to use for all smells if **Use Single Colour** is enabled."
-        },
-        "ecooptimizer.detection.highlightStyle": {
-          "order": 0,
-          "type": "string",
-          "enum": [
-            "underline",
-            "flashlight",
-            "border-arrow"
-          ],
-          "markdownEnumDescriptions": [
-            "Your average wavy line",
-            "No pixel left untouched",
-            "Basically how it sounds"
-          ],
-          "default": "underline",
-          "description": "Choose a highlight style for all smells."
-        }
-      }
     }
   }
 }

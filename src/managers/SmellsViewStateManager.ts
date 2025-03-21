@@ -30,7 +30,6 @@ export class SmellsStateManager {
   ): void {
     this.fileStatusMap.set(filePath, 'passed');
 
-    console.log('Smells:', smells, typeof smells);
     const formattedSmells: ProcessedSmell[] = smells.map((smell) => {
       const foundEntry = Object.values(smellMetadata).find(
         (smellData) => smellData.message_id === smell.messageId,

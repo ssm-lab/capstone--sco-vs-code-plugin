@@ -30,17 +30,6 @@ export function registerFileSaveListener(
         )}" has been modified since the last analysis.`,
       );
 
-      // Check if smell linting is enabled
-      // TODO: Uncomment this block after implementing smell linting
-      // const isEnabled = contextManager.getWorkspaceData(
-      //   envConfig.SMELL_LINTING_ENABLED_KEY,
-      //   false,
-      // );
-      // if (isEnabled) {
-      //   console.log('Eco: Smell linting is enabled. Detecting smells...');
-      //   await detectSmells(contextManager);
-      // }
-
       // Mark file as outdated in the UI
       smellsDisplayProvider.markFileAsOutdated(filePath);
     }

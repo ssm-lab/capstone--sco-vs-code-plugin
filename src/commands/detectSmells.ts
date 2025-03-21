@@ -30,7 +30,6 @@ export async function detectSmellsFile(
   const filePath = typeof fileUri === 'string' ? fileUri : fileUri.fsPath;
 
   // Handle outdated files before proceeding
-  console.log('Handling outdated file:', filePath);
   await handleOutdatedFile(filePath, smellsCacheManager, treeDataProvider);
 
   // Open the file and compute its hash
@@ -38,11 +37,9 @@ export async function detectSmellsFile(
   const fileContent = document.getText();
 
   // Store the file hash after analyzing
-  console.log('Storing file hash for:', filePath);
   await smellsCacheManager.storeFileHash(filePath, fileContent);
 
   // Retrieve enabled smells from configuration
-  console.log('Retrieving enabled smells...');
   const enabledSmells = getEnabledSmells();
 
   // Ensure that at least one smell type is enabled
@@ -54,7 +51,6 @@ export async function detectSmellsFile(
   }
 
   // Check if smells are already cached
-  console.log('Checking for cached smells...');
   const cachedSmells = smellsCacheManager.getCachedSmells(filePath);
   if (cachedSmells !== undefined) {
     // Use cached smells if available
@@ -63,13 +59,11 @@ export async function detectSmellsFile(
     );
 
     if (cachedSmells.length > 0) {
-      console.log('Updating UI with cached smells...');
       treeDataProvider.updateSmells(filePath, cachedSmells, enabledSmells);
     } else {
       treeDataProvider.updateStatus(filePath, 'no_issues');
     }
 
-    console.log('Analysis complete: Using cached smells.');
     return;
   }
 
@@ -86,25 +80,21 @@ export async function detectSmellsFile(
 
   try {
     // Prepare enabled smells for backend request
-    console.log('Preparing enabled smells for backend...');
     const enabledSmellsForBackend = Object.fromEntries(
       Object.entries(enabledSmells).map(([key, value]) => [key, value.options]),
     );
 
     // Request smell analysis from the backend
-    console.log('Requesting smell analysis from the backend...');
     const { smells, status } = await fetchSmells(filePath, enabledSmellsForBackend);
 
     // Handle response and update UI
     if (status === 200) {
       // Cache detected smells, even if no smells are found
-      console.log('Caching detected smells...');
       await smellsCacheManager.setCachedSmells(filePath, smells);
 
       // Remove the file from modifiedFiles after re-analysis
       treeDataProvider.clearOutdatedStatus(filePath);
 
-      console.log('Updating UI with detected smells...');
       if (smells.length > 0) {
         treeDataProvider.updateSmells(filePath, smells, enabledSmells);
         vscode.window.showInformationMessage(
@@ -118,8 +108,6 @@ export async function detectSmellsFile(
           `Analysis complete: No code smells found in ${path.basename(filePath)}.`,
         );
       }
-
-      console.log('Analysis complete: Detected smells.');
     } else {
       throw new Error(`Unexpected status code: ${status}`);
     }
@@ -143,7 +131,6 @@ export async function detectSmellsFolder(
   treeDataProvider: SmellsDisplayProvider,
   folderPath: string,
 ) {
-  console.log('Detecting smells for all Python files in:', folderPath);
   // Notify the user that folder analysis has started
   vscode.window.showInformationMessage(
     `Detecting code smells for all Python files in: ${path.basename(folderPath)}`,
@@ -176,7 +163,6 @@ export async function detectSmellsFolder(
 
   // Analyze each Python file in the folder
   for (const file of pythonFiles) {
-    console.log('Analyzing:', file);
     await detectSmellsFile(smellsCacheManager, treeDataProvider, file);
   }
 

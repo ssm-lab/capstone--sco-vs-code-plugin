@@ -33,33 +33,4 @@ declare global {
     occurences: Occurrence[]; // Optional: List of occurrences for repeated calls
     additionalInfo: AdditionalInfo;
   }
-  
-  export interface ChangedFile {
-    original: string;
-    refactored: string;
-  }
-  
-  export interface RefactoredData {
-    tempDir: string;
-    targetFile: ChangedFile;
-    energySaved: number;
-    affectedFiles: ChangedFile[];
-  }
-  
-  export interface RefactorOutput {
-    refactoredData?: RefactoredData; // Refactored code as a string
-    updatedSmells: Smell[]; //
-  }
-  
-  export interface ActiveDiff {
-    files: ChangedFile[];
-    isOpen: boolean;
-    firstOpen: boolean;
-  }
-  
-  export type SmellDetails = {
-    symbol: string;
-    message: string;
-  };
-  
 }
