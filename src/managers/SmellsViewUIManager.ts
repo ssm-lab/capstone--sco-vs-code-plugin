@@ -196,6 +196,13 @@ export class SmellsUIManager {
           'server-process',
           new vscode.ThemeColor('charts.red'),
         );
+      case 'refactoring':
+        return new vscode.ThemeIcon('robot', new vscode.ThemeColor('charts.purple'));
+      case 'accept-refactoring':
+        return new vscode.ThemeIcon(
+          'warning',
+          new vscode.ThemeColor('charts.yellow'),
+        );
       default:
         return new vscode.ThemeIcon('circle-outline');
     }
@@ -221,6 +228,10 @@ export class SmellsUIManager {
         return 'File Outdated - Needs Reanalysis';
       case 'server_down':
         return 'Server Unavailable';
+      case 'refactoring':
+        return 'Refactoring Currently Ongoing';
+      case 'accept-refactoring':
+        return 'Successfully Refactored - Needs Reanalysis';
       default:
         return 'Smells Not Yet Detected';
     }

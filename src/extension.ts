@@ -145,7 +145,11 @@ export function activate(context: vscode.ExtensionContext): void {
   // Register the acceptRefactoring command
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () =>
-      acceptRefactoring(refactoringDetailsViewProvider),
+      acceptRefactoring(
+        refactoringDetailsViewProvider,
+        smellsCacheManager,
+        smellsViewProvider,
+      ),
     ),
   );
 

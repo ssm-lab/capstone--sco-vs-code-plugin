@@ -2,8 +2,14 @@ import * as vscode from 'vscode';
 import { backendRefactorSmell } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import path from 'path';
 import * as fs from 'fs';
+
+function normalizePath(filePath: string): string {
+  const normalizedPath = filePath.toLowerCase(); // Normalize case for consistent Map keying
+  return normalizedPath;
+}
 
 /**
  * Handles the refactoring of a specific smell.
@@ -75,9 +81,12 @@ export async function refactorSmell(
 
 /**
  * Accepts the refactoring changes and saves the refactored files.
+ * Marks the modified files as outdated and clears their smell cache.
  */
 export async function acceptRefactoring(
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
+  smellsCacheManager: SmellsCacheManager,
+  smellsViewProvider: SmellsViewProvider,
 ) {
   const targetFile = refactoringDetailsViewProvider.targetFile;
   const affectedFiles = refactoringDetailsViewProvider.affectedFiles;
@@ -99,6 +108,22 @@ export async function acceptRefactoring(
     // Notify the user
     vscode.window.showInformationMessage('Refactoring accepted! Changes applied.');
 
+    // Clear the smell cache for the target file and affected files
+    await smellsCacheManager.clearCachedSmellsForFile(
+      normalizePath(targetFile.original),
+    );
+    for (const file of affectedFiles) {
+      await smellsCacheManager.clearCachedSmellsForFile(
+        normalizePath(file.original),
+      );
+    }
+
+    // Mark the target file and affected files as outdated
+    smellsViewProvider.markFileAsOutdated(normalizePath(targetFile.original));
+    for (const file of affectedFiles) {
+      smellsViewProvider.markFileAsOutdated(normalizePath(file.original));
+    }
+
     // Reset the refactoring details view
     refactoringDetailsViewProvider.resetRefactoringDetails();
 
@@ -107,6 +132,9 @@ export async function acceptRefactoring(
 
     // Set the context key to indicate refactoring is no longer in progress
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+
+    // Refresh the UI to reflect the outdated status of the modified files
+    smellsViewProvider.refresh();
   } catch (error) {
     console.error('Failed to accept refactoring:', error);
     vscode.window.showErrorMessage(
