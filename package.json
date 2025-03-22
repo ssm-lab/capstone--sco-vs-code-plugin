@@ -214,6 +214,16 @@
         "category": "Eco Optimizer"
       },
       {
+        "command": "ecooptimizer.acceptRefactoring",
+        "title": "Accept Refactoring",
+        "category": "Eco Optimizer"
+      },
+      {
+        "command": "ecooptimizer.rejectRefactoring",
+        "title": "Reject Refactoring",
+        "category": "Eco Optimizer"
+      },
+      {
         "command": "ecooptimizer.jumpToSmell",
         "title": "Jump to Smell in File",
         "category": "Eco Optimizer"
@@ -245,6 +255,16 @@
           "command": "ecooptimizer.deselectAllFilterSmells",
           "when": "view == ecooptimizer.filterView",
           "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.acceptRefactoring",
+          "when": "view == ecooptimizer.refactoringDetails",
+          "group": "navigation"
+        },
+        {
+          "command": "ecooptimizer.rejectRefactoring",
+          "when": "view == ecooptimizer.refactoringDetails",
+          "group": "navigation"
         }
       ],
       "view/item/context": [

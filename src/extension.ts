@@ -152,6 +152,20 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  // Register the acceptRefactoring command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () => {
+      refactoringDetailsViewProvider.acceptRefactoring();
+    }),
+  );
+
+  // Register the rejectRefactoring command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', () => {
+      refactoringDetailsViewProvider.rejectRefactoring();
+    }),
+  );
+
   // Register the "Jump to Smell" command.
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.jumpToSmell', jumpToSmell),

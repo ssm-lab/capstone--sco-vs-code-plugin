@@ -37,17 +37,23 @@ export async function refactorSmell(
     // Update the refactoring details view with the refactored file name
     refactoringDetailsViewProvider.updateRefactoringDetails(
       refactoredData.targetFile.refactored,
+      refactoredData.targetFile.original,
+    );
+
+    // Show a diff view between the original and refactored files
+    const originalUri = vscode.Uri.file(refactoredData.targetFile.original);
+    const refactoredUri = vscode.Uri.file(refactoredData.targetFile.refactored);
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      originalUri,
+      refactoredUri,
+      'Original ↔ Refactored',
     );
 
     // Notify the user
     vscode.window.showInformationMessage(
       `Refactoring successful! Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
     );
-
-    // Optionally, open the refactored file
-    const refactoredFilePath = refactoredData.targetFile.refactored;
-    const document = await vscode.workspace.openTextDocument(refactoredFilePath);
-    await vscode.window.showTextDocument(document);
   } catch (error: any) {
     console.error('Refactoring failed:', error.message);
     vscode.window.showErrorMessage(`Refactoring failed: ${error.message}`);
