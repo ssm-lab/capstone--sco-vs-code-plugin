@@ -84,11 +84,11 @@ export class SmellsCacheManager {
   /**
    * Stores a hash of a file's contents in workspaceState.
    * @param filePath - Absolute path of the file.
-   * @param hash - The computed file hash.
+   * @param content - The file content to hash.
    */
-  public async storeFileHash(filePath: string, hash: string): Promise<void> {
+  public async storeFileHash(filePath: string, content: string): Promise<void> {
     const hashes = this.getFullFileHashCache();
-    hashes[filePath] = hash;
+    hashes[filePath] = this.computeFileHash(content);
     await this.context.workspaceState.update(envConfig.FILE_HASH_CACHE_KEY!, hashes);
   }
 

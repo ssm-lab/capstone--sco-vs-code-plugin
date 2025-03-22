@@ -85,15 +85,24 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'ecooptimizer.detectSmellsFolder',
-      (folderPath) =>
-        detectSmellsFolder(smellsCacheManager, smellsViewProvider, folderPath),
+      (folderPath) => {
+        try {
+          detectSmellsFolder(smellsCacheManager, smellsViewProvider, folderPath);
+        } catch (error: any) {
+          vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
+        }
+      },
     ),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileUri) =>
-      detectSmellsFile(smellsCacheManager, smellsViewProvider, fileUri),
-    ),
+    vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileUri) => {
+      try {
+        detectSmellsFile(smellsCacheManager, smellsViewProvider, fileUri);
+      } catch (error: any) {
+        vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
+      }
+    }),
   );
 
   // Register the "Jump to Smell" command.

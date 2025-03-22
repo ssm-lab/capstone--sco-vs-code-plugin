@@ -79,6 +79,7 @@ export class SmellsViewProvider implements vscode.TreeDataProvider<string> {
     smells: Smell[],
     smellMetadata: Record<string, { message_id: string; acronym: string }>,
   ): void {
+    console.log('Updating UI with detected smells...', smells);
     this.stateManager.updateSmells(filePath, smells, smellMetadata);
     this.refresh();
   }

@@ -32,13 +32,6 @@ export async function detectSmellsFile(
   // Handle outdated files before proceeding
   await handleOutdatedFile(filePath, smellsCacheManager, treeDataProvider);
 
-  // Open the file and compute its hash
-  const document = await vscode.workspace.openTextDocument(filePath);
-  const fileContent = document.getText();
-
-  // Store the file hash after analyzing
-  await smellsCacheManager.storeFileHash(filePath, fileContent);
-
   // Retrieve enabled smells from configuration
   const enabledSmells = getEnabledSmells();
 
@@ -52,6 +45,7 @@ export async function detectSmellsFile(
 
   // Check if smells are already cached
   const cachedSmells = smellsCacheManager.getCachedSmells(filePath);
+  console.log('Cached smells:', cachedSmells);
   if (cachedSmells !== undefined) {
     // Use cached smells if available
     vscode.window.showInformationMessage(
@@ -187,6 +181,12 @@ async function handleOutdatedFile(
   if (smellsDisplayProvider.isFileOutdated(filePath)) {
     // Delete cached smells for the outdated file
     await smellsCacheManager.clearCachedSmellsForFile(filePath);
+
+    const document = await vscode.workspace.openTextDocument(filePath);
+    const fileContent = document.getText();
+
+    console.log('Storing file hash for:', filePath);
+    await smellsCacheManager.storeFileHash(filePath, fileContent);
 
     // Remove the outdated status from the UI
     smellsDisplayProvider.updateStatus(filePath, 'queued'); // Reset to "queued" or another default status
