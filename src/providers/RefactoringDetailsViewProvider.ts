@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 
 export class RefactoringDetailsViewProvider
   implements vscode.TreeDataProvider<RefactoringDetailItem>
@@ -10,8 +9,8 @@ export class RefactoringDetailsViewProvider
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private refactoringDetails: RefactoringDetailItem[] = [];
-  private originalFilePath: string | undefined;
-  private refactoredFilePath: string | undefined;
+  public originalFilePath: string | undefined;
+  public refactoredFilePath: string | undefined;
 
   constructor() {}
 
@@ -56,26 +55,6 @@ export class RefactoringDetailsViewProvider
       return []; // No nested items
     }
     return this.refactoringDetails;
-  }
-
-  /**
-   * Handles the accept action.
-   */
-  acceptRefactoring(): void {
-    if (this.refactoredFilePath && this.originalFilePath) {
-      // Replace the original file with the refactored file
-      fs.copyFileSync(this.refactoredFilePath, this.originalFilePath);
-      vscode.window.showInformationMessage('Refactoring accepted! Changes applied.');
-    } else {
-      vscode.window.showErrorMessage('No refactoring data available.');
-    }
-  }
-
-  /**
-   * Handles the reject action.
-   */
-  rejectRefactoring(): void {
-    vscode.window.showInformationMessage('Refactoring rejected! Changes discarded.');
   }
 }
 

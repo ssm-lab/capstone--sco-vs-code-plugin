@@ -4,6 +4,7 @@ import { envConfig } from './utils/envConfig';
 import * as vscode from 'vscode';
 
 import { configureWorkspace } from './commands/configureWorkspace';
+import * as fs from 'fs';
 import { resetConfiguration } from './commands/resetConfiguration';
 import { detectSmellsFile, detectSmellsFolder } from './commands/detectSmells';
 import { openFile } from './commands/openFile';
@@ -113,12 +114,6 @@ export function activate(context: vscode.ExtensionContext): void {
   // Register the refactorSmell command
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.refactorSmell', (fileUri) => {
-      // Ensure the fileUri is valid
-      if (!fileUri) {
-        console.error('No file URI provided.');
-        return;
-      }
-
       // Extract the smell ID from the fileUri string (e.g., "(aa7) R0913: Line 15")
       const smellIdMatch = fileUri.match(/\(ID:\s*([^)]+)\)/);
       const smellId = smellIdMatch ? smellIdMatch[1] : null;
@@ -135,34 +130,44 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      // Get the file path from the smell object
-      const filePath = smell.path;
-
-      // Print the file path and smell object to the console
-      console.log('File Path:', filePath);
+      // Print the smell object to the console
       console.log('Smell Object:', smell);
 
-      // Call the refactorSmell function
-      refactorSmell(
-        smellsViewProvider,
-        refactoringDetailsViewProvider,
-        filePath,
-        smell,
-      );
+      // Call the refactorSmell function with only the smell object
+      refactorSmell(smellsViewProvider, refactoringDetailsViewProvider, smell);
     }),
   );
 
   // Register the acceptRefactoring command
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () => {
-      refactoringDetailsViewProvider.acceptRefactoring();
+      const refactoredFilePath = refactoringDetailsViewProvider.refactoredFilePath;
+      const originalFilePath = refactoringDetailsViewProvider.originalFilePath;
+
+      if (refactoredFilePath && originalFilePath) {
+        // Replace the original file with the refactored file
+        fs.copyFileSync(refactoredFilePath, originalFilePath);
+        vscode.window.showInformationMessage(
+          'Refactoring accepted! Changes applied.',
+        );
+
+        // Reset the refactoring details view
+        refactoringDetailsViewProvider.resetRefactoringDetails();
+      } else {
+        vscode.window.showErrorMessage('No refactoring data available.');
+      }
     }),
   );
 
   // Register the rejectRefactoring command
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', () => {
-      refactoringDetailsViewProvider.rejectRefactoring();
+      vscode.window.showInformationMessage(
+        'Refactoring rejected! Changes discarded.',
+      );
+
+      // Reset the refactoring details view
+      refactoringDetailsViewProvider.resetRefactoringDetails();
     }),
   );
 

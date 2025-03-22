@@ -1,35 +1,30 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import { backendRefactorSmell } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
-import { refactorSmell as backendRefactorSmell } from '../api/backend'; // Import the backend function
 
 /**
- * Handles the refactoring of a specific smell in a file.
+ * Handles the refactoring of a specific smell.
  *
  * @param treeDataProvider - The tree data provider for updating the UI.
  * @param refactoringDetailsViewProvider - The refactoring details view provider.
- * @param filePath - The path of the file to refactor.
  * @param smell - The smell to refactor.
  */
 export async function refactorSmell(
   treeDataProvider: SmellsViewProvider,
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
-  filePath: string,
   smell: Smell,
 ) {
-  if (!filePath || !smell) {
-    vscode.window.showErrorMessage('Error: Invalid file path or smell.');
+  if (!smell) {
+    vscode.window.showErrorMessage('Error: Invalid smell.');
     return;
   }
 
-  vscode.window.showInformationMessage(
-    `Refactoring code smells in: ${path.basename(filePath)}`,
-  );
+  vscode.window.showInformationMessage(`Refactoring code smell: ${smell.symbol}`);
 
   try {
     // Call the backend to refactor the smell
-    const refactoredData = await backendRefactorSmell(filePath, smell);
+    const refactoredData = await backendRefactorSmell(smell);
 
     // Log the response from the backend
     console.log('Refactoring response:', refactoredData);
