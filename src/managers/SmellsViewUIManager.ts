@@ -70,7 +70,7 @@ export class SmellsUIManager {
         const smells = this.stateManager.getSmellsForFile(parentFile);
 
         // Extract the smell ID from the element's label
-        const idMatch = element.match(/\(([^)]+)\)/);
+        const idMatch = element.match(/\(ID:\s*([^)]+)\)/);
         const id = idMatch ? idMatch[1] : null;
 
         // Find the smell by its ID
