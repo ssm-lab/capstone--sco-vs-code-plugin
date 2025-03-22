@@ -304,12 +304,6 @@
           "command": "ecooptimizer.refactorSmell",
           "when": "viewItem == ecoOptimizerSmell",
           "group": "inline"
-        },
-        {
-          "command": "ecooptimizer.openDiffEditor",
-          "when": "viewItem == ecoOptimizerFile",
-          "group": "inline",
-          "icon": "$(diff)"
         }
       ]
     }

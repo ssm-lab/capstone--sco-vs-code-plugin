@@ -17,6 +17,7 @@ import { SmellsCacheManager } from './context/SmellsCacheManager';
 import { registerFileSaveListener } from './listeners/fileSaveListener';
 import { refactorSmell } from './commands/refactorSmell';
 import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsViewProvider';
+import path from 'path';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -190,22 +191,24 @@ export function activate(context: vscode.ExtensionContext): void {
   // );
 
   // Register the command to open the diff editor
-  // Register the command to open the diff editor
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'ecooptimizer.openDiffEditor',
       (originalFilePath: string, refactoredFilePath: string) => {
         // Get the file name for the diff editor title
-        const fileName = originalFilePath.split('/').pop() || 'file';
+        const fileName = path.basename(originalFilePath);
 
-        // Show the diff editor
+        // Show the diff editor with the updated title
         const originalUri = vscode.Uri.file(originalFilePath);
         const refactoredUri = vscode.Uri.file(refactoredFilePath);
         vscode.commands.executeCommand(
           'vscode.diff',
           originalUri,
           refactoredUri,
-          `${fileName} (original) ↔ ${fileName} (refactored)`,
+          `Refactoring Comparison (${fileName})`,
+          {
+            preview: false,
+          },
         );
       },
     ),

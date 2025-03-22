@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { backendRefactorSmell } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
+import path from 'path';
 
 /**
  * Handles the refactoring of a specific smell.
@@ -37,14 +38,17 @@ export async function refactorSmell(
 
     // Show a diff view for the target file
     const targetFile = refactoredData.targetFile;
-    const fileName = targetFile.original.split('/').pop() || 'file';
+    const fileName = path.basename(targetFile.original);
     const originalUri = vscode.Uri.file(targetFile.original);
     const refactoredUri = vscode.Uri.file(targetFile.refactored);
     await vscode.commands.executeCommand(
       'vscode.diff',
       originalUri,
       refactoredUri,
-      `${fileName} (original) ↔ ${fileName} (refactored)`,
+      `Refactoring Comparison (${fileName})`,
+      {
+        preview: false,
+      },
     );
 
     // Set a context key to track that refactoring is in progress
