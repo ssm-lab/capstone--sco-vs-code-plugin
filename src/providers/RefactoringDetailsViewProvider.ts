@@ -12,38 +12,46 @@ export class RefactoringDetailsViewProvider
   private refactoringDetails: RefactoringDetailItem[] = [];
   public targetFile: { original: string; refactored: string } | undefined;
   public affectedFiles: { original: string; refactored: string }[] = [];
+  public energySaved: number | null = null; // Add energySaved as a class property
 
   constructor() {
-    // Initialize with an empty state
     this.resetRefactoringDetails();
   }
 
   /**
-   * Updates the refactoring details with the given target file and affected files.
+   * Updates the refactoring details with the given target file, affected files, and energy saved.
    * @param targetFile - The target file (original and refactored paths).
    * @param affectedFiles - The list of affected files (original and refactored paths).
+   * @param energySaved - The amount of energy saved in kg CO2.
    */
   updateRefactoringDetails(
     targetFile: { original: string; refactored: string },
     affectedFiles: { original: string; refactored: string }[],
+    energySaved: number | null,
   ): void {
     this.targetFile = targetFile;
     this.affectedFiles = affectedFiles;
+    this.energySaved = energySaved;
 
-    // Convert the absolute paths to relative paths for display
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    const relativeTargetFile = workspaceFolder
-      ? vscode.workspace.asRelativePath(targetFile.original)
-      : targetFile.original;
+    // Clear the existing refactoring details
+    this.refactoringDetails = [];
 
-    const relativeAffectedFiles = affectedFiles.map((file) =>
-      workspaceFolder
-        ? vscode.workspace.asRelativePath(file.original)
-        : file.original,
-    );
+    // Add energy saved as the first item
+    if (energySaved !== null) {
+      this.refactoringDetails.push(
+        new RefactoringDetailItem(
+          `Energy Saved: ${energySaved} kg CO2`, // Label
+          '', // No description
+          '', // No file path
+          '', // No file path
+          false, // Not collapsible
+          true, // Special item for energy saved
+        ),
+      );
+    }
 
-    // Create the tree view items
-    this.refactoringDetails = [
+    // Add the target file
+    this.refactoringDetails.push(
       new RefactoringDetailItem(
         path.basename(targetFile.original), // File name as label
         'Target File', // Description
@@ -51,23 +59,10 @@ export class RefactoringDetailsViewProvider
         targetFile.refactored,
         true, // This is a parent item (collapsible)
       ),
-    ];
+    );
 
-    // Add affected files as child items
-    if (affectedFiles.length > 0) {
-      this.refactoringDetails.push(
-        ...affectedFiles.map(
-          (file) =>
-            new RefactoringDetailItem(
-              path.basename(file.original), // File name as label
-              'Affected File', // Description
-              file.original,
-              file.refactored,
-              false, // This is a child item (not collapsible)
-            ),
-        ),
-      );
-    }
+    // Do not add affected files to refactoringDetails here
+    // They will be added dynamically in getChildren when the parent item is expanded
 
     this._onDidChangeTreeData.fire(undefined); // Refresh the view
   }
@@ -78,8 +73,7 @@ export class RefactoringDetailsViewProvider
   resetRefactoringDetails(): void {
     this.targetFile = undefined;
     this.affectedFiles = [];
-
-    // Clear the tree view
+    this.energySaved = null;
     this.refactoringDetails = [];
     this._onDidChangeTreeData.fire(undefined); // Refresh the view
   }
@@ -105,32 +99,44 @@ export class RefactoringDetailsViewProvider
       }
       return []; // No nested items for child items
     }
-    // If no element is provided, return the parent item (Target File)
-    return this.refactoringDetails.filter((item) => item.isParent);
+    // If no element is provided, return the top-level items (Energy Saved and Target File)
+    return this.refactoringDetails;
   }
 }
 
 class RefactoringDetailItem extends vscode.TreeItem {
   constructor(
-    label: string, // File name
-    description: string, // "Target File" or "Affected File"
+    label: string,
+    description: string,
     public readonly originalFilePath: string,
     public readonly refactoredFilePath: string,
-    public readonly isParent: boolean = false, // Whether this is a parent item
+    public readonly isParent: boolean = false,
+    public readonly isEnergySaved: boolean = false,
   ) {
     super(
       label,
       isParent
-        ? vscode.TreeItemCollapsibleState.Collapsed // Parent item is collapsible
-        : vscode.TreeItemCollapsibleState.None, // Child item is not collapsible
+        ? vscode.TreeItemCollapsibleState.Collapsed
+        : vscode.TreeItemCollapsibleState.None,
     );
-    this.description = description; // Set the description
+    this.description = description;
 
-    // Add a command to open the diff editor for both parent and child items
-    this.command = {
-      command: 'ecooptimizer.openDiffEditor',
-      title: 'Open Diff Editor',
-      arguments: [originalFilePath, refactoredFilePath],
-    };
+    // Customize the icon for the Energy Saved item
+    if (isEnergySaved) {
+      this.iconPath = new vscode.ThemeIcon(
+        'lightbulb', // Use a lightbulb icon for energy saved
+        new vscode.ThemeColor('charts.yellow'),
+      );
+      this.tooltip = 'This is the amount of energy saved by refactoring.';
+    }
+
+    // Add a command to open the diff editor for file items (not energy saved)
+    if (!isEnergySaved) {
+      this.command = {
+        command: 'ecooptimizer.openDiffEditor',
+        title: 'Open Diff Editor',
+        arguments: [originalFilePath, refactoredFilePath],
+      };
+    }
   }
 }

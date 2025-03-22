@@ -30,10 +30,11 @@ export async function refactorSmell(
     // Log the response from the backend
     console.log('Refactoring response:', refactoredData);
 
-    // Update the refactoring details view with the target file and affected files
+    // Update the refactoring details view with the target file, affected files, and energy saved
     refactoringDetailsViewProvider.updateRefactoringDetails(
       refactoredData.targetFile,
       refactoredData.affectedFiles,
+      refactoredData.energySaved, // Pass the energy saved value
     );
 
     // Show a diff view for the target file
@@ -47,7 +48,7 @@ export async function refactorSmell(
       refactoredUri,
       `Refactoring Comparison (${fileName})`,
       {
-        preview: false,
+        preview: false, // Ensure the diff editor is not in preview mode
       },
     );
 
