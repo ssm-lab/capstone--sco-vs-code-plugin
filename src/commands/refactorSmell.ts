@@ -3,6 +3,7 @@ import { backendRefactorSmell } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import path from 'path';
+import * as fs from 'fs';
 
 /**
  * Handles the refactoring of a specific smell.
@@ -70,4 +71,65 @@ export async function refactorSmell(
     refactoringDetailsViewProvider.resetRefactoringDetails();
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
   }
+}
+
+/**
+ * Accepts the refactoring changes and saves the refactored files.
+ */
+export async function acceptRefactoring(
+  refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
+) {
+  const targetFile = refactoringDetailsViewProvider.targetFile;
+  const affectedFiles = refactoringDetailsViewProvider.affectedFiles;
+
+  if (!targetFile || !affectedFiles) {
+    vscode.window.showErrorMessage('No refactoring data available.');
+    return;
+  }
+
+  try {
+    // Save the refactored target file
+    fs.copyFileSync(targetFile.refactored, targetFile.original);
+
+    // Save the refactored affected files
+    for (const file of affectedFiles) {
+      fs.copyFileSync(file.refactored, file.original);
+    }
+
+    // Notify the user
+    vscode.window.showInformationMessage('Refactoring accepted! Changes applied.');
+
+    // Reset the refactoring details view
+    refactoringDetailsViewProvider.resetRefactoringDetails();
+
+    // Close all diff editors
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+
+    // Set the context key to indicate refactoring is no longer in progress
+    vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+  } catch (error) {
+    console.error('Failed to accept refactoring:', error);
+    vscode.window.showErrorMessage(
+      'Failed to accept refactoring. Please try again.',
+    );
+  }
+}
+
+/**
+ * Rejects the refactoring changes and keeps the original files.
+ */
+export async function rejectRefactoring(
+  refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
+) {
+  // Notify the user
+  vscode.window.showInformationMessage('Refactoring rejected! Changes discarded.');
+
+  // Reset the refactoring details view
+  refactoringDetailsViewProvider.resetRefactoringDetails();
+
+  // Close all diff editors
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+
+  // Set the context key to indicate refactoring is no longer in progress
+  vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
 }

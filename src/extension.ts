@@ -15,7 +15,11 @@ import { checkServerStatus } from './api/backend';
 import { FilterViewProvider } from './providers/FilterViewProvider';
 import { SmellsCacheManager } from './context/SmellsCacheManager';
 import { registerFileSaveListener } from './listeners/fileSaveListener';
-import { refactorSmell } from './commands/refactorSmell';
+import {
+  acceptRefactoring,
+  refactorSmell,
+  rejectRefactoring,
+} from './commands/refactorSmell';
 import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsViewProvider';
 import path from 'path';
 
@@ -138,57 +142,19 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // // Register the acceptRefactoring command
-  // context.subscriptions.push(
-  //   vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () => {
-  //     const refactoredFilePath = refactoringDetailsViewProvider.refactoredFilePath;
-  //     const originalFilePath = refactoringDetailsViewProvider.originalFilePath;
+  // Register the acceptRefactoring command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () =>
+      acceptRefactoring(refactoringDetailsViewProvider),
+    ),
+  );
 
-  //     if (refactoredFilePath && originalFilePath) {
-  //       try {
-  //         // Replace the original file with the refactored file
-  //         fs.copyFileSync(refactoredFilePath, originalFilePath);
-  //         vscode.window.showInformationMessage(
-  //           'Refactoring accepted! Changes applied.',
-  //         );
-
-  //         // Close the diff editor
-  //         vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-
-  //         // Reset the refactoring details view
-  //         refactoringDetailsViewProvider.resetRefactoringDetails();
-  //         vscode.commands.executeCommand(
-  //           'setContext',
-  //           'refactoringInProgress',
-  //           false,
-  //         );
-  //       } catch (error) {
-  //         console.error('Failed to accept refactoring:', error);
-  //         vscode.window.showErrorMessage(
-  //           'Failed to accept refactoring. Please try again.',
-  //         );
-  //       }
-  //     } else {
-  //       vscode.window.showErrorMessage('No refactoring data available.');
-  //     }
-  //   }),
-  // );
-
-  // // Register the rejectRefactoring command
-  // context.subscriptions.push(
-  //   vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', () => {
-  //     vscode.window.showInformationMessage(
-  //       'Refactoring rejected! Changes discarded.',
-  //     );
-
-  //     // Close the diff editor
-  //     vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-
-  //     // Reset the refactoring details view
-  //     refactoringDetailsViewProvider.resetRefactoringDetails();
-  //     vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
-  //   }),
-  // );
+  // Register the rejectRefactoring command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', () =>
+      rejectRefactoring(refactoringDetailsViewProvider),
+    ),
+  );
 
   // Register the command to open the diff editor
   context.subscriptions.push(
