@@ -10,10 +10,10 @@ export class RefactoringDetailsViewProvider
 
   private refactoringDetails: RefactoringDetailItem[] = [];
   public originalFilePath: string | undefined;
-  public refactoredFilePath: string | undefined;
+  public refactoredFilePath: string | undefined; // Add this property
 
   constructor() {
-    // Initialize with the welcome view
+    // Initialize with an empty state
     this.resetRefactoringDetails();
   }
 
@@ -26,7 +26,7 @@ export class RefactoringDetailsViewProvider
     refactoredFilePath: string,
     originalFilePath: string,
   ): void {
-    this.refactoredFilePath = refactoredFilePath;
+    this.refactoredFilePath = refactoredFilePath; // Set the refactored file path
     this.originalFilePath = originalFilePath;
 
     // Convert the absolute path of the original file to a relative path for display
@@ -46,16 +46,11 @@ export class RefactoringDetailsViewProvider
    * Resets the refactoring details to indicate no refactoring is in progress.
    */
   resetRefactoringDetails(): void {
-    this.refactoredFilePath = undefined;
+    this.refactoredFilePath = undefined; // Reset the refactored file path
     this.originalFilePath = undefined;
 
-    // Set the welcome view
-    this.refactoringDetails = [
-      new RefactoringDetailItem(
-        'Status',
-        'Refactoring is currently not in progress.',
-      ),
-    ];
+    // Clear the tree view
+    this.refactoringDetails = [];
     this._onDidChangeTreeData.fire(undefined); // Refresh the view
   }
 

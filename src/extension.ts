@@ -137,6 +137,7 @@ export function activate(context: vscode.ExtensionContext): void {
       refactorSmell(smellsViewProvider, refactoringDetailsViewProvider, smell);
     }),
   );
+
   // Register the acceptRefactoring command
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () => {
@@ -144,18 +145,35 @@ export function activate(context: vscode.ExtensionContext): void {
       const originalFilePath = refactoringDetailsViewProvider.originalFilePath;
 
       if (refactoredFilePath && originalFilePath) {
-        // Replace the original file with the refactored file
-        fs.copyFileSync(refactoredFilePath, originalFilePath);
-        vscode.window.showInformationMessage(
-          'Refactoring accepted! Changes applied.',
-        );
+        try {
+          // Replace the original file with the refactored file
+          fs.copyFileSync(refactoredFilePath, originalFilePath);
+          vscode.window.showInformationMessage(
+            'Refactoring accepted! Changes applied.',
+          );
 
-        // Close the diff editor
-        vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+          // Close the diff editor
+          vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
-        // Reset the refactoring details view
-        refactoringDetailsViewProvider.resetRefactoringDetails();
-        vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+          // Reset the refactoring details view
+          refactoringDetailsViewProvider.resetRefactoringDetails();
+          vscode.commands.executeCommand(
+            'setContext',
+            'refactoringInProgress',
+            false,
+          );
+
+          // Close the refactoring details view
+          vscode.commands.executeCommand(
+            'workbench.action.closeView',
+            'ecooptimizer.refactoringDetails',
+          );
+        } catch (error) {
+          console.error('Failed to accept refactoring:', error);
+          vscode.window.showErrorMessage(
+            'Failed to accept refactoring. Please try again.',
+          );
+        }
       } else {
         vscode.window.showErrorMessage('No refactoring data available.');
       }
@@ -175,6 +193,12 @@ export function activate(context: vscode.ExtensionContext): void {
       // Reset the refactoring details view
       refactoringDetailsViewProvider.resetRefactoringDetails();
       vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+
+      // Close the refactoring details view
+      vscode.commands.executeCommand(
+        'workbench.action.closeView',
+        'ecooptimizer.refactoringDetails',
+      );
     }),
   );
 
