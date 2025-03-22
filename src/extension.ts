@@ -22,8 +22,13 @@ import { SmellsCacheManager } from './context/SmellsCacheManager';
 
 import { registerFileSaveListener } from './listeners/fileSaveListener';
 
-import { checkServerStatus } from './api/backend';
+import {
+  acceptRefactoring,
+  checkServerStatus,
+  rejectRefactoring,
+} from './api/backend';
 import { loadSmells } from './utils/smellsData';
+import path from 'path';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -146,12 +151,6 @@ export function activate(context: vscode.ExtensionContext): void {
   // Register the refactorSmell command
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.refactorSmell', (fileUri) => {
-      // Ensure the fileUri is valid
-      if (!fileUri) {
-        console.error('No file URI provided.');
-        return;
-      }
-
       // Extract the smell ID from the fileUri string (e.g., "(aa7) R0913: Line 15")
       const smellIdMatch = fileUri.match(/\(ID:\s*([^)]+)\)/);
       const smellId = smellIdMatch ? smellIdMatch[1] : null;
@@ -168,22 +167,54 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      // Get the file path from the smell object
-      const filePath = smell.path;
-
-      // Print the file path and smell object to the console
-      console.log('File Path:', filePath);
+      // Print the smell object to the console
       console.log('Smell Object:', smell);
 
-      // Call the refactorSmell function
-      refactorSmell(
-        smellsViewProvider,
-        metricsViewProvider,
-        refactoringDetailsViewProvider,
-        filePath,
-        smell,
-      );
+      // Call the refactorSmell function with only the smell object
+      refactorSmell(smellsViewProvider, refactoringDetailsViewProvider, smell);
     }),
+  );
+
+  // Register the acceptRefactoring command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () =>
+      acceptRefactoring(
+        refactoringDetailsViewProvider,
+        smellsCacheManager,
+        smellsViewProvider,
+      ),
+    ),
+  );
+
+  // Register the rejectRefactoring command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', () =>
+      rejectRefactoring(refactoringDetailsViewProvider),
+    ),
+  );
+
+  // Register the command to open the diff editor
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer.openDiffEditor',
+      (originalFilePath: string, refactoredFilePath: string) => {
+        // Get the file name for the diff editor title
+        const fileName = path.basename(originalFilePath);
+
+        // Show the diff editor with the updated title
+        const originalUri = vscode.Uri.file(originalFilePath);
+        const refactoredUri = vscode.Uri.file(refactoredFilePath);
+        vscode.commands.executeCommand(
+          'vscode.diff',
+          originalUri,
+          refactoredUri,
+          `Refactoring Comparison (${fileName})`,
+          {
+            preview: false,
+          },
+        );
+      },
+    ),
   );
 
   // Register the "Jump to Smell" command.

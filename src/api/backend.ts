@@ -30,7 +30,7 @@ export async function checkServerStatus(): Promise<void> {
  */
 export async function fetchSmells(
   filePath: string,
-  enabledSmells: Record<string, Record<string, number | string>>
+  enabledSmells: Record<string, Record<string, number | string>>,
 ): Promise<{ smells: Smell[]; status: number }> {
   const url = `${BASE_URL}/smells`;
 
@@ -48,7 +48,7 @@ export async function fetchSmells(
 
     if (!response.ok) {
       throw new Error(
-        `Backend request failed with status ${response.status}: ${response.statusText}`
+        `Backend request failed with status ${response.status}: ${response.statusText}`,
       );
     }
 
@@ -61,7 +61,7 @@ export async function fetchSmells(
     return { smells: smellsList, status: response.status };
   } catch (error: any) {
     throw new Error(
-      `Failed to connect to the backend: ${error.message}. Please check your network and try again.`
+      `Failed to connect to the backend: ${error.message}. Please check your network and try again.`,
     );
   }
 }
@@ -69,33 +69,36 @@ export async function fetchSmells(
 /**
  * Sends a request to the backend to refactor a specific smell.
  *
- * @param filePath - The absolute path to the file containing the smell.
  * @param smell - The smell to refactor.
  * @returns A promise resolving to the refactored data or throwing an error if unsuccessful.
  */
-export async function refactorSmell(
-  filePath: string,
-  smell: Smell
+export async function backendRefactorSmell(
+  smell: Smell,
 ): Promise<RefactoredData> {
   const url = `${BASE_URL}/refactor`;
 
+  // Extract the file path from the smell object
+  const filePath = smell.path;
+
+  // Find the workspace folder containing the file
   const workspaceFolder = vscode.workspace.workspaceFolders?.find((folder) =>
-    filePath.includes(folder.uri.fsPath)
+    filePath.includes(folder.uri.fsPath),
   );
 
   if (!workspaceFolder) {
     console.error('Eco: Error - Unable to determine workspace folder for', filePath);
     throw new Error(
-      `Eco: Unable to find a matching workspace folder for file: ${filePath}`
+      `Eco: Unable to find a matching workspace folder for file: ${filePath}`,
     );
   }
 
   const workspaceFolderPath = workspaceFolder.uri.fsPath;
 
   console.log(
-    `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspaceFolderPath}"`
+    `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspaceFolderPath}"`,
   );
 
+  // Prepare the payload for the backend
   const payload = {
     source_dir: workspaceFolderPath,
     smell,

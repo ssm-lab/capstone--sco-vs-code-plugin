@@ -129,6 +129,11 @@
     "views": {
       "ecooptimizer": [
         {
+          "id": "ecooptimizer.refactoringDetails",
+          "name": "Refactoring Details",
+          "icon": "assets/eco-icon.png"
+        },
+        {
           "id": "ecooptimizer.view",
           "name": "Code Smells",
           "icon": "assets/eco-icon.png"
@@ -151,6 +156,11 @@
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "ecooptimizer.refactoringDetails",
+        "contents": "Refactoring is currently not in progress. Try selecting a smell in the Code Smells view to start refactoring.",
+        "when": "!refactoringInProgress"
+      },
       {
         "view": "ecooptimizer.view",
         "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
@@ -229,6 +239,18 @@
         "category": "Eco Optimizer"
       },
       {
+        "command": "ecooptimizer.acceptRefactoring",
+        "title": "Accept Refactoring",
+        "category": "Eco Optimizer",
+        "icon": "$(check)"
+      },
+      {
+        "command": "ecooptimizer.rejectRefactoring",
+        "title": "Reject Refactoring",
+        "category": "Eco Optimizer",
+        "icon": "$(close)"
+      },
+      {
         "command": "ecooptimizer.jumpToSmell",
         "title": "Jump to Smell in File",
         "category": "Eco Optimizer"
@@ -236,6 +258,11 @@
       {
         "command": "ecooptimizer.wipeWorkCache",
         "title": "Clear Smells Cache",
+        "category": "Eco Optimizer"
+      },
+      {
+        "command": "ecooptimizer.openDiffEditor",
+        "title": "Open Diff Editor",
         "category": "Eco Optimizer"
       }
     ],
@@ -265,6 +292,16 @@
           "command": "ecooptimizer.exportMetricsData",
           "when": "view == ecooptimizer.metricsView",
           "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.acceptRefactoring",
+          "when": "view == ecooptimizer.refactoringDetails && refactoringInProgress",
+          "group": "navigation"
+        },
+        {
+          "command": "ecooptimizer.rejectRefactoring",
+          "when": "view == ecooptimizer.refactoringDetails && refactoringInProgress",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
