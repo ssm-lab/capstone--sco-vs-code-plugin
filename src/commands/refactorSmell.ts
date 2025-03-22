@@ -55,6 +55,9 @@ export async function refactorSmell(
     // Set a context key to track that refactoring is in progress
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
 
+    // Focus on the Refactoring Details view
+    await vscode.commands.executeCommand('ecooptimizer.refactoringDetails.focus');
+
     // Notify the user
     vscode.window.showInformationMessage(
       `Refactoring successful! Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
