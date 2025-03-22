@@ -147,9 +147,9 @@
     },
     "viewsWelcome": [
       {
-        "view": "ecooptimizer.view",
-        "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
-        "when": "!workspaceState.workspaceConfigured"
+        "view": "ecooptimizer.refactoringDetails",
+        "contents": "Refactoring is currently not in progress.",
+        "when": "!refactoringInProgress"
       }
     ],
     "commands": [
@@ -216,12 +216,14 @@
       {
         "command": "ecooptimizer.acceptRefactoring",
         "title": "Accept Refactoring",
-        "category": "Eco Optimizer"
+        "category": "Eco Optimizer",
+        "icon": "$(check)"
       },
       {
         "command": "ecooptimizer.rejectRefactoring",
         "title": "Reject Refactoring",
-        "category": "Eco Optimizer"
+        "category": "Eco Optimizer",
+        "icon": "$(close)"
       },
       {
         "command": "ecooptimizer.jumpToSmell",
@@ -258,12 +260,12 @@
         },
         {
           "command": "ecooptimizer.acceptRefactoring",
-          "when": "view == ecooptimizer.refactoringDetails",
+          "when": "view == ecooptimizer.refactoringDetails && refactoringInProgress",
           "group": "navigation"
         },
         {
           "command": "ecooptimizer.rejectRefactoring",
-          "when": "view == ecooptimizer.refactoringDetails",
+          "when": "view == ecooptimizer.refactoringDetails && refactoringInProgress",
           "group": "navigation"
         }
       ],

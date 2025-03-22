@@ -137,7 +137,6 @@ export function activate(context: vscode.ExtensionContext): void {
       refactorSmell(smellsViewProvider, refactoringDetailsViewProvider, smell);
     }),
   );
-
   // Register the acceptRefactoring command
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () => {
@@ -151,8 +150,12 @@ export function activate(context: vscode.ExtensionContext): void {
           'Refactoring accepted! Changes applied.',
         );
 
+        // Close the diff editor
+        vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+
         // Reset the refactoring details view
         refactoringDetailsViewProvider.resetRefactoringDetails();
+        vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
       } else {
         vscode.window.showErrorMessage('No refactoring data available.');
       }
@@ -166,8 +169,12 @@ export function activate(context: vscode.ExtensionContext): void {
         'Refactoring rejected! Changes discarded.',
       );
 
+      // Close the diff editor
+      vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+
       // Reset the refactoring details view
       refactoringDetailsViewProvider.resetRefactoringDetails();
+      vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
     }),
   );
 

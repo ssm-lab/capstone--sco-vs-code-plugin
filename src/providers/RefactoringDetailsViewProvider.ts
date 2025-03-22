@@ -12,7 +12,10 @@ export class RefactoringDetailsViewProvider
   public originalFilePath: string | undefined;
   public refactoredFilePath: string | undefined;
 
-  constructor() {}
+  constructor() {
+    // Initialize with the welcome view
+    this.resetRefactoringDetails();
+  }
 
   /**
    * Updates the refactoring details with the given file names.
@@ -26,9 +29,15 @@ export class RefactoringDetailsViewProvider
     this.refactoredFilePath = refactoredFilePath;
     this.originalFilePath = originalFilePath;
 
+    // Convert the absolute path of the original file to a relative path for display
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    const relativeOriginalPath = workspaceFolder
+      ? vscode.workspace.asRelativePath(originalFilePath)
+      : originalFilePath;
+
+    // Update the tree view with only the original file's relative path
     this.refactoringDetails = [
-      new RefactoringDetailItem('Refactored File', refactoredFilePath, 'accept'),
-      new RefactoringDetailItem('Original File', originalFilePath, 'reject'),
+      new RefactoringDetailItem('Original File', relativeOriginalPath),
     ];
     this._onDidChangeTreeData.fire(undefined); // Refresh the view
   }
@@ -40,8 +49,12 @@ export class RefactoringDetailsViewProvider
     this.refactoredFilePath = undefined;
     this.originalFilePath = undefined;
 
+    // Set the welcome view
     this.refactoringDetails = [
-      new RefactoringDetailItem('Status', 'Refactoring not in progress'),
+      new RefactoringDetailItem(
+        'Status',
+        'Refactoring is currently not in progress.',
+      ),
     ];
     this._onDidChangeTreeData.fire(undefined); // Refresh the view
   }
@@ -59,26 +72,8 @@ export class RefactoringDetailsViewProvider
 }
 
 class RefactoringDetailItem extends vscode.TreeItem {
-  constructor(
-    label: string,
-    description: string,
-    public readonly action?: 'accept' | 'reject',
-  ) {
+  constructor(label: string, description: string) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.description = description;
-
-    if (action === 'accept') {
-      this.iconPath = new vscode.ThemeIcon('check');
-      this.command = {
-        command: 'ecooptimizer.acceptRefactoring',
-        title: 'Accept Refactoring',
-      };
-    } else if (action === 'reject') {
-      this.iconPath = new vscode.ThemeIcon('close');
-      this.command = {
-        command: 'ecooptimizer.rejectRefactoring',
-        title: 'Reject Refactoring',
-      };
-    }
   }
 }
