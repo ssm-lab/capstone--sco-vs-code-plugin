@@ -1,26 +1,47 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
+import { refactorSmell as backendRefactorSmell } from '../api/backend'; // Import the backend function
 
-// 📌 Refactor Code Smells for a File
-export async function refactorSmellsByType(
+/**
+ * Handles the refactoring of a specific smell in a file.
+ *
+ * @param treeDataProvider - The tree data provider for updating the UI.
+ * @param filePath - The path of the file to refactor.
+ * @param smell - The smell to refactor.
+ */
+export async function refactorSmell(
   treeDataProvider: SmellsViewProvider,
-  fileUri: vscode.Uri | string,
+  filePath: string,
+  smell: Smell,
 ) {
-  if (!fileUri) {
-    vscode.window.showErrorMessage('Error: No file selected for refactoring.');
+  if (!filePath || !smell) {
+    vscode.window.showErrorMessage('Error: Invalid file path or smell.');
     return;
   }
 
-  const filePath = typeof fileUri === 'string' ? fileUri : fileUri.fsPath;
   vscode.window.showInformationMessage(
     `Refactoring code smells in: ${path.basename(filePath)}`,
   );
 
-  // Simulate backend request
-  setTimeout(() => {
+  try {
+    // Call the backend to refactor the smell
+    const refactoredData = await backendRefactorSmell(filePath, smell);
+
+    // Log the response from the backend
+    console.log('Refactoring response:', refactoredData);
+
+    // Notify the user
     vscode.window.showInformationMessage(
-      `Code smells refactored for: ${path.basename(filePath)}`,
+      `Refactoring successful! Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
     );
-  }, 3000);
+
+    // Optionally, open the refactored file
+    const refactoredFilePath = refactoredData.targetFile.refactored;
+    const document = await vscode.workspace.openTextDocument(refactoredFilePath);
+    await vscode.window.showTextDocument(document);
+  } catch (error: any) {
+    console.error('Refactoring failed:', error.message);
+    vscode.window.showErrorMessage(`Refactoring failed: ${error.message}`);
+  }
 }

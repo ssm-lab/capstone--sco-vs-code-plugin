@@ -15,6 +15,7 @@ import { checkServerStatus } from './api/backend';
 import { FilterViewProvider } from './providers/FilterViewProvider';
 import { SmellsCacheManager } from './context/SmellsCacheManager';
 import { registerFileSaveListener } from './listeners/fileSaveListener';
+import { refactorSmell } from './commands/refactorSmell';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -105,7 +106,8 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       // Extract the smell ID from the fileUri string (e.g., "(aa7) R0913: Line 15")
-      const smellIdMatch = fileUri.match(/\(([^)]+)\)/);
+      console.log('File URi:', fileUri);
+      const smellIdMatch = fileUri.match(/\(ID:\s*([^)]+)\)/);
       const smellId = smellIdMatch ? smellIdMatch[1] : null;
 
       if (!smellId) {
@@ -127,7 +129,8 @@ export function activate(context: vscode.ExtensionContext): void {
       console.log('File Path:', filePath);
       console.log('Smell Object:', smell);
 
-      // Add additional logic here to handle refactoring
+      // Call the refactorSmell function
+      refactorSmell(smellsViewProvider, filePath, smell);
     }),
   );
 
