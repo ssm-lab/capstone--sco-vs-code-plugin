@@ -1,19 +1,8 @@
 import * as path from 'path';
 
-interface DetectedSmell {
-  messageId: string;
-  symbol: string;
-  occurences: { line: number; endLine?: number }[];
-}
-
-interface ProcessedSmell {
-  acronym: string;
-  occurrences: { line: number; endLine?: number }[];
-}
-
 export class SmellsStateManager {
   private fileStatusMap: Map<string, string> = new Map();
-  private detectedSmells: Map<string, ProcessedSmell[]> = new Map();
+  private detectedSmells: Map<string, Smell[]> = new Map(); // Use Smell[] instead of ProcessedSmell[]
   private smellToFileMap: Map<string, string> = new Map();
   private modifiedFiles: Map<string, boolean> = new Map();
 
@@ -21,36 +10,19 @@ export class SmellsStateManager {
    * Updates the detected smells for a file.
    * @param filePath - The analyzed file path.
    * @param smells - The detected smells in the file.
-   * @param smellMetadata - Metadata containing message ID and acronym for each smell.
    */
-  updateSmells(
-    filePath: string,
-    smells: DetectedSmell[],
-    smellMetadata: Record<string, { message_id: string; acronym: string }>,
-  ): void {
+  updateSmells(filePath: string, smells: Smell[]): void {
     this.fileStatusMap.set(filePath, 'passed');
 
-    const formattedSmells: ProcessedSmell[] = smells.map((smell) => {
-      const foundEntry = Object.values(smellMetadata).find(
-        (smellData) => smellData.message_id === smell.messageId,
-      ) as { message_id: string; acronym: string };
+    // Update the detected smells for the file
+    this.detectedSmells.set(filePath, smells);
 
-      return {
-        acronym: foundEntry ? foundEntry.acronym : smell.messageId,
-        occurrences: smell.occurences.map((occ) => ({
-          line: occ.line,
-          endLine: occ.endLine,
-        })),
-      };
-    });
-
-    this.detectedSmells.set(filePath, formattedSmells);
-
+    // Update the detected smells for the folder
     const folderPath = path.dirname(filePath);
     if (!this.detectedSmells.has(folderPath)) {
       this.detectedSmells.set(folderPath, []);
     }
-    this.detectedSmells.get(folderPath)?.push(...formattedSmells);
+    this.detectedSmells.get(folderPath)?.push(...smells);
   }
 
   /**
@@ -110,7 +82,7 @@ export class SmellsStateManager {
    * @param filePath - The path of the file.
    * @returns An array of smell entries.
    */
-  getSmellsForFile(filePath: string): ProcessedSmell[] {
+  getSmellsForFile(filePath: string): Smell[] {
     return this.detectedSmells.get(filePath) || [];
   }
 

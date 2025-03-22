@@ -15,6 +15,7 @@ import { checkServerStatus } from './api/backend';
 import { FilterViewProvider } from './providers/FilterViewProvider';
 import { SmellsCacheManager } from './context/SmellsCacheManager';
 import { registerFileSaveListener } from './listeners/fileSaveListener';
+import { refactorSmell } from './commands/refactorSmell';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -102,6 +103,43 @@ export function activate(context: vscode.ExtensionContext): void {
       } catch (error: any) {
         vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
       }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.refactorSmell', (fileUri) => {
+      // Ensure the fileUri is valid
+      if (!fileUri) {
+        console.error('No file URI provided.');
+        return;
+      }
+
+      // Extract the smell ID from the fileUri string (e.g., "(aa7) R0913: Line 15")
+      console.log('File URi:', fileUri);
+      const smellIdMatch = fileUri.match(/\(ID:\s*([^)]+)\)/);
+      const smellId = smellIdMatch ? smellIdMatch[1] : null;
+
+      if (!smellId) {
+        console.error('No smell ID found in the file URI:', fileUri);
+        return;
+      }
+
+      // Retrieve the smell object by ID using the cache manager
+      const smell = smellsCacheManager.getSmellById(smellId);
+      if (!smell) {
+        console.error('No smell found with ID:', smellId);
+        return;
+      }
+
+      // Get the file path from the smell object
+      const filePath = smell.path;
+
+      // Print the file path and smell object to the console
+      console.log('File Path:', filePath);
+      console.log('Smell Object:', smell);
+
+      // Call the refactorSmell function
+      refactorSmell(smellsViewProvider, filePath, smell);
     }),
   );
 

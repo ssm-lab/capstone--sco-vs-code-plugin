@@ -1,60 +1,94 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
+import * as path from 'path';
 import { SmellsStateManager } from './SmellsViewStateManager';
 
+/**
+ * Manages the UI representation of files, folders, and detected smells in the VS Code tree view.
+ * This class handles creating tree items, assigning commands, and updating item states based on
+ * the analysis status and file state (e.g., outdated, queued, passed, failed).
+ */
 export class SmellsUIManager {
   constructor(private stateManager: SmellsStateManager) {}
 
   /**
    * Creates a tree item for a given element (folder, file, or smell).
+   * The tree item's appearance and behavior depend on the type of element and its current state.
+   *
    * @param element - The file or folder path, or a detected smell.
+   * @returns A `vscode.TreeItem` representing the element.
    */
   createTreeItem(element: string): vscode.TreeItem {
+    // Retrieve the current status and smell information for the element
     const status = this.stateManager.getFileStatus(element);
     const hasSmells = this.stateManager.getSmellsForFile(element).length > 0;
     const isDirectory = fs.existsSync(element) && fs.statSync(element).isDirectory();
     const isSmellItem = !fs.existsSync(element) && !isDirectory;
 
-    // Check if the file is outdated
+    // Check if the file is outdated (needs reanalysis)
     const isOutdated =
       !isDirectory && !isSmellItem && this.stateManager.isFileOutdated(element);
 
-    // Set the collapsible state
+    // Determine the collapsible state of the tree item
     let collapsibleState: vscode.TreeItemCollapsibleState;
     if (isDirectory) {
-      // Directories are always collapsible
-      collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+      collapsibleState = vscode.TreeItemCollapsibleState.Collapsed; // Folders are collapsible
     } else if (isSmellItem) {
-      // Smell items are never collapsible
-      collapsibleState = vscode.TreeItemCollapsibleState.None;
+      collapsibleState = vscode.TreeItemCollapsibleState.None; // Smells are not collapsible
     } else if (isOutdated) {
-      // Outdated files are not collapsible
-      collapsibleState = vscode.TreeItemCollapsibleState.None;
+      collapsibleState = vscode.TreeItemCollapsibleState.None; // Outdated files are not collapsible
     } else {
-      // Files with smells are collapsible
       collapsibleState = hasSmells
-        ? vscode.TreeItemCollapsibleState.Collapsed
-        : vscode.TreeItemCollapsibleState.None;
+        ? vscode.TreeItemCollapsibleState.Collapsed // Files with smells are collapsible
+        : vscode.TreeItemCollapsibleState.None; // Files without smells are not collapsible
     }
 
+    // Create the tree item with the element's basename and collapsible state
     const item = new vscode.TreeItem(path.basename(element), collapsibleState);
 
+    // Customize the tree item based on its type (folder, file, or smell)
     if (isDirectory) {
+      // Folders have a specific context value for styling and behavior
       item.contextValue = 'ecoOptimizerFolder';
     } else if (!isSmellItem) {
+      // Files have a specific context value and can be opened
       item.contextValue = 'ecoOptimizerFile';
-      this.assignOpenFileCommand(item, element);
-      this.updateFileItem(item, status, isOutdated);
+      this.assignOpenFileCommand(item, element); // Assign a command to open the file
+      this.updateFileItem(item, status, isOutdated); // Update the item's appearance based on status
+
+      // Add a context value for files with detected smells
+      if (hasSmells && status === 'passed' && !isOutdated) {
+        item.contextValue = 'ecoOptimizerFile-hasSmells';
+      }
     } else {
+      // Smells have a specific context value and display detailed information
       item.contextValue = 'ecoOptimizerSmell';
+
+      // Retrieve the parent file and smell object for the smell item
       const parentFile = this.stateManager.getFileForSmell(element);
       if (parentFile) {
-        const [, lineStr] = element.split(': Line ');
-        const lines = lineStr.split(',').map((line) => parseInt(line.trim(), 10));
-        const firstLine = lines.length > 0 ? lines[0] - 1 : 0;
-        this.assignJumpToSmellCommand(item, parentFile, firstLine);
+        const smells = this.stateManager.getSmellsForFile(parentFile);
+
+        // Extract the smell ID from the element's label
+        const idMatch = element.match(/\(ID:\s*([^)]+)\)/);
+        const id = idMatch ? idMatch[1] : null;
+
+        // Find the smell by its ID
+        const smell = smells.find((s) => s.id === id);
+
+        if (smell) {
+          // Set the label and description for the smell item
+          item.label = `${smell.messageId}: Line ${smell.occurences
+            .map((o) => o.line)
+            .join(', ')} (ID: ${smell.id}) `;
+
+          // Assign a command to jump to the first occurrence of the smell in the file
+          const firstLine = smell.occurences[0]?.line - 1 || 0; // Default to line 0 if no occurrences
+          this.assignJumpToSmellCommand(item, parentFile, firstLine);
+        }
       }
+
+      // Set the tooltip for the smell item
       this.setSmellTooltip(item, element);
     }
 
@@ -63,6 +97,7 @@ export class SmellsUIManager {
 
   /**
    * Assigns a command to open a file when the tree item is clicked.
+   *
    * @param item - The tree item to update.
    * @param filePath - The path of the file to open.
    */
@@ -75,32 +110,8 @@ export class SmellsUIManager {
   }
 
   /**
-   * Updates the file item's status, including icon, message, and description.
-   * @param item - The tree item to update.
-   * @param status - The analysis status (e.g., "queued", "passed", "failed", "outdated").
-   * @param isOutdated - Whether the file is outdated.
-   */
-  private updateFileItem(
-    item: vscode.TreeItem,
-    status: string,
-    isOutdated: boolean,
-  ): void {
-    if (isOutdated) {
-      item.description = 'outdated';
-      item.iconPath = new vscode.ThemeIcon(
-        'warning',
-        new vscode.ThemeColor('charts.orange'),
-      );
-    } else {
-      item.iconPath = this.getStatusIcon(status);
-    }
-    item.tooltip = `${path.basename(
-      item.label as string,
-    )} (${this.getStatusMessage(status)})`;
-  }
-
-  /**
    * Assigns a command to jump to a specific line in a file when the tree item is clicked.
+   *
    * @param item - The tree item to update.
    * @param filePath - The path of the file containing the smell.
    * @param line - The line number to jump to.
@@ -118,7 +129,37 @@ export class SmellsUIManager {
   }
 
   /**
+   * Updates the file item's appearance based on its analysis status and whether it is outdated.
+   *
+   * @param item - The tree item to update.
+   * @param status - The analysis status (e.g., "queued", "passed", "failed", "outdated").
+   * @param isOutdated - Whether the file is outdated.
+   */
+  private updateFileItem(
+    item: vscode.TreeItem,
+    status: string,
+    isOutdated: boolean,
+  ): void {
+    if (isOutdated) {
+      // Mark the file as outdated with a warning icon and description
+      item.description = 'outdated';
+      item.iconPath = new vscode.ThemeIcon(
+        'warning',
+        new vscode.ThemeColor('charts.orange'),
+      );
+      item.tooltip = `${path.basename(this.getStatusMessage('outdated'))}`;
+    } else {
+      // Set the icon and tooltip based on the analysis status
+      item.iconPath = this.getStatusIcon(status);
+      item.tooltip = `${path.basename(
+        item.label as string,
+      )} (${this.getStatusMessage(status)})`;
+    }
+  }
+
+  /**
    * Sets the tooltip for a smell item.
+   *
    * @param item - The tree item to update.
    * @param smellDescription - The description of the smell.
    */
@@ -128,6 +169,7 @@ export class SmellsUIManager {
 
   /**
    * Retrieves the appropriate VS Code icon based on the smell analysis status.
+   *
    * @param status - The analysis status.
    * @returns The corresponding VS Code theme icon.
    */
@@ -161,6 +203,7 @@ export class SmellsUIManager {
 
   /**
    * Retrieves the status message corresponding to the smell analysis state.
+   *
    * @param status - The analysis status.
    * @returns A descriptive status message.
    */
