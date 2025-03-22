@@ -19,7 +19,7 @@ export async function detectSmellsFile(
   smellsCacheManager: SmellsCacheManager,
   treeDataProvider: SmellsViewProvider,
   fileUri: vscode.Uri | string,
-) {
+): Promise<void> {
   // Validate the file URI or path
   if (!fileUri) {
     vscode.window.showErrorMessage('No file selected for analysis.');
@@ -125,7 +125,7 @@ export async function detectSmellsFolder(
   smellsCacheManager: SmellsCacheManager,
   treeDataProvider: SmellsViewProvider,
   folderPath: string,
-) {
+): Promise<void> {
   // Notify the user that folder analysis has started
   vscode.window.showInformationMessage(
     `Detecting code smells for all Python files in: ${path.basename(folderPath)}`,
@@ -177,7 +177,7 @@ async function handleOutdatedFile(
   filePath: string,
   smellsCacheManager: SmellsCacheManager,
   smellsDisplayProvider: SmellsViewProvider,
-) {
+): Promise<void> {
   // Check if the file is marked as outdated
   if (smellsDisplayProvider.isFileOutdated(filePath)) {
     // Delete cached smells for the outdated file

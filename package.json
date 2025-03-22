@@ -142,6 +142,11 @@
           "id": "ecooptimizer.refactoringDetails",
           "name": "Refactoring Details",
           "icon": "assets/eco-icon.png"
+        },
+        {
+          "id": "ecooptimizer.metricsView",
+          "name": "Carbon Metrics",
+          "icon": "assets/eco-icon.png"
         }
       ]
     },
@@ -149,6 +154,11 @@
       {
         "view": "ecooptimizer.view",
         "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
+        "when": "!workspaceState.workspaceConfigured"
+      },
+      {
+        "view": "ecooptimizer.metricsView",
+        "contents": "No energy savings to declare. Configure your workspace to start saving energy!\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
         "when": "!workspaceState.workspaceConfigured"
       }
     ],
@@ -187,6 +197,11 @@
       {
         "command": "ecooptimizer.openFile",
         "title": "Open File",
+        "category": "Eco Optimizer"
+      },
+      {
+        "command": "ecooptimizer.exportMetricsData",
+        "title": "Export Metrics Data as JSON",
         "category": "Eco Optimizer"
       },
       {
@@ -244,6 +259,11 @@
         {
           "command": "ecooptimizer.deselectAllFilterSmells",
           "when": "view == ecooptimizer.filterView",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.exportMetricsData",
+          "when": "view == ecooptimizer.metricsView",
           "group": "resource"
         }
       ],

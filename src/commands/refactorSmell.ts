@@ -3,6 +3,7 @@ import * as path from 'path';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import { refactorSmell as backendRefactorSmell } from '../api/backend'; // Import the backend function
+import { MetricsViewProvider } from '../providers/MetricsViewProvider';
 
 /**
  * Handles the refactoring of a specific smell in a file.
@@ -13,11 +14,12 @@ import { refactorSmell as backendRefactorSmell } from '../api/backend'; // Impor
  * @param smell - The smell to refactor.
  */
 export async function refactorSmell(
-  treeDataProvider: SmellsViewProvider,
+  smellsDataProvider: SmellsViewProvider,
+  metricsDataProvider: MetricsViewProvider,
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
   filePath: string,
   smell: Smell,
-) {
+): Promise<void> {
   if (!filePath || !smell) {
     vscode.window.showErrorMessage('Error: Invalid file path or smell.');
     return;
@@ -38,6 +40,14 @@ export async function refactorSmell(
     refactoringDetailsViewProvider.updateRefactoringDetails(
       refactoredData.targetFile.refactored,
     );
+
+    if (refactoredData.energySaved) {
+      metricsDataProvider.updateMetrics(
+        filePath,
+        refactoredData.energySaved,
+        smell.symbol,
+      );
+    }
 
     // Notify the user
     vscode.window.showInformationMessage(
