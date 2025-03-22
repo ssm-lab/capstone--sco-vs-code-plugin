@@ -239,6 +239,11 @@
         "command": "ecooptimizer.wipeWorkCache",
         "title": "Clear Smells Cache",
         "category": "Eco Optimizer"
+      },
+      {
+        "command": "ecooptimizer.openDiffEditor",
+        "title": "Open Diff Editor",
+        "category": "Eco Optimizer"
       }
     ],
     "menus": {
@@ -299,6 +304,12 @@
           "command": "ecooptimizer.refactorSmell",
           "when": "viewItem == ecoOptimizerSmell",
           "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.openDiffEditor",
+          "when": "viewItem == ecoOptimizerFile",
+          "group": "inline",
+          "icon": "$(diff)"
         }
       ]
     }

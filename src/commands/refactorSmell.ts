@@ -42,57 +42,16 @@ export async function refactorSmell(
       'vscode.diff',
       originalUri,
       refactoredUri,
-      'Original ↔ Refactored',
+      'Refactoring Comparison',
     );
 
     // Set a context key to track that refactoring is in progress
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
 
-    // Listen for the diff editor being closed manually
-    const closeListener = vscode.window.onDidChangeVisibleTextEditors((editors) => {
-      const diffEditorStillOpen = editors.some(
-        (editor) =>
-          editor.document.uri.toString() === originalUri.toString() ||
-          editor.document.uri.toString() === refactoredUri.toString(),
-      );
-
-      if (!diffEditorStillOpen) {
-        // Show a confirmation popup if the diff editor is closed manually
-        vscode.window
-          .showWarningMessage(
-            'You need to accept or reject the refactoring. Do you want to stop refactoring?',
-            { modal: true },
-            'Stop Refactoring',
-          )
-          .then((choice) => {
-            if (choice === 'Stop Refactoring') {
-              // Reset the refactoring state
-              refactoringDetailsViewProvider.resetRefactoringDetails();
-              vscode.commands.executeCommand(
-                'setContext',
-                'refactoringInProgress',
-                false,
-              );
-            } else {
-              // Reopen the diff editor
-              vscode.commands.executeCommand(
-                'vscode.diff',
-                originalUri,
-                refactoredUri,
-                'Original ↔ Refactored',
-              );
-            }
-          });
-      }
-    });
-
     // Notify the user
     vscode.window.showInformationMessage(
       `Refactoring successful! Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
     );
-
-    // Return the close listener so it can be disposed later
-    return closeListener;
   } catch (error: any) {
     console.error('Refactoring failed:', error.message);
     vscode.window.showErrorMessage(`Refactoring failed: ${error.message}`);

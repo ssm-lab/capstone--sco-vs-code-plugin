@@ -162,12 +162,6 @@ export function activate(context: vscode.ExtensionContext): void {
             'refactoringInProgress',
             false,
           );
-
-          // Close the refactoring details view
-          vscode.commands.executeCommand(
-            'workbench.action.closeView',
-            'ecooptimizer.refactoringDetails',
-          );
         } catch (error) {
           console.error('Failed to accept refactoring:', error);
           vscode.window.showErrorMessage(
@@ -193,12 +187,31 @@ export function activate(context: vscode.ExtensionContext): void {
       // Reset the refactoring details view
       refactoringDetailsViewProvider.resetRefactoringDetails();
       vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+    }),
+  );
 
-      // Close the refactoring details view
-      vscode.commands.executeCommand(
-        'workbench.action.closeView',
-        'ecooptimizer.refactoringDetails',
-      );
+  // Register the command to open the diff editor
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.openDiffEditor', (fileUri) => {
+      const refactoredFilePath = refactoringDetailsViewProvider.refactoredFilePath;
+      const originalFilePath = refactoringDetailsViewProvider.originalFilePath;
+
+      if (refactoredFilePath && originalFilePath) {
+        // Get the file name from the original file path
+        const fileName = originalFilePath.split('/').pop() || 'file';
+
+        // Show the diff editor
+        const originalUri = vscode.Uri.file(originalFilePath);
+        const refactoredUri = vscode.Uri.file(refactoredFilePath);
+        vscode.commands.executeCommand(
+          'vscode.diff',
+          originalUri,
+          refactoredUri,
+          `${fileName} (original) ↔ ${fileName} (refactored)`,
+        );
+      } else {
+        vscode.window.showErrorMessage('No refactoring data available.');
+      }
     }),
   );
 

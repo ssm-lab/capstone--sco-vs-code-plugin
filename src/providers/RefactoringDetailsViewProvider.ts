@@ -70,5 +70,12 @@ class RefactoringDetailItem extends vscode.TreeItem {
   constructor(label: string, description: string) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.description = description;
+
+    // Add a command to open the diff editor when the item is clicked
+    this.command = {
+      command: 'ecooptimizer.openDiffEditor',
+      title: 'Open Diff Editor',
+      arguments: [description], // Pass the file path as an argument
+    };
   }
 }
