@@ -62,7 +62,7 @@ export class SmellsViewProvider implements vscode.TreeDataProvider<string> {
     return smells.map((smell) => {
       const smellItem = `${smell.messageId}: Line ${smell.occurences
         .map((o) => o.line)
-        .join(', ')}`;
+        .join(', ')} (ID: ${smell.id})`;
       this.stateManager.mapSmellToFile(smellItem, element);
       return smellItem;
     });

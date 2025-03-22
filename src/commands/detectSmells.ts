@@ -91,12 +91,13 @@ export async function detectSmellsFile(
     if (status === 200) {
       // Cache detected smells, even if no smells are found
       await smellsCacheManager.setCachedSmells(filePath, smells);
+      const smellsWithID = smellsCacheManager.getCachedSmells(filePath) || [];
 
       // Remove the file from modifiedFiles after re-analysis
       treeDataProvider.clearOutdatedStatus(filePath);
 
       if (smells.length > 0) {
-        treeDataProvider.updateSmells(filePath, smells);
+        treeDataProvider.updateSmells(filePath, smellsWithID);
         vscode.window.showInformationMessage(
           `Analysis complete: Detected ${
             smells.length

@@ -5,6 +5,8 @@ import { envConfig } from '../utils/envConfig';
 
 /**
  * Manages caching of detected smells and file hashes to avoid redundant backend calls.
+ * This class handles storing, retrieving, and clearing cached smells and file hashes,
+ * as well as refreshing the UI when the cache is updated.
  */
 export class SmellsCacheManager {
   constructor(private context: vscode.ExtensionContext) {}
@@ -14,32 +16,77 @@ export class SmellsCacheManager {
   // ============================
 
   /**
-   * Retrieves cached smells for a given file.
-   * If the file has been analyzed and found clean, this will return an empty array.
+   * Generates a unique string ID for a smell based on its content.
+   * The ID is derived from a SHA256 hash of the smell object.
    *
-   * @param filePath - The absolute path of the file.
-   * @returns An array of detected smells or `undefined` if the file has not been analyzed.
+   * @param smell - The smell object to generate an ID for.
+   * @returns A unique string ID for the smell.
    */
-  public getCachedSmells(filePath: string): Smell[] | undefined {
-    const cache = this.getFullSmellCache();
-    return cache[filePath]; // May be undefined
+  private generateSmellId(smell: Smell): string {
+    // Generate a SHA256 hash of the smell object
+    const smellHash = createHash('sha256')
+      .update(JSON.stringify(smell))
+      .digest('hex');
+
+    // Use the first 8 characters of the hash as the ID
+    return smellHash.substring(0, 3);
   }
 
   /**
-   * Caches detected smells for a given file.
-   * If no smells are detected, caches an empty array to avoid redundant backend calls.
+   * Caches detected smells for a given file and assigns unique string IDs to each smell.
+   * The smells are stored in the workspace state for persistence.
    *
    * @param filePath - The absolute path of the file.
-   * @param smells - The detected smells to store (empty array if no smells found).
+   * @param smells - The detected smells to store.
    */
   public async setCachedSmells(filePath: string, smells: Smell[]): Promise<void> {
     const cache = this.getFullSmellCache();
-    cache[filePath] = smells;
+
+    // Assign unique string IDs to each smell
+    const smellsWithIds = smells.map((smell) => {
+      const id = this.generateSmellId(smell);
+      return {
+        ...smell,
+        id, // Add the unique string ID to the smell object
+      };
+    });
+
+    // Update the cache with the new smells
+    cache[filePath] = smellsWithIds;
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
   }
 
   /**
-   * Clears all cached smells from the workspace.
+   * Retrieves cached smells for a given file.
+   *
+   * @param filePath - The absolute path of the file.
+   * @returns An array of detected smells with unique IDs, or undefined if no smells are cached.
+   */
+  public getCachedSmells(filePath: string): Smell[] | undefined {
+    const cache = this.getFullSmellCache();
+    return cache[filePath];
+  }
+
+  /**
+   * Retrieves a smell by its unique string ID.
+   *
+   * @param id - The unique string ID of the smell.
+   * @returns The smell object, or undefined if no smell matches the ID.
+   */
+  public getSmellById(id: string): Smell | undefined {
+    const cache = this.getFullSmellCache();
+    for (const filePath in cache) {
+      const smells = cache[filePath];
+      const smell = smells.find((s) => s.id === id);
+      if (smell) {
+        return smell;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Clears all cached smells from the workspace state.
    * This forces a fresh analysis of all files when `detectSmellsFile` is called.
    */
   public async clearSmellsCache(): Promise<void> {
@@ -58,8 +105,9 @@ export class SmellsCacheManager {
   }
 
   /**
-   * Retrieves the entire smell cache.
-   * @returns A record of file paths to cached smells.
+   * Retrieves the entire smell cache from the workspace state.
+   *
+   * @returns A record of file paths to their corresponding cached smells.
    */
   public getFullSmellCache(): Record<string, Smell[]> {
     return this.context.workspaceState.get<Record<string, Smell[]>>(
@@ -73,18 +121,20 @@ export class SmellsCacheManager {
   // ============================
 
   /**
-   * Computes a SHA256 hash of a file's contents.
+   * Computes a SHA256 hash of a file's contents and returns it as a string.
+   *
    * @param content - The file content as a string.
-   * @returns A SHA256 hash string.
+   * @returns A SHA256 hash string derived from the file content.
    */
   public computeFileHash(content: string): string {
     return createHash('sha256').update(content).digest('hex');
   }
 
   /**
-   * Stores a hash of a file's contents in workspaceState.
-   * @param filePath - Absolute path of the file.
-   * @param hash - The computed file hash.
+   * Stores a hash of a file's contents in the workspace state.
+   *
+   * @param filePath - The absolute path of the file.
+   * @param hash - The computed file hash as a string.
    */
   public async storeFileHash(filePath: string, hash: string): Promise<void> {
     const hashes = this.getFullFileHashCache();
@@ -94,8 +144,9 @@ export class SmellsCacheManager {
 
   /**
    * Retrieves the stored hash for a given file.
-   * @param filePath - Absolute path of the file.
-   * @returns The stored hash or undefined if not found.
+   *
+   * @param filePath - The absolute path of the file.
+   * @returns The stored hash as a string, or undefined if no hash is found.
    */
   public getStoredFileHash(filePath: string): string | undefined {
     const hashes = this.getFullFileHashCache();
@@ -103,8 +154,9 @@ export class SmellsCacheManager {
   }
 
   /**
-   * Retrieves the entire file hash cache.
-   * @returns A record of file paths to SHA256 hashes.
+   * Retrieves the entire file hash cache from the workspace state.
+   *
+   * @returns A record of file paths to their corresponding SHA256 hashes.
    */
   private getFullFileHashCache(): Record<string, string> {
     return this.context.workspaceState.get<Record<string, string>>(
@@ -119,7 +171,7 @@ export class SmellsCacheManager {
 
   /**
    * Clears all cached smells and refreshes the UI.
-   * Used by both "Clear Smells Cache" and "Reset Configuration".
+   * This method is used by both "Clear Smells Cache" and "Reset Configuration" commands.
    *
    * @param smellsDisplayProvider - The tree view provider responsible for the UI.
    */

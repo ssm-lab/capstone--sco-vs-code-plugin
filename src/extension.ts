@@ -96,6 +96,41 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.refactorSmell', (fileUri) => {
+      // Ensure the fileUri is valid
+      if (!fileUri) {
+        console.error('No file URI provided.');
+        return;
+      }
+
+      // Extract the smell ID from the fileUri string (e.g., "(aa7) R0913: Line 15")
+      const smellIdMatch = fileUri.match(/\(([^)]+)\)/);
+      const smellId = smellIdMatch ? smellIdMatch[1] : null;
+
+      if (!smellId) {
+        console.error('No smell ID found in the file URI:', fileUri);
+        return;
+      }
+
+      // Retrieve the smell object by ID using the cache manager
+      const smell = smellsCacheManager.getSmellById(smellId);
+      if (!smell) {
+        console.error('No smell found with ID:', smellId);
+        return;
+      }
+
+      // Get the file path from the smell object
+      const filePath = smell.path;
+
+      // Print the file path and smell object to the console
+      console.log('File Path:', filePath);
+      console.log('Smell Object:', smell);
+
+      // Add additional logic here to handle refactoring
+    }),
+  );
+
   // Register the "Jump to Smell" command.
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.jumpToSmell', jumpToSmell),

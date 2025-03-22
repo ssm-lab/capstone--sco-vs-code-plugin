@@ -32,5 +32,22 @@ declare global {
     obj?: string; // Optional: Object name associated with the smell (if applicable)
     occurences: Occurrence[]; // Optional: List of occurrences for repeated calls
     additionalInfo: AdditionalInfo;
+    id?: string; // Add this line to include the unique ID
+  }
+
+  /**
+   * Represents the response from the `/refactor` endpoint.
+   */
+  export interface RefactoredData {
+    tempDir: string;
+    targetFile: {
+      original: string;
+      refactored: string;
+    };
+    energySaved: number | null;
+    affectedFiles: {
+      original: string;
+      refactored: string;
+    }[];
   }
 }
