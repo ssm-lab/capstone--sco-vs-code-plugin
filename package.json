@@ -137,6 +137,11 @@
           "id": "ecooptimizer.filterView",
           "name": "Filter Smells",
           "icon": "assets/eco-icon.png"
+        },
+        {
+          "id": "ecooptimizer.refactoringDetails",
+          "name": "Refactoring Details",
+          "icon": "assets/eco-icon.png"
         }
       ]
     },

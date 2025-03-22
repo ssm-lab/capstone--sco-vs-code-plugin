@@ -16,6 +16,7 @@ import { FilterViewProvider } from './providers/FilterViewProvider';
 import { SmellsCacheManager } from './context/SmellsCacheManager';
 import { registerFileSaveListener } from './listeners/fileSaveListener';
 import { refactorSmell } from './commands/refactorSmell';
+import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsViewProvider';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -106,6 +107,19 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  // Initialize the RefactoringDetailsViewProvider
+  const refactoringDetailsViewProvider = new RefactoringDetailsViewProvider();
+  const refactoringDetailsView = vscode.window.createTreeView(
+    'ecooptimizer.refactoringDetails',
+    {
+      treeDataProvider: refactoringDetailsViewProvider,
+    },
+  );
+
+  // Reset the refactoring details view initially
+  refactoringDetailsViewProvider.resetRefactoringDetails();
+
+  // Register the refactorSmell command
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.refactorSmell', (fileUri) => {
       // Ensure the fileUri is valid
@@ -115,7 +129,6 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       // Extract the smell ID from the fileUri string (e.g., "(aa7) R0913: Line 15")
-      console.log('File URi:', fileUri);
       const smellIdMatch = fileUri.match(/\(ID:\s*([^)]+)\)/);
       const smellId = smellIdMatch ? smellIdMatch[1] : null;
 
@@ -139,7 +152,12 @@ export function activate(context: vscode.ExtensionContext): void {
       console.log('Smell Object:', smell);
 
       // Call the refactorSmell function
-      refactorSmell(smellsViewProvider, filePath, smell);
+      refactorSmell(
+        smellsViewProvider,
+        refactoringDetailsViewProvider,
+        filePath,
+        smell,
+      );
     }),
   );
 
