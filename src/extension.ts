@@ -4,7 +4,6 @@ import { envConfig } from './utils/envConfig';
 import * as vscode from 'vscode';
 
 import { configureWorkspace } from './commands/configureWorkspace';
-import * as fs from 'fs';
 import { resetConfiguration } from './commands/resetConfiguration';
 import { detectSmellsFile, detectSmellsFolder } from './commands/detectSmells';
 import { openFile } from './commands/openFile';
@@ -138,66 +137,65 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // Register the acceptRefactoring command
-  context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () => {
-      const refactoredFilePath = refactoringDetailsViewProvider.refactoredFilePath;
-      const originalFilePath = refactoringDetailsViewProvider.originalFilePath;
+  // // Register the acceptRefactoring command
+  // context.subscriptions.push(
+  //   vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () => {
+  //     const refactoredFilePath = refactoringDetailsViewProvider.refactoredFilePath;
+  //     const originalFilePath = refactoringDetailsViewProvider.originalFilePath;
 
-      if (refactoredFilePath && originalFilePath) {
-        try {
-          // Replace the original file with the refactored file
-          fs.copyFileSync(refactoredFilePath, originalFilePath);
-          vscode.window.showInformationMessage(
-            'Refactoring accepted! Changes applied.',
-          );
+  //     if (refactoredFilePath && originalFilePath) {
+  //       try {
+  //         // Replace the original file with the refactored file
+  //         fs.copyFileSync(refactoredFilePath, originalFilePath);
+  //         vscode.window.showInformationMessage(
+  //           'Refactoring accepted! Changes applied.',
+  //         );
 
-          // Close the diff editor
-          vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+  //         // Close the diff editor
+  //         vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
-          // Reset the refactoring details view
-          refactoringDetailsViewProvider.resetRefactoringDetails();
-          vscode.commands.executeCommand(
-            'setContext',
-            'refactoringInProgress',
-            false,
-          );
-        } catch (error) {
-          console.error('Failed to accept refactoring:', error);
-          vscode.window.showErrorMessage(
-            'Failed to accept refactoring. Please try again.',
-          );
-        }
-      } else {
-        vscode.window.showErrorMessage('No refactoring data available.');
-      }
-    }),
-  );
+  //         // Reset the refactoring details view
+  //         refactoringDetailsViewProvider.resetRefactoringDetails();
+  //         vscode.commands.executeCommand(
+  //           'setContext',
+  //           'refactoringInProgress',
+  //           false,
+  //         );
+  //       } catch (error) {
+  //         console.error('Failed to accept refactoring:', error);
+  //         vscode.window.showErrorMessage(
+  //           'Failed to accept refactoring. Please try again.',
+  //         );
+  //       }
+  //     } else {
+  //       vscode.window.showErrorMessage('No refactoring data available.');
+  //     }
+  //   }),
+  // );
 
-  // Register the rejectRefactoring command
-  context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', () => {
-      vscode.window.showInformationMessage(
-        'Refactoring rejected! Changes discarded.',
-      );
+  // // Register the rejectRefactoring command
+  // context.subscriptions.push(
+  //   vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', () => {
+  //     vscode.window.showInformationMessage(
+  //       'Refactoring rejected! Changes discarded.',
+  //     );
 
-      // Close the diff editor
-      vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+  //     // Close the diff editor
+  //     vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
-      // Reset the refactoring details view
-      refactoringDetailsViewProvider.resetRefactoringDetails();
-      vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
-    }),
-  );
+  //     // Reset the refactoring details view
+  //     refactoringDetailsViewProvider.resetRefactoringDetails();
+  //     vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+  //   }),
+  // );
 
   // Register the command to open the diff editor
+  // Register the command to open the diff editor
   context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.openDiffEditor', (fileUri) => {
-      const refactoredFilePath = refactoringDetailsViewProvider.refactoredFilePath;
-      const originalFilePath = refactoringDetailsViewProvider.originalFilePath;
-
-      if (refactoredFilePath && originalFilePath) {
-        // Get the file name from the original file path
+    vscode.commands.registerCommand(
+      'ecooptimizer.openDiffEditor',
+      (originalFilePath: string, refactoredFilePath: string) => {
+        // Get the file name for the diff editor title
         const fileName = originalFilePath.split('/').pop() || 'file';
 
         // Show the diff editor
@@ -209,10 +207,8 @@ export function activate(context: vscode.ExtensionContext): void {
           refactoredUri,
           `${fileName} (original) ↔ ${fileName} (refactored)`,
         );
-      } else {
-        vscode.window.showErrorMessage('No refactoring data available.');
-      }
-    }),
+      },
+    ),
   );
 
   // Register the "Jump to Smell" command.

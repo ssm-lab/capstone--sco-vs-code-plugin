@@ -29,20 +29,22 @@ export async function refactorSmell(
     // Log the response from the backend
     console.log('Refactoring response:', refactoredData);
 
-    // Update the refactoring details view with the refactored file name
+    // Update the refactoring details view with the target file and affected files
     refactoringDetailsViewProvider.updateRefactoringDetails(
-      refactoredData.targetFile.refactored,
-      refactoredData.targetFile.original,
+      refactoredData.targetFile,
+      refactoredData.affectedFiles,
     );
 
-    // Show a diff view between the original and refactored files
-    const originalUri = vscode.Uri.file(refactoredData.targetFile.original);
-    const refactoredUri = vscode.Uri.file(refactoredData.targetFile.refactored);
+    // Show a diff view for the target file
+    const targetFile = refactoredData.targetFile;
+    const fileName = targetFile.original.split('/').pop() || 'file';
+    const originalUri = vscode.Uri.file(targetFile.original);
+    const refactoredUri = vscode.Uri.file(targetFile.refactored);
     await vscode.commands.executeCommand(
       'vscode.diff',
       originalUri,
       refactoredUri,
-      'Refactoring Comparison',
+      `${fileName} (original) ↔ ${fileName} (refactored)`,
     );
 
     // Set a context key to track that refactoring is in progress
