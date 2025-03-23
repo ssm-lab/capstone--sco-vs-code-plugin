@@ -250,22 +250,22 @@
       "view/title": [
         {
           "command": "ecooptimizer.resetConfiguration",
-          "when": "view == ecooptimizer.view && workspaceState.workspaceConfigured",
+          "when": "view == ecooptimizer.view && workspaceState.workspaceConfigured && !refactoringInProgress",
           "group": "resource"
         },
         {
           "command": "ecooptimizer.wipeWorkCache",
-          "when": "view == ecooptimizer.view && workspaceState.workspaceConfigured",
+          "when": "view == ecooptimizer.view && workspaceState.workspaceConfigured && !refactoringInProgress",
           "group": "resource"
         },
         {
           "command": "ecooptimizer.selectAllFilterSmells",
-          "when": "view == ecooptimizer.filterView",
+          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
           "group": "resource"
         },
         {
           "command": "ecooptimizer.deselectAllFilterSmells",
-          "when": "view == ecooptimizer.filterView",
+          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
           "group": "resource"
         },
         {
@@ -282,27 +282,27 @@
       "view/item/context": [
         {
           "command": "ecooptimizer.editSmellFilterOption",
-          "when": "viewItem == smellOption",
+          "when": "viewItem == smellOption && !refactoringInProgress",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.detectSmellsFolder",
-          "when": "viewItem == ecoOptimizerFolder",
+          "when": "viewItem == ecoOptimizerFolder && !refactoringInProgress",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.detectSmellsFile",
-          "when": "viewItem == ecoOptimizerFile || viewItem == ecoOptimizerFile-hasSmells",
+          "when": "(viewItem == ecoOptimizerFile || viewItem == ecoOptimizerFile-hasSmells) && !refactoringInProgress",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.refactorAllSmellsOfType",
-          "when": "viewItem == ecoOptimizerFile-hasSmells",
+          "when": "viewItem == ecoOptimizerFile-hasSmells && !refactoringInProgress",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.refactorSmell",
-          "when": "viewItem == ecoOptimizerSmell",
+          "when": "viewItem == ecoOptimizerSmell && !refactoringInProgress",
           "group": "inline"
         }
       ]
