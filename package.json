@@ -347,6 +347,97 @@
           "group": "inline"
         }
       ]
+    },
+    "configuration": {
+      "title": "EcoOptimizer",
+      "properties": {
+        "ecooptimizer.detection.smellsColours": {
+          "order": 1,
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Configure highlight colours for smells.",
+          "default": {
+            "long-element-chain": "lightblue",
+            "too-many-arguments": "lightcoral",
+            "long-lambda-expression": "mediumpurple",
+            "long-message-chain": "lightpink",
+            "cached-repeated-calls": "lightgreen",
+            "string-concat-loop": "lightsalmon",
+            "no-self-use": "lightcyan",
+            "use-a-generator": "yellow"
+          },
+          "properties": {
+            "long-element-chain": {
+              "type": "string",
+              "default": "lightblue",
+              "description": "Colour (css syntax) for highlighting long element chains."
+            },
+            "too-many-arguments": {
+              "type": "string",
+              "default": "lightcoral",
+              "description": "Colour (css syntax) for highlighting functions with too many arguments."
+            },
+            "long-lambda-expression": {
+              "type": "string",
+              "default": "mediumpurple",
+              "description": "Colour (css syntax) for highlighting long lambda expressions."
+            },
+            "long-message-chain": {
+              "type": "string",
+              "default": "lightpink",
+              "description": "Colour (css syntax) for highlighting long message chains."
+            },
+            "cached-repeated-calls": {
+              "type": "string",
+              "default": "lightgreen",
+              "description": "Colour (css syntax) for highlighting cached repeated calls."
+            },
+            "string-concat-loop": {
+              "type": "string",
+              "default": "lightsalmon",
+              "description": "Colour (css syntax) for highlighting string concatenation in loops."
+            },
+            "no-self-use": {
+              "type": "string",
+              "default": "lightcyan",
+              "description": "Colour (css syntax) for highlighting methods with no self-use."
+            },
+            "use-a-generator": {
+              "type": "string",
+              "default": "yellow",
+              "description": "Colour (css syntax) for highlighting places where a generator could be used."
+            }
+          }
+        },
+        "ecooptimizer.detection.useSingleColour": {
+          "order": 2,
+          "type": "boolean",
+          "default": false,
+          "description": "Use a single colour for all smells. If enabled, the colour defined below will be used."
+        },
+        "ecooptimizer.detection.singleHighlightColour": {
+          "order": 3,
+          "type": "string",
+          "default": "yellow",
+          "markdownDescription": "Colour (css syntax) to use for all smells if **Use Single Colour** is enabled."
+        },
+        "ecooptimizer.detection.highlightStyle": {
+          "order": 0,
+          "type": "string",
+          "enum": [
+            "underline",
+            "flashlight",
+            "border-arrow"
+          ],
+          "markdownEnumDescriptions": [
+            "Your average wavy line",
+            "No pixel left untouched",
+            "Basically how it sounds"
+          ],
+          "default": "underline",
+          "description": "Choose a highlight style for all smells."
+        }
+      }
     }
   }
 }

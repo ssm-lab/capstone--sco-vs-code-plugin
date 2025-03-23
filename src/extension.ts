@@ -131,11 +131,6 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // Initialize the FileHighlighter for highlighting code smells.
-  const fileHighlighter = FileHighlighter.getInstance(smellsCacheManager);
-
-  fileHighlighter.updateHighlightsForVisibleEditors();
-
   // Initialize the RefactoringDetailsViewProvider
   const refactoringDetailsViewProvider = new RefactoringDetailsViewProvider();
   // eslint-disable-next-line unused-imports/no-unused-vars
@@ -263,6 +258,19 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.wipeWorkCache', async () => {
       await wipeWorkCache(smellsCacheManager, smellsViewProvider);
+    }),
+  );
+
+  // Initialize the FileHighlighter for highlighting code smells.
+  const fileHighlighter = FileHighlighter.getInstance(smellsCacheManager);
+
+  fileHighlighter.updateHighlightsForVisibleEditors();
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeVisibleTextEditors((editors) => {
+      editors.forEach((editor) => {
+        fileHighlighter.highlightSmells(editor);
+      });
     }),
   );
 

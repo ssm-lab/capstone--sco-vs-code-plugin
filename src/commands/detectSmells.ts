@@ -20,19 +20,18 @@ export async function detectSmellsFile(
   treeDataProvider: SmellsViewProvider,
   fileUri: vscode.Uri | string,
 ): Promise<void> {
-  // Validate the file URI or path
   if (!fileUri) {
     vscode.window.showErrorMessage('No file selected for analysis.');
     return;
   }
 
-  // Convert file URI to a path if necessary
   const filePath = typeof fileUri === 'string' ? fileUri : fileUri.fsPath;
 
   // Handle outdated files before proceeding
-  await handleOutdatedFile(filePath, smellsCacheManager, treeDataProvider);
+  if (treeDataProvider.isFileOutdated(filePath)) {
+    treeDataProvider.updateStatus(filePath, 'queued');
+  }
 
-  // Retrieve enabled smells from configuration
   const enabledSmells = getEnabledSmells();
 
   // Ensure that at least one smell type is enabled
@@ -47,7 +46,6 @@ export async function detectSmellsFile(
   const cachedSmells = smellsCacheManager.getCachedSmells(filePath);
   console.log('Cached smells:', cachedSmells);
   if (cachedSmells !== undefined) {
-    // Use cached smells if available
     vscode.window.showInformationMessage(
       `Using cached smells for ${path.basename(filePath)}.`,
     );
@@ -78,10 +76,8 @@ export async function detectSmellsFile(
       Object.entries(enabledSmells).map(([key, value]) => [key, value.options]),
     );
 
-    // Request smell analysis from the backend
     const { smells, status } = await fetchSmells(filePath, enabledSmellsForBackend);
 
-    // Handle response and update UI
     if (status === 200) {
       // Cache detected smells, even if no smells are found
       await smellsCacheManager.setCachedSmells(filePath, smells);
@@ -163,33 +159,4 @@ export async function detectSmellsFolder(
 
   // Refresh UI to reflect folder analysis results
   treeDataProvider.refresh();
-}
-
-/**
- * Handles outdated files before detecting smells.
- * Deletes cached smells and updates the UI for outdated files.
- *
- * @param filePath - The path of the file to analyze.
- * @param smellsCacheManager - Manages caching of smells and file hashes.
- * @param smellsDisplayProvider - The UI provider for updating the tree view.
- */
-async function handleOutdatedFile(
-  filePath: string,
-  smellsCacheManager: SmellsCacheManager,
-  smellsDisplayProvider: SmellsViewProvider,
-): Promise<void> {
-  // Check if the file is marked as outdated
-  if (smellsDisplayProvider.isFileOutdated(filePath)) {
-    // Delete cached smells for the outdated file
-    await smellsCacheManager.clearCachedSmellsForFile(filePath);
-
-    const document = await vscode.workspace.openTextDocument(filePath);
-    const fileContent = document.getText();
-
-    console.log('Storing file hash for:', filePath);
-    await smellsCacheManager.storeFileHash(filePath, fileContent);
-
-    // Remove the outdated status from the UI
-    smellsDisplayProvider.updateStatus(filePath, 'queued'); // Reset to "queued" or another default status
-  }
 }
