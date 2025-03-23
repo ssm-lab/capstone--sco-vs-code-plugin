@@ -81,7 +81,41 @@ async function configurePythonFile(
 }
 
 /**
- * Prompts the user to select a Python folder from the workspace.
+ * Recursively finds all folders in the workspace that contain Python files or are Python modules.
+ *
+ * @param folderPath - The absolute path of the folder to start scanning from.
+ * @returns An array of folder paths that contain Python files or are Python modules.
+ */
+function findPythonFoldersRecursively(folderPath: string): string[] {
+  let pythonFolders: string[] = [];
+
+  try {
+    const files = fs.readdirSync(folderPath);
+
+    // Check if the current folder is a Python module or contains Python files
+    if (
+      files.includes('__init__.py') ||
+      files.some((file) => file.endsWith('.py'))
+    ) {
+      pythonFolders.push(folderPath);
+    }
+
+    // Recursively scan subfolders
+    files.forEach((file) => {
+      const filePath = path.join(folderPath, file);
+      if (fs.statSync(filePath).isDirectory()) {
+        pythonFolders = pythonFolders.concat(findPythonFoldersRecursively(filePath));
+      }
+    });
+  } catch (error) {
+    console.error(`Error scanning folder ${folderPath}:`, error);
+  }
+
+  return pythonFolders;
+}
+
+/**
+ * Prompts the user to select a Python folder from the workspace, including nested folders.
  * Updates the workspace state with the selected folder and refreshes the tree view.
  *
  * @param context - The extension context used to persist workspace state.
@@ -102,10 +136,10 @@ async function configurePythonFolder(
     return;
   }
 
-  // Filter workspace folders to include only those containing Python files
+  // Find all valid Python folders, including nested ones
   const validPythonFolders = workspaceFolders
     .map((folder) => folder.uri.fsPath)
-    .filter((folderPath) => containsPythonFiles(folderPath));
+    .flatMap((folderPath) => findPythonFoldersRecursively(folderPath));
 
   // Notify the user if no valid Python folders are found
   if (validPythonFolders.length === 0) {
@@ -126,28 +160,6 @@ async function configurePythonFolder(
     vscode.window.showInformationMessage(
       `Workspace configured for folder: ${path.basename(selectedFolder)}`,
     );
-  }
-}
-
-/**
- * Checks if a given folder contains Python files.
- * This function scans the folder for `.py` files or an `__init__.py` file.
- *
- * @param folderPath - The absolute path of the folder to check.
- * @returns True if the folder contains Python files, otherwise false.
- */
-function containsPythonFiles(folderPath: string): boolean {
-  try {
-    // Read the contents of the folder
-    const files = fs.readdirSync(folderPath);
-
-    // Check if any file ends with `.py` or if the folder contains `__init__.py`
-    return (
-      files.some((file) => file.endsWith('.py')) || files.includes('__init__.py')
-    );
-  } catch (error) {
-    // Return false if an error occurs (e.g., folder is inaccessible)
-    return false;
   }
 }
 

@@ -59,7 +59,9 @@ export function activate(context: vscode.ExtensionContext): void {
   checkServerStatus();
   setInterval(checkServerStatus, 10000);
 
-  // Track the workspace configuration state.
+  ////////////////////////////////////////////////
+  // WORKSPACE CONFIGURATION COMMANDS
+  ////////////////////////////////////////////////
   const workspaceConfigured = Boolean(
     context.workspaceState.get<string>('workspaceConfiguredPath'),
   );
@@ -69,7 +71,6 @@ export function activate(context: vscode.ExtensionContext): void {
     workspaceConfigured,
   );
 
-  // Register workspace-related commands.
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.configureWorkspace', () =>
       configureWorkspace(context, smellsViewProvider),
@@ -81,6 +82,8 @@ export function activate(context: vscode.ExtensionContext): void {
       resetConfiguration(context, smellsCacheManager, smellsViewProvider),
     ),
   );
+
+  ////////////////////////////////////////////////
 
   // Initialize the Filter Smells View.
   const filterSmellsProvider = new FilterViewProvider(

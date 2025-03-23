@@ -139,13 +139,13 @@
           "icon": "assets/eco-icon.png"
         },
         {
-          "id": "ecooptimizer.filterView",
-          "name": "Filter Smells",
+          "id": "ecooptimizer.metricsView",
+          "name": "Carbon Metrics",
           "icon": "assets/eco-icon.png"
         },
         {
-          "id": "ecooptimizer.metricsView",
-          "name": "Carbon Metrics",
+          "id": "ecooptimizer.filterView",
+          "name": "Filter Smells",
           "icon": "assets/eco-icon.png"
         }
       ]
