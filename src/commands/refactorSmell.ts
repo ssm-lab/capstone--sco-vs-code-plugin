@@ -32,7 +32,13 @@ export async function refactorSmell(
 
   vscode.window.showInformationMessage(`Refactoring code smell: ${smell.symbol}`);
 
+  // Update UI to indicate the file is queued for analysis
+  smellsDataProvider.updateStatus(smell.path, 'queued');
+
   try {
+    // Set a context key to track that refactoring is in progress
+    vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
+
     // Call the backend to refactor the smell
     const refactoredData = await backendRefactorSmell(smell);
 
@@ -61,9 +67,6 @@ export async function refactorSmell(
         preview: false, // Ensure the diff editor is not in preview mode
       },
     );
-
-    // Set a context key to track that refactoring is in progress
-    vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
 
     // Focus on the Refactoring Details view
     await vscode.commands.executeCommand('ecooptimizer.refactoringDetails.focus');
