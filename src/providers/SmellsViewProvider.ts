@@ -1,19 +1,19 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { SmellsStateManager } from '../managers/SmellsViewStateManager';
-import { SmellsUIManager } from '../managers/SmellsViewUIManager';
+import { SmellsViewStateManager } from '../managers/SmellsViewStateManager';
+import { SmellsViewUIManager } from '../managers/SmellsViewUIManager';
 
 export class SmellsViewProvider implements vscode.TreeDataProvider<string> {
   private _onDidChangeTreeData = new vscode.EventEmitter<string | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private stateManager: SmellsStateManager;
-  private uiManager: SmellsUIManager;
+  private stateManager: SmellsViewStateManager;
+  private uiManager: SmellsViewUIManager;
 
   constructor(private context: vscode.ExtensionContext) {
-    this.stateManager = new SmellsStateManager();
-    this.uiManager = new SmellsUIManager(this.stateManager);
+    this.stateManager = new SmellsViewStateManager();
+    this.uiManager = new SmellsViewUIManager(this.stateManager);
   }
 
   /**

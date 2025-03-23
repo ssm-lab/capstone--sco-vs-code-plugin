@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { SmellsStateManager } from './SmellsViewStateManager';
+import { SmellsViewStateManager } from './SmellsViewStateManager';
 
 /**
  * Manages the UI representation of files, folders, and detected smells in the VS Code tree view.
  * This class handles creating tree items, assigning commands, and updating item states based on
  * the analysis status and file state (e.g., outdated, queued, passed, failed).
  */
-export class SmellsUIManager {
-  constructor(private stateManager: SmellsStateManager) {}
+export class SmellsViewUIManager {
+  constructor(private stateManager: SmellsViewStateManager) {}
 
   /**
    * Creates a tree item for a given element (folder, file, or smell).

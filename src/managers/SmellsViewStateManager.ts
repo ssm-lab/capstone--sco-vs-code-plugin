@@ -1,6 +1,6 @@
 import * as path from 'path';
 
-export class SmellsStateManager {
+export class SmellsViewStateManager {
   private fileStatusMap: Map<string, string> = new Map();
   private detectedSmells: Map<string, Smell[]> = new Map(); // Use Smell[] instead of ProcessedSmell[]
   private smellToFileMap: Map<string, string> = new Map();
