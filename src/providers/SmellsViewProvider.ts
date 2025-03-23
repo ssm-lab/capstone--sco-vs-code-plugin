@@ -64,6 +64,12 @@ export class SmellsViewProvider implements vscode.TreeDataProvider<TreeItem> {
       );
       item.iconPath = icon;
       item.tooltip = tooltip;
+
+      // Add "Outdated" description
+      if (status === 'outdated') {
+        item.description = 'outdated';
+      }
+
       return item;
     });
   }

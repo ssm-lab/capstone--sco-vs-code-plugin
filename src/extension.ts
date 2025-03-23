@@ -15,6 +15,7 @@ import { FilterViewProvider } from './providers/FilterViewProvider';
 import { registerFilterSmellCommands } from './commands/filterSmells';
 import { loadSmells } from './utils/smellsData';
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
+import { initializeStatusesFromCache } from './utils/initializeStatusesFromCache';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -24,6 +25,8 @@ export function activate(context: vscode.ExtensionContext): void {
   loadSmells();
   const smellsCacheManager = new SmellsCacheManager(context);
   const smellsViewProvider = new SmellsViewProvider(context);
+  initializeStatusesFromCache(context, smellsCacheManager, smellsViewProvider);
+
   const codeSmellsView = vscode.window.createTreeView('ecooptimizer.smellsView', {
     treeDataProvider: smellsViewProvider,
   });
