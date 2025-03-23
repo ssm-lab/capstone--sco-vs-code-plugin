@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 import { FilterSmellConfig, getFilterSmells, saveSmells } from '../utils/smellsData';
-import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import { SmellsViewProvider } from './SmellsViewProvider';
 import { MetricsViewProvider } from './MetricsViewProvider';
 
 /**
@@ -19,8 +17,6 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
   constructor(
     private context: vscode.ExtensionContext,
-    private cacheManager: SmellsCacheManager,
-    private smellsViewProvider: SmellsViewProvider,
     private metricsViewProvider: MetricsViewProvider,
   ) {
     this.smells = getFilterSmells();
@@ -165,14 +161,10 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
   /**
    * Clears smell cache and marks all cached file results as outdated.
+   * Cache not implemented yet.
    */
   async invalidateCachedSmellsForAffectedFiles(): Promise<void> {
-    const cache = this.cacheManager.getFullSmellCache();
-
-    for (const filePath of Object.keys(cache)) {
-      await this.cacheManager.clearCachedSmellsForFile(filePath);
-      this.smellsViewProvider.markFileAsOutdated(filePath);
-    }
+    console.log('Invalidating cached smells for affected files...');
 
     this.metricsViewProvider.refresh();
   }

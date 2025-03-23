@@ -8,12 +8,17 @@ import { MetricsViewProvider } from './providers/MetricsViewProvider';
 
 import { SmellsCacheManager } from './context/SmellsCacheManager';
 import { openFile } from './commands/openFile';
+import { detectSmellsFile } from './commands/detectSmells';
+import { FilterViewProvider } from './providers/FilterViewProvider';
+import { registerFilterSmellCommands } from './commands/filterSmells';
+import { loadSmells } from './utils/smellsData';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
  * @param context - The VS Code extension context.
  */
 export function activate(context: vscode.ExtensionContext): void {
+  loadSmells();
   const smellsCacheManager = new SmellsCacheManager(context);
   const smellsViewProvider = new SmellsViewProvider(context);
   const codeSmellsView = vscode.window.createTreeView('ecooptimizer.smellsView', {
@@ -56,8 +61,40 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
+  // Initialize the Filter Smells View.
+  const filterSmellsProvider = new FilterViewProvider(context, metricsViewProvider);
+  const filterSmellsView = vscode.window.createTreeView('ecooptimizer.filterView', {
+    treeDataProvider: filterSmellsProvider,
+    showCollapseAll: true,
+  });
+
+  // Associate the TreeView instance with the provider.
+  filterSmellsProvider.setTreeView(filterSmellsView);
+
+  // Register filter-related commands.
+  registerFilterSmellCommands(context, filterSmellsProvider);
+
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.openFile', openFile),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileItem) => {
+      try {
+        const filePath = fileItem?.resourceUri?.fsPath;
+
+        if (!filePath) {
+          vscode.window.showWarningMessage(
+            'No file selected or file path not found.',
+          );
+          return;
+        }
+
+        detectSmellsFile(smellsViewProvider, filePath);
+      } catch (error: any) {
+        vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
+      }
+    }),
   );
 }
 

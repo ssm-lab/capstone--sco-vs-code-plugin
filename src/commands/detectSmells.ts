@@ -1,150 +1,31 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { fetchSmells } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { getEnabledSmells } from '../utils/smellsData';
-import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { serverStatus, ServerStatusType } from '../emitters/serverStatus';
 
 /**
  * Detects code smells for a given file.
  * Uses cached smells if available; otherwise, fetches from the backend.
  *
- * @param smellsCacheManager - Manages caching of smells and file hashes.
- * @param treeDataProvider - UI provider for updating tree view.
- * @param fileUri - The VS Code file URI or string path of the file to analyze.
+ * @param smellsViewProvider - UI provider for updating tree view.
+ * @param filePath - The VS Code file URI or string path of the file to analyze.
  */
 export async function detectSmellsFile(
-  smellsCacheManager: SmellsCacheManager,
-  treeDataProvider: SmellsViewProvider,
-  fileUri: vscode.Uri | string,
+  smellsViewProvider: SmellsViewProvider,
+  filePath: string,
 ): Promise<void> {
-  if (!fileUri) {
-    vscode.window.showErrorMessage('No file selected for analysis.');
-    return;
-  }
-
-  const filePath = typeof fileUri === 'string' ? fileUri : fileUri.fsPath;
-
-  // Handle outdated files before proceeding
-  if (treeDataProvider.isFileOutdated(filePath)) {
-    treeDataProvider.updateStatus(filePath, 'queued');
-  }
-
-  const enabledSmells = getEnabledSmells();
-
-  // Ensure that at least one smell type is enabled
-  if (Object.keys(enabledSmells).length === 0) {
-    vscode.window.showWarningMessage(
-      'No enabled smells found. Please configure enabled smells in the settings.',
-    );
-    return;
-  }
-
-  // Check if smells are already cached
-  const cachedSmells = smellsCacheManager.getCachedSmells(filePath);
-  console.log('Cached smells:', cachedSmells);
-  if (cachedSmells !== undefined) {
-    vscode.window.showInformationMessage(
-      `Using cached smells for ${path.basename(filePath)}.`,
-    );
-
-    if (cachedSmells.length > 0) {
-      treeDataProvider.updateSmells(filePath, cachedSmells);
-    } else {
-      treeDataProvider.updateStatus(filePath, 'no_issues');
-    }
-
-    return;
-  }
-
+  // STEP 2: Check if server is down
   if (serverStatus.getStatus() === ServerStatusType.DOWN) {
     vscode.window.showWarningMessage(
       'Action blocked: Server is down and no cached smells exist for this file version.',
     );
-    treeDataProvider.updateStatus(filePath, 'server_down');
+    smellsViewProvider.setStatus(filePath, 'server_down');
     return;
   }
 
-  // Update UI to indicate the file is queued for analysis
-  treeDataProvider.updateStatus(filePath, 'queued');
-
-  try {
-    // Prepare enabled smells for backend request
-    const enabledSmellsForBackend = Object.fromEntries(
-      Object.entries(enabledSmells).map(([key, value]) => [key, value.options]),
-    );
-
-    const { smells, status } = await fetchSmells(filePath, enabledSmellsForBackend);
-
-    if (status === 200) {
-      // Cache detected smells, even if no smells are found
-      await smellsCacheManager.setCachedSmells(filePath, smells);
-      const smellsWithID = smellsCacheManager.getCachedSmells(filePath) || [];
-
-      // Remove the file from modifiedFiles after re-analysis
-      treeDataProvider.clearOutdatedStatus(filePath);
-
-      if (smells.length > 0) {
-        treeDataProvider.updateSmells(filePath, smellsWithID);
-        vscode.window.showInformationMessage(
-          `Analysis complete: Detected ${
-            smells.length
-          } code smell(s) in ${path.basename(filePath)}.`,
-        );
-      } else {
-        treeDataProvider.updateStatus(filePath, 'no_issues'); // Update status based on backend result
-        vscode.window.showInformationMessage(
-          `Analysis complete: No code smells found in ${path.basename(filePath)}.`,
-        );
-      }
-    } else {
-      throw new Error(`Unexpected status code: ${status}`);
-    }
-  } catch (error: any) {
-    // Handle errors during analysis
-    treeDataProvider.updateStatus(filePath, 'failed');
-    vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
-  }
-}
-
-/**
- * Detects code smells for all Python files within a folder.
- * Uses cached smells where available.
- *
- * @param smellsCacheManager - Manages caching of smells and file hashes.
- * @param treeDataProvider - UI provider for updating tree view.
- * @param folderPath - The absolute path of the folder to analyze.
- */
-export async function detectSmellsFolder(
-  smellsCacheManager: SmellsCacheManager,
-  treeDataProvider: SmellsViewProvider,
-  folderPath: string,
-): Promise<void> {
-  // Notify the user that folder analysis has started
-  vscode.window.showInformationMessage(
-    `Detecting code smells for all Python files in: ${path.basename(folderPath)}`,
-  );
-
-  // Retrieve all Python files in the specified folder
-  const pythonFiles = fs
-    .readdirSync(folderPath)
-    .filter((file) => file.endsWith('.py'))
-    .map((file) => path.join(folderPath, file));
-
-  // Ensure that Python files exist in the folder before analysis
-  if (pythonFiles.length === 0) {
-    vscode.window.showWarningMessage(
-      `No Python files found in ${path.basename(folderPath)}.`,
-    );
-    return;
-  }
-
-  // Retrieve enabled smells from configuration
+  // STEP 3: Get enabled smells
   const enabledSmells = getEnabledSmells();
-
-  // Ensure that at least one smell type is enabled
   if (Object.keys(enabledSmells).length === 0) {
     vscode.window.showWarningMessage(
       'No enabled smells found. Please configure enabled smells in the settings.',
@@ -152,11 +33,29 @@ export async function detectSmellsFolder(
     return;
   }
 
-  // Analyze each Python file in the folder
-  for (const file of pythonFiles) {
-    await detectSmellsFile(smellsCacheManager, treeDataProvider, file);
-  }
+  const enabledSmellsForBackend = Object.fromEntries(
+    Object.entries(enabledSmells).map(([key, value]) => [key, value.options]),
+  );
 
-  // Refresh UI to reflect folder analysis results
-  treeDataProvider.refresh();
+  // STEP 4: Set status to queued
+  smellsViewProvider.setStatus(filePath, 'queued');
+
+  try {
+    const { smells, status } = await fetchSmells(filePath, enabledSmellsForBackend);
+
+    if (status === 200) {
+      if (smells.length > 0) {
+        smellsViewProvider.setStatus(filePath, 'passed');
+        // TODO: addSmellsToTreeView(smellsViewProvider, filePath, smells);
+      } else {
+        smellsViewProvider.setStatus(filePath, 'no_issues');
+      }
+    } else {
+      smellsViewProvider.setStatus(filePath, 'failed');
+      vscode.window.showErrorMessage(`Analysis failed (status ${status}).`);
+    }
+  } catch (error: any) {
+    smellsViewProvider.setStatus(filePath, 'failed');
+    vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
+  }
 }

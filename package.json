@@ -137,6 +137,11 @@
           "id": "ecooptimizer.metricsView",
           "name": "Carbon Metrics",
           "icon": "assets/eco-icon.png"
+        },
+        {
+          "id": "ecooptimizer.filterView",
+          "name": "Filter Smells",
+          "icon": "assets/eco-icon.png"
         }
       ]
     },
@@ -164,25 +169,36 @@
         "category": "Eco"
       },
       {
+        "command": "ecooptimizer.toggleSmellFilter",
+        "title": "Toggle Smell",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.editSmellFilterOption",
+        "title": "Edit Option",
+        "icon": "$(edit)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.selectAllFilterSmells",
+        "title": "Select All Smells",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.deselectAllFilterSmells",
+        "title": "Deselect All Smells",
+        "category": "Eco"
+      },
+      {
         "command": "ecooptimizer.openFile",
         "title": "Open File",
         "category": "Eco",
         "enablement": "false"
       },
       {
-        "command": "ecooptimizer.exportMetricsData",
-        "title": "Export Metrics Data as JSON",
-        "category": "Eco"
-      },
-      {
-        "command": "ecooptimizer.clearMetricsData",
-        "title": "Clear Metrics Data",
-        "category": "Eco"
-      },
-      {
-        "command": "ecooptimizer.metricsView.refresh",
-        "title": "Refresh Metrics Data",
-        "icon": "$(sync)",
+        "command": "ecooptimizer.detectSmellsFile",
+        "title": "Detect Smells",
+        "icon": "$(search)",
         "category": "Eco"
       }
     ],
@@ -192,9 +208,30 @@
           "command": "ecooptimizer.resetConfiguration",
           "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured",
           "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.selectAllFilterSmells",
+          "when": "view == ecooptimizer.filterView",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.deselectAllFilterSmells",
+          "when": "view == ecooptimizer.filterView",
+          "group": "resource"
         }
       ],
-      "view/item/context": []
+      "view/item/context": [
+        {
+          "command": "ecooptimizer.editSmellFilterOption",
+          "when": "viewItem == smellOption",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.detectSmellsFile",
+          "when": "view == ecooptimizer.smellsView && viewItem == file",
+          "group": "inline"
+        }
+      ]
     },
     "configuration": {
       "title": "EcoOptimizer",
