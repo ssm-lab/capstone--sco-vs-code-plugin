@@ -47,7 +47,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Initialize the Code Smells View.
   const smellsViewProvider = new SmellsViewProvider(context);
-  const codeSmellsView = vscode.window.createTreeView('ecooptimizer.view', {
+  const codeSmellsView = vscode.window.createTreeView('ecooptimizer.smellsView', {
     treeDataProvider: smellsViewProvider,
   });
   context.subscriptions.push(codeSmellsView);

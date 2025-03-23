@@ -134,7 +134,7 @@
           "icon": "assets/eco-icon.png"
         },
         {
-          "id": "ecooptimizer.view",
+          "id": "ecooptimizer.smellsView",
           "name": "Code Smells",
           "icon": "assets/eco-icon.png"
         },
@@ -157,7 +157,7 @@
         "when": "!refactoringInProgress"
       },
       {
-        "view": "ecooptimizer.view",
+        "view": "ecooptimizer.smellsView",
         "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
         "when": "!workspaceState.workspaceConfigured"
       },
@@ -287,12 +287,12 @@
       "view/title": [
         {
           "command": "ecooptimizer.resetConfiguration",
-          "when": "view == ecooptimizer.view && workspaceState.workspaceConfigured && !refactoringInProgress",
+          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured && !refactoringInProgress",
           "group": "resource"
         },
         {
           "command": "ecooptimizer.wipeWorkCache",
-          "when": "view == ecooptimizer.view && workspaceState.workspaceConfigured && !refactoringInProgress",
+          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured && !refactoringInProgress",
           "group": "resource"
         },
         {
