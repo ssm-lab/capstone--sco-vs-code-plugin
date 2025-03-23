@@ -121,7 +121,7 @@
       "activitybar": [
         {
           "id": "ecooptimizer",
-          "title": "Eco Optimizer",
+          "title": "Eco",
           "icon": "assets/eco-icon.png"
         }
       ]
@@ -171,105 +171,116 @@
       {
         "command": "ecooptimizer.configureWorkspace",
         "title": "Configure Workspace",
-        "category": "Eco Optimizer"
+        "category": "Eco"
       },
       {
         "command": "ecooptimizer.resetConfiguration",
         "title": "Reset Configuration",
-        "category": "Eco Optimizer"
+        "category": "Eco"
       },
       {
         "command": "ecooptimizer.toggleSmellFilter",
         "title": "Toggle Smell",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.editSmellFilterOption",
         "title": "Edit Option",
         "icon": "$(edit)",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.selectAllFilterSmells",
         "title": "Select All Smells",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.deselectAllFilterSmells",
         "title": "Deselect All Smells",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.openFile",
         "title": "Open File",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.exportMetricsData",
         "title": "Export Metrics Data as JSON",
-        "category": "Eco Optimizer"
+        "category": "Eco"
       },
       {
         "command": "ecooptimizer.clearMetricsData",
         "title": "Clear Metrics Data",
-        "category": "Eco Optimizer"
+        "category": "Eco"
       },
       {
         "command": "ecooptimizer.metricsView.refresh",
         "title": "Refresh Metrics Data",
         "icon": "$(sync)",
-        "category": "Eco Optimizer"
+        "category": "Eco"
       },
       {
         "command": "ecooptimizer.detectSmellsFolder",
         "title": "Detect Smells for All Files",
         "icon": "$(search)",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.detectSmellsFile",
         "title": "Detect Smells",
         "icon": "$(search)",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.refactorAllSmellsOfType",
         "title": "Refactor Smells By Type",
         "icon": "$(tools)",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.refactorSmell",
         "title": "Refactor Smell",
         "icon": "$(tools)",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.acceptRefactoring",
         "title": "Accept Refactoring",
-        "category": "Eco Optimizer",
+        "category": "Eco",
         "icon": "$(check)"
       },
       {
         "command": "ecooptimizer.rejectRefactoring",
         "title": "Reject Refactoring",
-        "category": "Eco Optimizer",
+        "category": "Eco",
         "icon": "$(close)"
       },
       {
         "command": "ecooptimizer.jumpToSmell",
         "title": "Jump to Smell in File",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       },
       {
         "command": "ecooptimizer.wipeWorkCache",
         "title": "Clear Smells Cache",
-        "category": "Eco Optimizer"
+        "category": "Eco"
       },
       {
         "command": "ecooptimizer.openDiffEditor",
         "title": "Open Diff Editor",
-        "category": "Eco Optimizer"
+        "category": "Eco",
+        "enablement": "false"
       }
     ],
     "menus": {
