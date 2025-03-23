@@ -73,22 +73,34 @@ async function configurePythonFile(
 
 function findPythonFoldersRecursively(folderPath: string): string[] {
   let pythonFolders: string[] = [];
+  let hasPythonFiles = false;
 
   try {
     const files = fs.readdirSync(folderPath);
 
+    // Check if current folder contains Python files or __init__.py
     if (
       files.includes('__init__.py') ||
       files.some((file) => file.endsWith('.py'))
     ) {
-      pythonFolders.push(folderPath);
+      hasPythonFiles = true;
     }
 
+    // Recursively scan subfolders
     for (const file of files) {
       const filePath = path.join(folderPath, file);
       if (fs.statSync(filePath).isDirectory()) {
-        pythonFolders = pythonFolders.concat(findPythonFoldersRecursively(filePath));
+        const subfolderPythonFolders = findPythonFoldersRecursively(filePath);
+        if (subfolderPythonFolders.length > 0) {
+          hasPythonFiles = true;
+          pythonFolders.push(...subfolderPythonFolders);
+        }
       }
+    }
+
+    // Only add this folder if it or its subfolders contain Python
+    if (hasPythonFiles) {
+      pythonFolders.push(folderPath);
     }
   } catch (error) {
     console.error(`Error scanning folder ${folderPath}:`, error);
