@@ -1,4 +1,3 @@
-// eslint-disable-next-line unused-imports/no-unused-imports
 import { envConfig } from './utils/envConfig';
 
 import * as vscode from 'vscode';
@@ -7,21 +6,29 @@ import { configureWorkspace } from './commands/configureWorkspace';
 import { resetConfiguration } from './commands/resetConfiguration';
 import { detectSmellsFile, detectSmellsFolder } from './commands/detectSmells';
 import { openFile } from './commands/openFile';
+import { exportMetricsData } from './commands/exportMetricsData';
 import { registerFilterSmellCommands } from './commands/filterSmells';
 import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
-import { SmellsViewProvider } from './providers/SmellsViewProvider';
-import { checkServerStatus } from './api/backend';
-import { FilterViewProvider } from './providers/FilterViewProvider';
-import { SmellsCacheManager } from './context/SmellsCacheManager';
-import { registerFileSaveListener } from './listeners/fileSaveListener';
 import {
-  acceptRefactoring,
   refactorSmell,
+  acceptRefactoring,
   rejectRefactoring,
 } from './commands/refactorSmell';
+
+import { SmellsViewProvider } from './providers/SmellsViewProvider';
+import { FilterViewProvider } from './providers/FilterViewProvider';
 import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsViewProvider';
+import { MetricsViewProvider } from './providers/MetricsViewProvider';
+
+import { SmellsCacheManager } from './context/SmellsCacheManager';
+
+import { registerFileSaveListener } from './listeners/fileSaveListener';
+
+import { checkServerStatus } from './api/backend';
+import { loadSmells } from './utils/smellsData';
 import path from 'path';
+import { registerWorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -29,6 +36,8 @@ import path from 'path';
  */
 export function activate(context: vscode.ExtensionContext): void {
   console.log('Activating Eco-Optimizer extension...');
+
+  loadSmells();
 
   // Initialize the SmellsCacheManager for managing caching of smells and file hashes.
   const smellsCacheManager = new SmellsCacheManager(context);
@@ -39,6 +48,12 @@ export function activate(context: vscode.ExtensionContext): void {
     treeDataProvider: smellsViewProvider,
   });
   context.subscriptions.push(codeSmellsView);
+
+  const metricsViewProvider = new MetricsViewProvider(context);
+  vscode.window.createTreeView('ecooptimizer.metricsView', {
+    treeDataProvider: metricsViewProvider,
+    showCollapseAll: true,
+  });
 
   // Start periodic backend status checks (every 10 seconds).
   checkServerStatus();
@@ -72,6 +87,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context,
     smellsCacheManager,
     smellsViewProvider,
+    metricsViewProvider,
   );
   const filterSmellsView = vscode.window.createTreeView('ecooptimizer.filterView', {
     treeDataProvider: filterSmellsProvider,
@@ -92,24 +108,69 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'ecooptimizer.detectSmellsFolder',
-      (folderPath) =>
-        detectSmellsFolder(smellsCacheManager, smellsViewProvider, folderPath),
+      (folderPath) => {
+        try {
+          detectSmellsFolder(smellsCacheManager, smellsViewProvider, folderPath);
+        } catch (error: any) {
+          vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
+        }
+      },
     ),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileUri) =>
-      detectSmellsFile(smellsCacheManager, smellsViewProvider, fileUri),
-    ),
+    vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileUri) => {
+      try {
+        detectSmellsFile(smellsCacheManager, smellsViewProvider, fileUri);
+      } catch (error: any) {
+        vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
+      }
+    }),
   );
 
   // Initialize the RefactoringDetailsViewProvider
   const refactoringDetailsViewProvider = new RefactoringDetailsViewProvider();
+  // eslint-disable-next-line unused-imports/no-unused-vars
   const refactoringDetailsView = vscode.window.createTreeView(
     'ecooptimizer.refactoringDetails',
     {
       treeDataProvider: refactoringDetailsViewProvider,
     },
+  );
+
+  // Register the export command
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.exportMetricsData', () =>
+      exportMetricsData(context),
+    ),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.metricsView.refresh', () => {
+      metricsViewProvider.refresh();
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.clearMetricsData', () => {
+      vscode.window
+        .showWarningMessage(
+          'Are you sure you want to clear the metrics data? This action is irreversible, and the data will be permanently lost unless exported.',
+          { modal: true },
+          'Yes',
+          'No',
+        )
+        .then((selection) => {
+          if (selection === 'Yes') {
+            context.workspaceState.update(
+              envConfig.WORKSPACE_METRICS_DATA!,
+              undefined,
+            );
+            vscode.window.showInformationMessage('Metrics data has been cleared.');
+          }
+        });
+      metricsViewProvider.refresh();
+    }),
   );
 
   // Reset the refactoring details view initially
@@ -147,6 +208,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () =>
       acceptRefactoring(
         refactoringDetailsViewProvider,
+        metricsViewProvider,
         smellsCacheManager,
         smellsViewProvider,
       ),
@@ -202,6 +264,11 @@ export function activate(context: vscode.ExtensionContext): void {
     smellsViewProvider,
   );
   context.subscriptions.push(fileSaveListener);
+
+  // Register the workspace modified listener
+  const workspaceModifiedListener =
+    registerWorkspaceModifiedListener(metricsViewProvider);
+  context.subscriptions.push(workspaceModifiedListener);
 }
 
 /**

@@ -26,28 +26,32 @@ interface DetectSmellConfig {
   options: Record<string, string | number>;
 }
 
+let filterSmells: Record<string, FilterSmellConfig>;
+let enabledSmells: Record<string, DetectSmellConfig>;
+
 /**
  * Loads the full smells configuration from smells.json.
  * @returns A dictionary of smells with their respective configuration.
  */
-export function loadSmells(): Record<string, FilterSmellConfig> {
+export function loadSmells(): void {
   const filePath = path.join(__dirname, '..', 'data', 'smells.json');
 
   if (!fs.existsSync(filePath)) {
     vscode.window.showErrorMessage(
       'Configuration file missing: smells.json could not be found.',
     );
-    return {};
   }
 
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    filterSmells = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    enabledSmells = parseSmells(filterSmells);
+
+    console.log('Smells loaded');
   } catch (error) {
     vscode.window.showErrorMessage(
       'Error loading smells.json. Please check the file format.',
     );
     console.error('ERROR: Failed to parse smells.json', error);
-    return {};
   }
 }
 
@@ -56,9 +60,13 @@ export function loadSmells(): Record<string, FilterSmellConfig> {
  * @param smells - The smells data to be saved.
  */
 export function saveSmells(smells: Record<string, FilterSmellConfig>): void {
+  filterSmells = smells;
+
   const filePath = path.join(__dirname, '..', 'data', 'smells.json');
   try {
     fs.writeFileSync(filePath, JSON.stringify(smells, null, 2));
+
+    enabledSmells = parseSmells(filterSmells);
   } catch (error) {
     vscode.window.showErrorMessage('Error saving smells.json.');
     console.error('ERROR: Failed to write smells.json', error);
@@ -66,12 +74,29 @@ export function saveSmells(smells: Record<string, FilterSmellConfig>): void {
 }
 
 /**
+ * Extracts raw smells data from the loaded configuration.
+ * @returns A dictionary of smell config data for smell filtering.
+ */
+export function getFilterSmells(): Record<string, FilterSmellConfig> {
+  return filterSmells;
+}
+
+/**
  * Extracts enabled smells from the loaded configuration.
  * @returns A dictionary of enabled smells formatted for backend processing.
  */
 export function getEnabledSmells(): Record<string, DetectSmellConfig> {
-  const smells = loadSmells();
+  return enabledSmells;
+}
 
+/**
+ * Parses the raw smells into a formatted object.
+ * @param smells - The smells data to be saved.
+ * @returns A dictionary of enabled smells formatted for backend processing.
+ */
+function parseSmells(
+  smells: Record<string, FilterSmellConfig>,
+): Record<string, DetectSmellConfig> {
   return Object.fromEntries(
     Object.entries(smells)
       .filter(([, smell]) => smell.enabled)

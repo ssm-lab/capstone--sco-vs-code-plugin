@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
-import { FilterSmellConfig, loadSmells, saveSmells } from '../utils/smellsData';
+import { FilterSmellConfig, getFilterSmells, saveSmells } from '../utils/smellsData';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from './SmellsViewProvider';
+import { MetricsViewProvider } from './MetricsViewProvider';
 
 /**
  * Provides a tree view for filtering code smells within the VS Code extension.
@@ -20,8 +21,9 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
     private context: vscode.ExtensionContext,
     private cacheManager: SmellsCacheManager,
     private smellsViewProvider: SmellsViewProvider,
+    private metricsViewProvider: MetricsViewProvider,
   ) {
-    this.smells = loadSmells();
+    this.smells = getFilterSmells();
   }
 
   /**
@@ -171,6 +173,8 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
       await this.cacheManager.clearCachedSmellsForFile(filePath);
       this.smellsViewProvider.markFileAsOutdated(filePath);
     }
+
+    this.metricsViewProvider.refresh();
   }
 
   /**

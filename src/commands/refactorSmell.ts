@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
+import { basename } from 'path';
+import * as fs from 'fs';
+
 import { backendRefactorSmell } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import path from 'path';
-import * as fs from 'fs';
+import { MetricsViewProvider } from '../providers/MetricsViewProvider';
 
 function normalizePath(filePath: string): string {
   const normalizedPath = filePath.toLowerCase(); // Normalize case for consistent Map keying
@@ -19,10 +21,10 @@ function normalizePath(filePath: string): string {
  * @param smell - The smell to refactor.
  */
 export async function refactorSmell(
-  treeDataProvider: SmellsViewProvider,
+  smellsDataProvider: SmellsViewProvider,
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
   smell: Smell,
-) {
+): Promise<void> {
   if (!smell) {
     vscode.window.showErrorMessage('Error: Invalid smell.');
     return;
@@ -45,6 +47,7 @@ export async function refactorSmell(
 
     // Update the refactoring details view with the target file, affected files, and energy saved
     refactoringDetailsViewProvider.updateRefactoringDetails(
+      smell.symbol,
       refactoredData.targetFile,
       refactoredData.affectedFiles,
       refactoredData.energySaved, // Pass the energy saved value
@@ -52,7 +55,7 @@ export async function refactorSmell(
 
     // Show a diff view for the target file
     const targetFile = refactoredData.targetFile;
-    const fileName = path.basename(targetFile.original);
+    const fileName = basename(targetFile.original);
     const originalUri = vscode.Uri.file(targetFile.original);
     const refactoredUri = vscode.Uri.file(targetFile.refactored);
     await vscode.commands.executeCommand(
@@ -88,9 +91,10 @@ export async function refactorSmell(
  */
 export async function acceptRefactoring(
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
+  metricsDataProvider: MetricsViewProvider,
   smellsCacheManager: SmellsCacheManager,
   smellsViewProvider: SmellsViewProvider,
-) {
+): Promise<void> {
   const targetFile = refactoringDetailsViewProvider.targetFile;
   const affectedFiles = refactoringDetailsViewProvider.affectedFiles;
 
@@ -106,6 +110,17 @@ export async function acceptRefactoring(
     // Save the refactored affected files
     for (const file of affectedFiles) {
       fs.copyFileSync(file.refactored, file.original);
+    }
+
+    const energySaved = refactoringDetailsViewProvider.energySaved;
+    const targetSmell = refactoringDetailsViewProvider.targetSmell;
+    const file = vscode.Uri.file(targetFile.original).fsPath;
+
+    console.log('Energy: %d, smell: %s', energySaved, targetSmell);
+
+    if (energySaved && targetSmell) {
+      console.log('Updating metrics for', file);
+      metricsDataProvider.updateMetrics(file, energySaved, targetSmell);
     }
 
     // Notify the user
@@ -151,7 +166,7 @@ export async function acceptRefactoring(
  */
 export async function rejectRefactoring(
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
-) {
+): Promise<void> {
   // Notify the user
   vscode.window.showInformationMessage('Refactoring rejected! Changes discarded.');
 
