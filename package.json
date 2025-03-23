@@ -129,11 +129,6 @@
     "views": {
       "ecooptimizer": [
         {
-          "id": "ecooptimizer.refactoringDetails",
-          "name": "Refactoring Details",
-          "icon": "assets/eco-icon.png"
-        },
-        {
           "id": "ecooptimizer.smellsView",
           "name": "Code Smells",
           "icon": "assets/eco-icon.png"
@@ -142,23 +137,13 @@
           "id": "ecooptimizer.metricsView",
           "name": "Carbon Metrics",
           "icon": "assets/eco-icon.png"
-        },
-        {
-          "id": "ecooptimizer.filterView",
-          "name": "Filter Smells",
-          "icon": "assets/eco-icon.png"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "ecooptimizer.refactoringDetails",
-        "contents": "Refactoring is currently not in progress. Try selecting a smell in the Code Smells view to start refactoring.",
-        "when": "!refactoringInProgress"
-      },
-      {
         "view": "ecooptimizer.smellsView",
-        "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
+        "contents": "No code smells detected yet. Configure your workspace to start analysis!\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
         "when": "!workspaceState.workspaceConfigured"
       },
       {
@@ -177,31 +162,6 @@
         "command": "ecooptimizer.resetConfiguration",
         "title": "Reset Configuration",
         "category": "Eco"
-      },
-      {
-        "command": "ecooptimizer.toggleSmellFilter",
-        "title": "Toggle Smell",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.editSmellFilterOption",
-        "title": "Edit Option",
-        "icon": "$(edit)",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.selectAllFilterSmells",
-        "title": "Select All Smells",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.deselectAllFilterSmells",
-        "title": "Deselect All Smells",
-        "category": "Eco",
-        "enablement": "false"
       },
       {
         "command": "ecooptimizer.openFile",
@@ -224,140 +184,17 @@
         "title": "Refresh Metrics Data",
         "icon": "$(sync)",
         "category": "Eco"
-      },
-      {
-        "command": "ecooptimizer.detectSmellsFolder",
-        "title": "Detect Smells for All Files",
-        "icon": "$(search)",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.detectSmellsFile",
-        "title": "Detect Smells",
-        "icon": "$(search)",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.refactorAllSmellsOfType",
-        "title": "Refactor Smells By Type",
-        "icon": "$(tools)",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.refactorSmell",
-        "title": "Refactor Smell",
-        "icon": "$(tools)",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.acceptRefactoring",
-        "title": "Accept Refactoring",
-        "category": "Eco",
-        "icon": "$(check)"
-      },
-      {
-        "command": "ecooptimizer.rejectRefactoring",
-        "title": "Reject Refactoring",
-        "category": "Eco",
-        "icon": "$(close)"
-      },
-      {
-        "command": "ecooptimizer.jumpToSmell",
-        "title": "Jump to Smell in File",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
-        "command": "ecooptimizer.wipeWorkCache",
-        "title": "Clear Smells Cache",
-        "category": "Eco"
-      },
-      {
-        "command": "ecooptimizer.openDiffEditor",
-        "title": "Open Diff Editor",
-        "category": "Eco",
-        "enablement": "false"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "ecooptimizer.resetConfiguration",
-          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured && !refactoringInProgress",
+          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured",
           "group": "resource"
-        },
-        {
-          "command": "ecooptimizer.wipeWorkCache",
-          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured && !refactoringInProgress",
-          "group": "resource"
-        },
-        {
-          "command": "ecooptimizer.selectAllFilterSmells",
-          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
-          "group": "resource"
-        },
-        {
-          "command": "ecooptimizer.deselectAllFilterSmells",
-          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
-          "group": "resource"
-        },
-        {
-          "command": "ecooptimizer.exportMetricsData",
-          "when": "view == ecooptimizer.metricsView",
-          "group": "resource"
-        },
-        {
-          "command": "ecooptimizer.clearMetricsData",
-          "when": "view == ecooptimizer.metricsView",
-          "group": "resource"
-        },
-        {
-          "command": "ecooptimizer.metricsView.refresh",
-          "when": "view == ecooptimizer.metricsView",
-          "group": "navigation"
-        },
-        {
-          "command": "ecooptimizer.acceptRefactoring",
-          "when": "view == ecooptimizer.refactoringDetails && refactoringInProgress",
-          "group": "navigation"
-        },
-        {
-          "command": "ecooptimizer.rejectRefactoring",
-          "when": "view == ecooptimizer.refactoringDetails && refactoringInProgress",
-          "group": "navigation"
         }
       ],
-      "view/item/context": [
-        {
-          "command": "ecooptimizer.editSmellFilterOption",
-          "when": "viewItem == smellOption && !refactoringInProgress",
-          "group": "inline"
-        },
-        {
-          "command": "ecooptimizer.detectSmellsFolder",
-          "when": "viewItem == ecoOptimizerFolder && !refactoringInProgress",
-          "group": "inline"
-        },
-        {
-          "command": "ecooptimizer.detectSmellsFile",
-          "when": "(viewItem == ecoOptimizerFile || viewItem == ecoOptimizerFile-hasSmells) && !refactoringInProgress",
-          "group": "inline"
-        },
-        {
-          "command": "ecooptimizer.refactorAllSmellsOfType",
-          "when": "viewItem == ecoOptimizerFile-hasSmells && !refactoringInProgress",
-          "group": "inline"
-        },
-        {
-          "command": "ecooptimizer.refactorSmell",
-          "when": "viewItem == ecoOptimizerSmell && !refactoringInProgress",
-          "group": "inline"
-        }
-      ]
+      "view/item/context": []
     },
     "configuration": {
       "title": "EcoOptimizer",

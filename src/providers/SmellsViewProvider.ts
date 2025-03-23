@@ -1,125 +1,95 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { SmellsViewStateManager } from '../managers/SmellsViewStateManager';
-import { SmellsViewUIManager } from '../managers/SmellsViewUIManager';
 
-export class SmellsViewProvider implements vscode.TreeDataProvider<string> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<string | undefined>();
-  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+export class SmellsViewProvider implements vscode.TreeDataProvider<TreeItem> {
+  private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | void> =
+    new vscode.EventEmitter<TreeItem | undefined | void>();
+  readonly onDidChangeTreeData: vscode.Event<TreeItem | undefined | void> =
+    this._onDidChangeTreeData.event;
 
-  private stateManager: SmellsViewStateManager;
-  private uiManager: SmellsViewUIManager;
+  constructor(private context: vscode.ExtensionContext) {}
 
-  constructor(private context: vscode.ExtensionContext) {
-    this.stateManager = new SmellsViewStateManager();
-    this.uiManager = new SmellsViewUIManager(this.stateManager);
-  }
-
-  /**
-   * Refreshes the tree view, triggering a UI update.
-   */
   refresh(): void {
-    this._onDidChangeTreeData.fire(undefined);
+    this._onDidChangeTreeData.fire();
   }
 
-  /**
-   * Returns a tree item representing a file, folder, or detected smell.
-   * @param element - The file or folder path, or a detected smell.
-   */
-  getTreeItem(element: string): vscode.TreeItem {
-    return this.uiManager.createTreeItem(element);
+  getTreeItem(element: TreeItem): vscode.TreeItem {
+    return element;
   }
 
-  /**
-   * Retrieves child elements for a given tree item.
-   * @param element - The parent tree item (optional).
-   */
-  async getChildren(element?: string): Promise<string[]> {
+  async getChildren(element?: TreeItem): Promise<TreeItem[]> {
+    const rootPath = this.context.workspaceState.get<string>(
+      'workspaceConfiguredPath',
+    );
+    if (!rootPath) {
+      return [];
+    }
+
+    // Root level
     if (!element) {
-      const configuredPath = this.context.workspaceState.get<string>(
-        'workspaceConfiguredPath',
-      );
-      return configuredPath ? [configuredPath] : [];
+      const stat = fs.statSync(rootPath);
+      if (stat.isFile()) {
+        return [this.createTreeItem(rootPath, true)];
+      } else if (stat.isDirectory()) {
+        return this.readDirectory(rootPath);
+      }
     }
 
-    const isDirectory = fs.existsSync(element) && fs.statSync(element).isDirectory();
-
-    if (isDirectory) {
-      return fs
-        .readdirSync(element)
-        .filter((file) => file.endsWith('.py'))
-        .map((file) => path.join(element, file));
+    // Nested level (directory)
+    if (element && element.resourceUri) {
+      return this.readDirectory(element.resourceUri.fsPath);
     }
 
-    // Check if the file is outdated
-    if (this.stateManager.isFileOutdated(element)) {
-      return []; // Return an empty array if the file is outdated
+    return [];
+  }
+
+  private readDirectory(dirPath: string): TreeItem[] {
+    const children: TreeItem[] = [];
+
+    try {
+      const entries = fs.readdirSync(dirPath);
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry);
+        const stat = fs.statSync(fullPath);
+
+        // If directory, always include
+        if (stat.isDirectory()) {
+          children.push(this.createTreeItem(fullPath, false));
+        }
+        // If file, only include if it's a .py file
+        else if (stat.isFile() && entry.endsWith('.py')) {
+          children.push(this.createTreeItem(fullPath, true));
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to read directory ${dirPath}:`, err);
     }
 
-    // If the file is not outdated, return the detected smells
-    const smells = this.stateManager.getSmellsForFile(element);
-    return smells.map((smell) => {
-      const smellItem = `${smell.messageId}: Line ${smell.occurences
-        .map((o) => o.line)
-        .join(', ')} (ID: ${smell.id})`;
-      this.stateManager.mapSmellToFile(smellItem, element);
-      return smellItem;
-    });
+    return children;
   }
 
-  /**
-   * Updates the detected smells for a file and refreshes the tree view.
-   * @param filePath - The analyzed file path.
-   * @param smells - The detected smells in the file.
-   */
-  updateSmells(filePath: string, smells: Smell[]): void {
-    this.stateManager.updateSmells(filePath, smells);
-    this.refresh();
-  }
+  private createTreeItem(filePath: string, isFile: boolean): TreeItem {
+    const label = path.basename(filePath);
+    const collapsibleState = isFile
+      ? vscode.TreeItemCollapsibleState.None
+      : vscode.TreeItemCollapsibleState.Collapsed;
 
-  /**
-   * Marks a file as outdated, updating its appearance in the UI.
-   * @param filePath - The path of the modified file.
-   */
-  markFileAsOutdated(filePath: string): void {
-    this.stateManager.markFileAsOutdated(filePath);
-    this.refresh();
-  }
+    const contextValue = isFile ? 'file' : 'directory';
 
-  /**
-   * Updates the status of a specific file or folder.
-   * @param element - The file or folder path.
-   * @param status - The new status to set.
-   */
-  updateStatus(element: string, status: string): void {
-    this.stateManager.updateFileStatus(element, status);
-    this.refresh();
+    return new TreeItem(label, filePath, collapsibleState, contextValue);
   }
+}
 
-  /**
-   * Clears the outdated status for a file.
-   * @param filePath - The path of the file to clear.
-   */
-  clearOutdatedStatus(filePath: string): void {
-    this.stateManager.clearOutdatedStatus(filePath);
-    this.refresh();
-  }
-
-  /**
-   * Checks if a file is marked as outdated.
-   * @param filePath - The path of the file to check.
-   * @returns `true` if the file is outdated, `false` otherwise.
-   */
-  isFileOutdated(filePath: string): boolean {
-    return this.stateManager.isFileOutdated(filePath);
-  }
-
-  /**
-   * Clears all detected smells and resets file statuses.
-   */
-  resetAllSmells(): void {
-    this.stateManager.resetAllSmells();
-    this.refresh();
+class TreeItem extends vscode.TreeItem {
+  constructor(
+    label: string,
+    public readonly fullPath: string,
+    collapsibleState: vscode.TreeItemCollapsibleState,
+    contextValue: string,
+  ) {
+    super(label, collapsibleState);
+    this.resourceUri = vscode.Uri.file(fullPath);
+    this.contextValue = contextValue;
   }
 }

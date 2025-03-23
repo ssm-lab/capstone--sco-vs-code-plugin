@@ -210,7 +210,7 @@ export class SmellsCacheManager {
     await this.clearSmellsCache();
 
     // Reset the UI state, including icons and dropdowns
-    smellsDisplayProvider.resetAllSmells();
+    // smellsDisplayProvider.resetAllSmells();
 
     // Refresh the UI to reflect the cleared cache
     smellsDisplayProvider.refresh();
