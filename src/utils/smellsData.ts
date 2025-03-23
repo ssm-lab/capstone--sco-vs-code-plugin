@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ecoOutput } from '../extension';
 
 /**
  * Defines the structure of the smell configuration in smells.json.
@@ -46,7 +47,7 @@ export function loadSmells(): void {
     filterSmells = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     enabledSmells = parseSmells(filterSmells);
 
-    console.log('Smells loaded');
+    ecoOutput.appendLine('\nSmells loaded\n');
   } catch (error) {
     vscode.window.showErrorMessage(
       'Error loading smells.json. Please check the file format.',

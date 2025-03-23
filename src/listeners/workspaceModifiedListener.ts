@@ -1,18 +1,15 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { MetricsViewProvider } from '../providers/MetricsViewProvider';
+import { ecoOutput } from '../extension';
 
 /**
- * Listens for workspace modifications (file creation, deletion, and changes)
- * and refreshes the SmellsViewProvider and MetricsViewProvider when any of these events occur.
+ * Listens for workspace modifications (file creation, deletion, and saves)
+ * and refreshes the SmellsViewProvider and MetricsViewProvider accordingly.
  */
 export class WorkspaceModifiedListener {
   private fileWatcher: vscode.FileSystemWatcher | undefined;
-  private textDocumentChangeListener: vscode.Disposable | undefined;
-  private pollingInterval: NodeJS.Timeout | undefined;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -21,8 +18,6 @@ export class WorkspaceModifiedListener {
     private metricsViewProvider: MetricsViewProvider,
   ) {
     this.initializeFileWatcher();
-    this.initializeTextDocumentListener();
-    this.initializePolling();
   }
 
   /**
@@ -36,7 +31,7 @@ export class WorkspaceModifiedListener {
       return; // No workspace configured
     }
 
-    console.log('Watching workspace:', configuredPath);
+    ecoOutput.appendLine(`Watching workspace: ${configuredPath}`);
 
     this.fileWatcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(configuredPath, '**/*.py'),
@@ -46,79 +41,19 @@ export class WorkspaceModifiedListener {
     );
 
     this.fileWatcher.onDidCreate(() => {
-      console.log('A Python file was created.');
+      ecoOutput.appendLine('A Python file was created.');
       this.refreshViews();
     });
 
     this.fileWatcher.onDidChange((uri) => {
-      console.log('A Python file was modified and saved.');
+      ecoOutput.appendLine(`A Python file was modified and saved: ${uri.fsPath}`);
       this.handleFileChange(uri.fsPath);
     });
 
     this.fileWatcher.onDidDelete((uri) => {
-      console.log('A Python file was deleted.');
+      ecoOutput.appendLine(`A Python file was deleted: ${uri.fsPath}`);
       this.handleFileDeletion(uri.fsPath);
     });
-  }
-
-  /**
-   * Initializes the text document change listener.
-   */
-  private initializeTextDocumentListener(): void {
-    this.textDocumentChangeListener = vscode.workspace.onDidChangeTextDocument(
-      (event) => {
-        const filePath = event.document.uri.fsPath;
-        if (filePath.endsWith('.py')) {
-          console.log(`File ${filePath} was modified (unsaved changes).`);
-          this.handleFileChange(filePath);
-        }
-      },
-    );
-  }
-
-  /**
-   * Initializes polling to detect external modifications.
-   */
-  private initializePolling(): void {
-    const pollingIntervalMs = 5000; // Poll every 5 seconds
-    this.pollingInterval = setInterval(() => {
-      this.checkForExternalModifications();
-    }, pollingIntervalMs);
-  }
-
-  /**
-   * Checks for external modifications by comparing file modification times.
-   */
-  private async checkForExternalModifications(): Promise<void> {
-    const configuredPath = this.context.workspaceState.get<string>(
-      'workspaceConfiguredPath',
-    );
-    if (!configuredPath) {
-      return;
-    }
-
-    const cache = this.smellsCacheManager.getFullSmellCache();
-    for (const filePath in cache) {
-      try {
-        const stats = await fs.promises.stat(filePath);
-        const lastModified = stats.mtimeMs;
-
-        const cachedStats = this.context.workspaceState.get<number>(
-          `fileStats:${filePath}`,
-        );
-        if (cachedStats && lastModified > cachedStats) {
-          console.log(`External modification detected in file: ${filePath}`);
-          this.handleFileChange(filePath);
-        }
-
-        await this.context.workspaceState.update(
-          `fileStats:${filePath}`,
-          lastModified,
-        );
-      } catch (error) {
-        console.error(`Error checking file ${filePath}:`, error);
-      }
-    }
   }
 
   /**
@@ -128,24 +63,40 @@ export class WorkspaceModifiedListener {
   private async handleFileChange(filePath: string): Promise<void> {
     if (this.smellsCacheManager.hasCachedSmells(filePath)) {
       await this.smellsCacheManager.clearCachedSmellsForFile(filePath);
-      this.smellsViewProvider.updateStatus(filePath, 'outdated');
+      this.smellsViewProvider.setStatus(filePath, 'outdated');
+
+      vscode.window.showInformationMessage(
+        `File modified: ${filePath}\nSmell results are now outdated. Please reanalyze.`,
+      );
     }
     this.refreshViews();
   }
 
   /**
-   * Handles file deletions by clearing the cache for the deleted file and refreshing the tree view.
-   * @param filePath - The path of the deleted file.
+   * Handles file deletions by clearing the cache and removing from the tree view.
    */
   private async handleFileDeletion(filePath: string): Promise<void> {
+    let removed = false;
+
     if (this.smellsCacheManager.hasCachedSmells(filePath)) {
       await this.smellsCacheManager.clearCachedSmellsForFile(filePath);
+      removed = true;
     }
+
+    const removedFromTree = this.smellsViewProvider.removeFile(filePath);
+    removed ||= removedFromTree;
+
+    if (removed) {
+      vscode.window.showInformationMessage(
+        `Removed deleted file from smells view: ${filePath}`,
+      );
+    }
+
     this.refreshViews();
   }
 
   /**
-   * Refreshes both the SmellsViewProvider and MetricsViewProvider.
+   * Refreshes both views.
    */
   private refreshViews(): void {
     this.smellsViewProvider.refresh();
@@ -153,17 +104,11 @@ export class WorkspaceModifiedListener {
   }
 
   /**
-   * Disposes the file system watcher, text document listener, and polling interval.
+   * Disposes any resources.
    */
   public dispose(): void {
     if (this.fileWatcher) {
       this.fileWatcher.dispose();
-    }
-    if (this.textDocumentChangeListener) {
-      this.textDocumentChangeListener.dispose();
-    }
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
     }
   }
 }

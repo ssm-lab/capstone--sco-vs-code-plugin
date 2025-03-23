@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { FilterSmellConfig, getFilterSmells, saveSmells } from '../utils/smellsData';
 import { MetricsViewProvider } from './MetricsViewProvider';
+import { ecoOutput } from '../extension';
 
 /**
  * Provides a tree view for filtering code smells within the VS Code extension.
@@ -164,7 +165,7 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
    * Cache not implemented yet.
    */
   async invalidateCachedSmellsForAffectedFiles(): Promise<void> {
-    console.log('Invalidating cached smells for affected files...');
+    ecoOutput.appendLine('Invalidating cached smells for affected files...');
 
     this.metricsViewProvider.refresh();
   }

@@ -23,6 +23,14 @@ export class SmellsViewProvider implements vscode.TreeDataProvider<TreeItem> {
     this._onDidChangeTreeData.fire(); // Trigger UI update
   }
 
+  public removeFile(filePath: string): boolean {
+    const exists = this.fileStatuses.has(filePath);
+    if (exists) {
+      this.fileStatuses.delete(filePath);
+    }
+    return exists;
+  }
+
   getTreeItem(element: TreeItem): vscode.TreeItem {
     return element;
   }

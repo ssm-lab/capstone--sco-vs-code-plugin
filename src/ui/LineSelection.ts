@@ -23,7 +23,7 @@ export class LineSelectionManager {
    */
   public removeLastComment(): void {
     if (this.decoration) {
-      console.log('Removing decoration');
+      ecoOutput.appendLine('Removing decoration');
       this.decoration.dispose();
     }
   }
@@ -60,7 +60,7 @@ export class LineSelectionManager {
     }
 
     const selectedLine = selection.start.line;
-    console.log(`selection: ${selectedLine}`);
+    ecoOutput.appendLine(`selection: ${selectedLine}`);
 
     const smellsAtLine = smells.filter((smell: Smell) => {
       return smell.occurences[0].line === selectedLine + 1;

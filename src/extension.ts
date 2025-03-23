@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer');
+
 import { configureWorkspace } from './commands/configureWorkspace';
 import { resetConfiguration } from './commands/resetConfiguration';
 
@@ -12,6 +14,7 @@ import { detectSmellsFile } from './commands/detectSmells';
 import { FilterViewProvider } from './providers/FilterViewProvider';
 import { registerFilterSmellCommands } from './commands/filterSmells';
 import { loadSmells } from './utils/smellsData';
+import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -90,17 +93,26 @@ export function activate(context: vscode.ExtensionContext): void {
           return;
         }
 
-        detectSmellsFile(smellsViewProvider, filePath);
+        detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
       } catch (error: any) {
         vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
       }
     }),
   );
+
+  const workspaceModifiedListener = new WorkspaceModifiedListener(
+    context,
+    smellsCacheManager,
+    smellsViewProvider,
+    metricsViewProvider,
+  );
+
+  context.subscriptions.push(workspaceModifiedListener);
 }
 
 /**
  * Deactivates the Eco-Optimizer extension.
  */
 export function deactivate(): void {
-  console.log('Deactivating Eco-Optimizer extension...');
+  ecoOutput.appendLine('Deactivating Eco-Optimizer extension...\n');
 }

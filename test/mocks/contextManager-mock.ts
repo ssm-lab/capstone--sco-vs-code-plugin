@@ -14,21 +14,21 @@ const contextStorage: ContextStorage = {
 const mockExtensionContext: Partial<vscode.ExtensionContext> = {
   globalState: {
     get: jest.fn((key: string, defaultVal?: any) => {
-      console.log(`MOCK getGlobalData: ${key}`);
+      ecoOutput.appendLine(`MOCK getGlobalData: ${key}`);
       return contextStorage.globalState[key] ?? defaultVal;
     }),
     update: jest.fn(async (key: string, value: any) => {
-      console.log(`MOCK setGlobalData: ${key}:${value}`);
+      ecoOutput.appendLine(`MOCK setGlobalData: ${key}:${value}`);
       contextStorage.globalState[key] = value;
     }),
   } as any, // Casting to `any` to satisfy `vscode.ExtensionContext`
   workspaceState: {
     get: jest.fn((key: string, defaultVal?: any) => {
-      console.log(`MOCK getWorkspaceData: ${key}`);
+      ecoOutput.appendLine(`MOCK getWorkspaceData: ${key}`);
       return contextStorage.workspaceState[key] ?? defaultVal;
     }),
     update: jest.fn(async (key: string, value: any) => {
-      console.log(`MOCK setWorkspaceData ${key}:${value}`);
+      ecoOutput.appendLine(`MOCK setWorkspaceData ${key}:${value}`);
       contextStorage.workspaceState[key] = value;
     }),
   } as any, // Casting to `any` to satisfy `vscode.ExtensionContext`

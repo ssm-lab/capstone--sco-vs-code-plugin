@@ -94,7 +94,7 @@ export async function backendRefactorSmell(
 
   const workspaceFolderPath = workspaceFolder.uri.fsPath;
 
-  console.log(
+  ecoOutput.appendLine(
     `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspaceFolderPath}"`,
   );
 

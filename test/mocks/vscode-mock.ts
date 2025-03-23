@@ -17,7 +17,7 @@ export const TextDocument = {
   fileName: config.filePath,
   languageId: 'python',
   lineAt: jest.fn((line: number) => {
-    console.log('MOCK lineAt:', line);
+    ecoOutput.appendLine('MOCK lineAt:', line);
     return {
       text: 'Mock line text',
     };
@@ -55,21 +55,21 @@ interface Window {
 
 export const window: Window = {
   showInformationMessage: jest.fn(async (message: string) => {
-    console.log('MOCK showInformationMessage:', message);
+    ecoOutput.appendLine('MOCK showInformationMessage:', message);
     return message;
   }),
   showErrorMessage: jest.fn(async (message: string) => {
-    console.log('MOCK showErrorMessage:', message);
+    ecoOutput.appendLine('MOCK showErrorMessage:', message);
     return message;
   }),
   showWarningMessage: jest.fn(async (message: string) => {
-    console.log('MOCK showWarningMessage:', message);
+    ecoOutput.appendLine('MOCK showWarningMessage:', message);
     return message;
   }),
   activeTextEditor: TextEditor,
   visibleTextEditors: [],
   createTextEditorDecorationType: jest.fn((_options: any) => {
-    console.log('MOCK createTextEditorDecorationType:');
+    ecoOutput.appendLine('MOCK createTextEditorDecorationType:');
     return textEditorDecorationType;
   }),
 };

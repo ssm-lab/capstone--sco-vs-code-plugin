@@ -43,7 +43,7 @@ export async function refactorSmell(
     const refactoredData = await backendRefactorSmell(smell);
 
     // Log the response from the backend
-    console.log('Refactoring response:', refactoredData);
+    ecoOutput.appendLine('Refactoring response:', refactoredData);
 
     // Update the refactoring details view with the target file, affected files, and energy saved
     refactoringDetailsViewProvider.updateRefactoringDetails(
@@ -116,10 +116,10 @@ export async function acceptRefactoring(
     const targetSmell = refactoringDetailsViewProvider.targetSmell;
     const file = vscode.Uri.file(targetFile.original).fsPath;
 
-    console.log('Energy: %d, smell: %s', energySaved, targetSmell);
+    ecoOutput.appendLine('Energy: %d, smell: %s', energySaved, targetSmell);
 
     if (energySaved && targetSmell) {
-      console.log('Updating metrics for', file);
+      ecoOutput.appendLine('Updating metrics for', file);
       metricsDataProvider.updateMetrics(file, energySaved, targetSmell);
     }
 

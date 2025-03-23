@@ -3,6 +3,7 @@ import { fetchSmells } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { getEnabledSmells } from '../utils/smellsData';
 import { serverStatus, ServerStatusType } from '../emitters/serverStatus';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
 
 /**
  * Detects code smells for a given file.
@@ -12,10 +13,24 @@ import { serverStatus, ServerStatusType } from '../emitters/serverStatus';
  * @param filePath - The VS Code file URI or string path of the file to analyze.
  */
 export async function detectSmellsFile(
-  smellsViewProvider: SmellsViewProvider,
   filePath: string,
+  smellsViewProvider: SmellsViewProvider,
+  smellsCacheManager: SmellsCacheManager,
 ): Promise<void> {
-  // STEP 2: Check if server is down
+  // STEP 0: Check cache first
+  if (smellsCacheManager.hasCachedSmells(filePath)) {
+    const cached = smellsCacheManager.getCachedSmells(filePath);
+    vscode.window.showInformationMessage('Using cached smells for this file.');
+    if (cached && cached.length > 0) {
+      smellsViewProvider.setStatus(filePath, 'passed');
+      // TODO: render cached smells in tree
+    } else {
+      smellsViewProvider.setStatus(filePath, 'no_issues');
+    }
+    return;
+  }
+
+  // STEP 1: Check if server is down
   if (serverStatus.getStatus() === ServerStatusType.DOWN) {
     vscode.window.showWarningMessage(
       'Action blocked: Server is down and no cached smells exist for this file version.',
@@ -24,7 +39,7 @@ export async function detectSmellsFile(
     return;
   }
 
-  // STEP 3: Get enabled smells
+  // STEP 2: Get enabled smells
   const enabledSmells = getEnabledSmells();
   if (Object.keys(enabledSmells).length === 0) {
     vscode.window.showWarningMessage(
@@ -37,7 +52,7 @@ export async function detectSmellsFile(
     Object.entries(enabledSmells).map(([key, value]) => [key, value.options]),
   );
 
-  // STEP 4: Set status to queued
+  // STEP 3: Queue analysis
   smellsViewProvider.setStatus(filePath, 'queued');
 
   try {
@@ -46,9 +61,11 @@ export async function detectSmellsFile(
     if (status === 200) {
       if (smells.length > 0) {
         smellsViewProvider.setStatus(filePath, 'passed');
-        // TODO: addSmellsToTreeView(smellsViewProvider, filePath, smells);
+        await smellsCacheManager.setCachedSmells(filePath, smells);
+        // TODO: render smells in tree
       } else {
         smellsViewProvider.setStatus(filePath, 'no_issues');
+        await smellsCacheManager.setCachedSmells(filePath, []);
       }
     } else {
       smellsViewProvider.setStatus(filePath, 'failed');
