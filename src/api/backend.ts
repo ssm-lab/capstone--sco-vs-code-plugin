@@ -1,6 +1,6 @@
 import { envConfig } from '../utils/envConfig';
-import { serverStatus } from '../utils/serverStatus';
-import { ServerStatusType } from '../utils/serverStatus';
+import { serverStatus } from '../emitters/serverStatus';
+import { ServerStatusType } from '../emitters/serverStatus';
 import * as vscode from 'vscode';
 
 const BASE_URL = `http://${envConfig.SERVER_URL}`; // API URL for Python backend

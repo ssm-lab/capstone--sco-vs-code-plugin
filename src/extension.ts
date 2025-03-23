@@ -1,6 +1,7 @@
 import { envConfig } from './utils/envConfig';
 
 import * as vscode from 'vscode';
+import path from 'path';
 
 import { configureWorkspace } from './commands/configureWorkspace';
 import { resetConfiguration } from './commands/resetConfiguration';
@@ -21,14 +22,16 @@ import { FilterViewProvider } from './providers/FilterViewProvider';
 import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsViewProvider';
 import { MetricsViewProvider } from './providers/MetricsViewProvider';
 
+import { FileHighlighter } from './ui/FileHighlighter';
+
 import { SmellsCacheManager } from './context/SmellsCacheManager';
 
 import { registerFileSaveListener } from './listeners/fileSaveListener';
+import { registerWorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 
 import { checkServerStatus } from './api/backend';
 import { loadSmells } from './utils/smellsData';
-import path from 'path';
-import { registerWorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
+import { LineSelectionManager } from './ui/LineSelection';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -127,6 +130,11 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
   );
+
+  // Initialize the FileHighlighter for highlighting code smells.
+  const fileHighlighter = FileHighlighter.getInstance(smellsCacheManager);
+
+  fileHighlighter.updateHighlightsForVisibleEditors();
 
   // Initialize the RefactoringDetailsViewProvider
   const refactoringDetailsViewProvider = new RefactoringDetailsViewProvider();
@@ -255,6 +263,14 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.wipeWorkCache', async () => {
       await wipeWorkCache(smellsCacheManager, smellsViewProvider);
+    }),
+  );
+
+  const lineSelectManager = new LineSelectionManager(smellsCacheManager);
+  context.subscriptions.push(
+    vscode.window.onDidChangeTextEditorSelection((event) => {
+      console.log('Eco: Detected line selection event');
+      lineSelectManager.commentLine(event.textEditor);
     }),
   );
 

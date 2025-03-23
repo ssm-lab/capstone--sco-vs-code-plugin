@@ -9,6 +9,9 @@ import { envConfig } from '../utils/envConfig';
  * as well as refreshing the UI when the cache is updated.
  */
 export class SmellsCacheManager {
+  private cacheUpdatedEmitter = new vscode.EventEmitter<string>();
+  public readonly onSmellsUpdated = this.cacheUpdatedEmitter.event;
+
   constructor(private context: vscode.ExtensionContext) {}
 
   // ============================
@@ -54,6 +57,8 @@ export class SmellsCacheManager {
     // Update the cache with the new smells
     cache[filePath] = smellsWithIds;
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
+
+    this.cacheUpdatedEmitter.fire(filePath);
   }
 
   /**
@@ -91,6 +96,8 @@ export class SmellsCacheManager {
    */
   public async clearSmellsCache(): Promise<void> {
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, undefined);
+
+    this.cacheUpdatedEmitter.fire('all');
   }
 
   /**
@@ -102,6 +109,8 @@ export class SmellsCacheManager {
     const cache = this.getFullSmellCache();
     delete cache[filePath];
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
+
+    this.cacheUpdatedEmitter.fire(filePath);
   }
 
   /**

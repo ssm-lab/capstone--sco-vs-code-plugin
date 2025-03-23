@@ -5,7 +5,7 @@ import { fetchSmells } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { getEnabledSmells } from '../utils/smellsData';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import { serverStatus, ServerStatusType } from '../utils/serverStatus';
+import { serverStatus, ServerStatusType } from '../emitters/serverStatus';
 
 /**
  * Detects code smells for a given file.
