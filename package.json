@@ -182,32 +182,32 @@
         "command": "ecooptimizer.toggleSmellFilter",
         "title": "Toggle Smell",
         "category": "Eco",
-        "enablement": "false"
+        "when": "view == ecooptimizer.filterView && !refactoringInProgress"
       },
       {
         "command": "ecooptimizer.editSmellFilterOption",
         "title": "Edit Option",
         "icon": "$(edit)",
         "category": "Eco",
-        "enablement": "false"
+        "when": "viewItem == smellOption && !refactoringInProgress"
       },
       {
         "command": "ecooptimizer.selectAllFilterSmells",
         "title": "Select All Smells",
         "category": "Eco",
-        "enablement": "false"
+        "when": "view == ecooptimizer.filterView && !refactoringInProgress"
       },
       {
         "command": "ecooptimizer.deselectAllFilterSmells",
         "title": "Deselect All Smells",
         "category": "Eco",
-        "enablement": "false"
+        "when": "view == ecooptimizer.filterView && !refactoringInProgress"
       },
       {
         "command": "ecooptimizer.openFile",
         "title": "Open File",
         "category": "Eco",
-        "enablement": "false"
+        "when": "viewItem == ecoOptimizerFile || viewItem == ecoOptimizerFile-hasSmells"
       },
       {
         "command": "ecooptimizer.exportMetricsData",
@@ -230,28 +230,28 @@
         "title": "Detect Smells for All Files",
         "icon": "$(search)",
         "category": "Eco",
-        "enablement": "false"
+        "when": "viewItem == ecoOptimizerFolder && !refactoringInProgress"
       },
       {
         "command": "ecooptimizer.detectSmellsFile",
         "title": "Detect Smells",
         "icon": "$(search)",
         "category": "Eco",
-        "enablement": "false"
+        "when": "viewItem == ecoOptimizerFile || viewItem == ecoOptimizerFile-hasSmells && !refactoringInProgress"
       },
       {
         "command": "ecooptimizer.refactorAllSmellsOfType",
         "title": "Refactor Smells By Type",
         "icon": "$(tools)",
         "category": "Eco",
-        "enablement": "false"
+        "when": "viewItem == ecoOptimizerFile-hasSmells && !refactoringInProgress"
       },
       {
         "command": "ecooptimizer.refactorSmell",
         "title": "Refactor Smell",
         "icon": "$(tools)",
         "category": "Eco",
-        "enablement": "false"
+        "when": "viewItem == ecoOptimizerSmell && !refactoringInProgress"
       },
       {
         "command": "ecooptimizer.acceptRefactoring",
@@ -269,7 +269,7 @@
         "command": "ecooptimizer.jumpToSmell",
         "title": "Jump to Smell in File",
         "category": "Eco",
-        "enablement": "false"
+        "when": "viewItem == ecoOptimizerSmell"
       },
       {
         "command": "ecooptimizer.wipeWorkCache",
@@ -280,7 +280,7 @@
         "command": "ecooptimizer.openDiffEditor",
         "title": "Open Diff Editor",
         "category": "Eco",
-        "enablement": "false"
+        "when": "viewItem == ecoOptimizerSmell"
       }
     ],
     "menus": {
