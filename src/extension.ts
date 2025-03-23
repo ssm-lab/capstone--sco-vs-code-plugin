@@ -7,6 +7,7 @@ import { SmellsViewProvider } from './providers/SmellsViewProvider';
 import { MetricsViewProvider } from './providers/MetricsViewProvider';
 
 import { SmellsCacheManager } from './context/SmellsCacheManager';
+import { openFile } from './commands/openFile';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -53,6 +54,10 @@ export function activate(context: vscode.ExtensionContext): void {
         ),
       smellsViewProvider.refresh(),
     ),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.openFile', openFile),
   );
 }
 
