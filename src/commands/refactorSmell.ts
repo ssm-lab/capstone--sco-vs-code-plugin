@@ -33,7 +33,7 @@ export async function refactorSmell(
   vscode.window.showInformationMessage(`Refactoring code smell: ${smell.symbol}`);
 
   // Update UI to indicate the file is queued for analysis
-  treeDataProvider.updateStatus(smell.path, 'queued');
+  smellsDataProvider.updateStatus(smell.path, 'queued');
 
   try {
     // Set a context key to track that refactoring is in progress
