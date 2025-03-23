@@ -25,7 +25,8 @@ export async function resetConfiguration(
     );
 
     // Clear any cached smells, if needed
-    // smellsCacheManager.clear();
+    smellsCacheManager.clearAllCachedSmells();
+    smellsViewProvider.clearAllStatuses();
 
     // 🔥 Trigger view refreshes
     smellsViewProvider.refresh();

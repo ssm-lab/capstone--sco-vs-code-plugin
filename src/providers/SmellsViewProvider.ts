@@ -29,6 +29,11 @@ export class SmellsViewProvider implements vscode.TreeDataProvider<TreeItem> {
     return exists;
   }
 
+  public clearAllStatuses(): void {
+    this.fileStatuses.clear();
+    this._onDidChangeTreeData.fire();
+  }
+
   getTreeItem(element: TreeItem): vscode.TreeItem {
     return element;
   }

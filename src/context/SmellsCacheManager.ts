@@ -106,4 +106,8 @@ export class SmellsCacheManager {
       {},
     );
   }
+
+  public async clearAllCachedSmells(): Promise<void> {
+    await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, {});
+  }
 }
