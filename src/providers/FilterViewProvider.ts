@@ -169,7 +169,7 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
   async invalidateCachedSmellsForAffectedFiles(): Promise<void> {
     const cache = this.cacheManager.getFullSmellCache();
 
-    for (const [filePath, smells] of Object.entries(cache)) {
+    for (const filePath of Object.keys(cache)) {
       await this.cacheManager.clearCachedSmellsForFile(filePath);
       this.smellsViewProvider.markFileAsOutdated(filePath);
     }

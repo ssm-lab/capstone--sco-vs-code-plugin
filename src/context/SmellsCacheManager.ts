@@ -9,6 +9,9 @@ import { envConfig } from '../utils/envConfig';
  * as well as refreshing the UI when the cache is updated.
  */
 export class SmellsCacheManager {
+  private cacheUpdatedEmitter = new vscode.EventEmitter<string>();
+  public readonly onSmellsUpdated = this.cacheUpdatedEmitter.event;
+
   constructor(private context: vscode.ExtensionContext) {}
 
   // ============================
@@ -54,6 +57,8 @@ export class SmellsCacheManager {
     // Update the cache with the new smells
     cache[filePath] = smellsWithIds;
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
+
+    this.cacheUpdatedEmitter.fire(filePath);
   }
 
   /**
@@ -91,6 +96,8 @@ export class SmellsCacheManager {
    */
   public async clearSmellsCache(): Promise<void> {
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, undefined);
+
+    this.cacheUpdatedEmitter.fire('all');
   }
 
   /**
@@ -102,6 +109,8 @@ export class SmellsCacheManager {
     const cache = this.getFullSmellCache();
     delete cache[filePath];
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
+
+    this.cacheUpdatedEmitter.fire(filePath);
   }
 
   /**
@@ -126,8 +135,15 @@ export class SmellsCacheManager {
    * @param content - The file content as a string.
    * @returns A SHA256 hash string derived from the file content.
    */
-  public computeFileHash(content: string): string {
+  private computeFileHash(content: string): string {
     return createHash('sha256').update(content).digest('hex');
+  }
+
+  public wasFileModified(filePath: string, content: string): boolean {
+    const newHash = this.computeFileHash(content);
+    const oldHash = this.getStoredFileHash(filePath);
+
+    return newHash !== oldHash;
   }
 
   /**
@@ -136,10 +152,22 @@ export class SmellsCacheManager {
    * @param filePath - The absolute path of the file.
    * @param content - The file content to hash.
    */
-  public async storeFileHash(filePath: string, content: string): Promise<void> {
+  public async updateFileHash(filePath: string, content: string): Promise<boolean> {
     const hashes = this.getFullFileHashCache();
-    hashes[filePath] = this.computeFileHash(content);
-    await this.context.workspaceState.update(envConfig.FILE_HASH_CACHE_KEY!, hashes);
+
+    let currentHash = hashes[filePath];
+    const newHash = this.computeFileHash(content);
+
+    if (!currentHash || currentHash !== newHash) {
+      hashes[filePath] = newHash;
+      await this.context.workspaceState.update(
+        envConfig.FILE_HASH_CACHE_KEY!,
+        hashes,
+      );
+      return true;
+    }
+
+    return false;
   }
 
   /**

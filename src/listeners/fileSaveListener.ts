@@ -19,17 +19,18 @@ export function registerFileSaveListener(
     const cachedSmells = smellsCacheManager.getCachedSmells(filePath);
     if (!cachedSmells) return;
 
-    // Compute the new hash and compare it with the stored hash
-    const newHash = smellsCacheManager.computeFileHash(document.getText());
-    const oldHash = smellsCacheManager.getStoredFileHash(filePath);
-
-    if (oldHash && newHash !== oldHash) {
+    const updated = await smellsCacheManager.updateFileHash(
+      filePath,
+      document.getText(),
+    );
+    if (updated) {
       vscode.window.showWarningMessage(
         `The file "${path.basename(
           filePath,
         )}" has been modified since the last analysis.`,
       );
 
+      await smellsCacheManager.clearCachedSmellsForFile(filePath);
       // Mark file as outdated in the UI
       smellsDisplayProvider.markFileAsOutdated(filePath);
     }
