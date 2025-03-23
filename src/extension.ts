@@ -1,4 +1,3 @@
-// eslint-disable-next-line unused-imports/no-unused-imports
 import { envConfig } from './utils/envConfig';
 
 import * as vscode from 'vscode';
@@ -11,7 +10,11 @@ import { exportMetricsData } from './commands/exportMetricsData';
 import { registerFilterSmellCommands } from './commands/filterSmells';
 import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
-import { refactorSmell } from './commands/refactorSmell';
+import {
+  refactorSmell,
+  acceptRefactoring,
+  rejectRefactoring,
+} from './commands/refactorSmell';
 
 import { SmellsViewProvider } from './providers/SmellsViewProvider';
 import { FilterViewProvider } from './providers/FilterViewProvider';
@@ -22,13 +25,10 @@ import { SmellsCacheManager } from './context/SmellsCacheManager';
 
 import { registerFileSaveListener } from './listeners/fileSaveListener';
 
-import {
-  acceptRefactoring,
-  checkServerStatus,
-  rejectRefactoring,
-} from './api/backend';
+import { checkServerStatus } from './api/backend';
 import { loadSmells } from './utils/smellsData';
 import path from 'path';
+import { registerWorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -145,6 +145,34 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.metricsView.refresh', () => {
+      metricsViewProvider.refresh();
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.clearMetricsData', () => {
+      vscode.window
+        .showWarningMessage(
+          'Are you sure you want to clear the metrics data? This action is irreversible, and the data will be permanently lost unless exported.',
+          { modal: true },
+          'Yes',
+          'No',
+        )
+        .then((selection) => {
+          if (selection === 'Yes') {
+            context.workspaceState.update(
+              envConfig.WORKSPACE_METRICS_DATA!,
+              undefined,
+            );
+            vscode.window.showInformationMessage('Metrics data has been cleared.');
+          }
+        });
+      metricsViewProvider.refresh();
+    }),
+  );
+
   // Reset the refactoring details view initially
   refactoringDetailsViewProvider.resetRefactoringDetails();
 
@@ -180,6 +208,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', () =>
       acceptRefactoring(
         refactoringDetailsViewProvider,
+        metricsViewProvider,
         smellsCacheManager,
         smellsViewProvider,
       ),
@@ -235,6 +264,11 @@ export function activate(context: vscode.ExtensionContext): void {
     smellsViewProvider,
   );
   context.subscriptions.push(fileSaveListener);
+
+  // Register the workspace modified listener
+  const workspaceModifiedListener =
+    registerWorkspaceModifiedListener(metricsViewProvider);
+  context.subscriptions.push(workspaceModifiedListener);
 }
 
 /**

@@ -12,7 +12,8 @@ export class RefactoringDetailsViewProvider
   private refactoringDetails: RefactoringDetailItem[] = [];
   public targetFile: { original: string; refactored: string } | undefined;
   public affectedFiles: { original: string; refactored: string }[] = [];
-  public energySaved: number | null = null; // Add energySaved as a class property
+  public energySaved: number | undefined; // Add energySaved as a class property
+  public targetSmell: string | undefined;
 
   constructor() {
     this.resetRefactoringDetails();
@@ -25,10 +26,12 @@ export class RefactoringDetailsViewProvider
    * @param energySaved - The amount of energy saved in kg CO2.
    */
   updateRefactoringDetails(
+    targetSmell: string,
     targetFile: { original: string; refactored: string },
     affectedFiles: { original: string; refactored: string }[],
-    energySaved: number | null,
+    energySaved: number | undefined,
   ): void {
+    this.targetSmell = targetSmell;
     this.targetFile = targetFile;
     this.affectedFiles = affectedFiles;
     this.energySaved = energySaved;
@@ -37,7 +40,7 @@ export class RefactoringDetailsViewProvider
     this.refactoringDetails = [];
 
     // Add energy saved as the first item
-    if (energySaved !== null) {
+    if (energySaved) {
       this.refactoringDetails.push(
         new RefactoringDetailItem(
           `Energy Saved: ${energySaved} kg CO2`, // Label
@@ -73,7 +76,8 @@ export class RefactoringDetailsViewProvider
   resetRefactoringDetails(): void {
     this.targetFile = undefined;
     this.affectedFiles = [];
-    this.energySaved = null;
+    this.targetSmell = undefined;
+    this.energySaved = undefined;
     this.refactoringDetails = [];
     this._onDidChangeTreeData.fire(undefined); // Refresh the view
   }

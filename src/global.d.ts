@@ -44,7 +44,7 @@ declare global {
       original: string;
       refactored: string;
     };
-    energySaved: number | null;
+    energySaved?: number;
     affectedFiles: {
       original: string;
       refactored: string;

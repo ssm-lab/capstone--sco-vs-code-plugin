@@ -144,11 +144,6 @@
           "icon": "assets/eco-icon.png"
         },
         {
-          "id": "ecooptimizer.refactoringDetails",
-          "name": "Refactoring Details",
-          "icon": "assets/eco-icon.png"
-        },
-        {
           "id": "ecooptimizer.metricsView",
           "name": "Carbon Metrics",
           "icon": "assets/eco-icon.png"
@@ -212,6 +207,17 @@
       {
         "command": "ecooptimizer.exportMetricsData",
         "title": "Export Metrics Data as JSON",
+        "category": "Eco Optimizer"
+      },
+      {
+        "command": "ecooptimizer.clearMetricsData",
+        "title": "Clear Metrics Data",
+        "category": "Eco Optimizer"
+      },
+      {
+        "command": "ecooptimizer.metricsView.refresh",
+        "title": "Refresh Metrics Data",
+        "icon": "$(sync)",
         "category": "Eco Optimizer"
       },
       {
@@ -292,6 +298,16 @@
           "command": "ecooptimizer.exportMetricsData",
           "when": "view == ecooptimizer.metricsView",
           "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.clearMetricsData",
+          "when": "view == ecooptimizer.metricsView",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.metricsView.refresh",
+          "when": "view == ecooptimizer.metricsView",
+          "group": "navigation"
         },
         {
           "command": "ecooptimizer.acceptRefactoring",

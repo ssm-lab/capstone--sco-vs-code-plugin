@@ -3,7 +3,64 @@ import * as fs from 'fs';
 import { basename } from 'path';
 
 import { envConfig } from '../utils/envConfig';
-import { getEnabledSmells, getFilterSmells } from '../utils/smellsData';
+import { getFilterSmells } from '../utils/smellsData';
+
+/**
+ * Represents a metric item in the tree view.
+ */
+class MetricItem extends vscode.TreeItem {
+  constructor(
+    public readonly label: string,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+    public readonly contextValue: string,
+    public readonly carbonSaved?: number,
+    public readonly resourceUri?: vscode.Uri, // For file/folder paths
+    public readonly smellName?: string, // For smell names
+  ) {
+    super(label, collapsibleState);
+
+    // Set icon based on contextValue
+    switch (this.contextValue) {
+      case 'folder':
+        this.iconPath = new vscode.ThemeIcon('folder'); // Built-in folder icon
+        break;
+      case 'file':
+        this.iconPath = new vscode.ThemeIcon('file'); // Built-in file icon
+        break;
+      case 'smell':
+        this.iconPath = new vscode.ThemeIcon('tag'); // Built-in warning icon
+        break;
+      case 'folder-stats':
+        this.iconPath = new vscode.ThemeIcon('graph'); // Optional stats icon
+        break;
+    }
+
+    // Set description for carbon saved
+    this.description =
+      carbonSaved !== undefined
+        ? `Carbon Saved: ${formatNumber(carbonSaved)} kg`
+        : '';
+    this.tooltip = this.description;
+
+    this.tooltip = smellName !== undefined ? smellName : '';
+
+    if (resourceUri && contextValue === 'file') {
+      this.resourceUri = resourceUri;
+      this.command = {
+        title: 'Open File',
+        command: 'vscode.open',
+        arguments: [resourceUri],
+      };
+    }
+  }
+}
+
+export interface MetricsDataItem {
+  totalCarbonSaved: number;
+  smellDistribution: {
+    [smell: string]: number;
+  };
+}
 
 export class MetricsViewProvider implements vscode.TreeDataProvider<MetricItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<MetricItem | undefined>();
@@ -52,7 +109,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricItem> 
       // Folder stats
       const folderStats = [
         new MetricItem(
-          `Total Carbon Saved: ${folderMetrics.totalCarbonSaved.toFixed(2)} kg`,
+          `Total Carbon Saved: ${formatNumber(folderMetrics.totalCarbonSaved)} kg`,
           vscode.TreeItemCollapsibleState.None,
           'folder-stats',
         ),
@@ -70,7 +127,8 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricItem> 
         }),
       );
 
-      return [...folderStats, ...contents];
+      const children = [...folderStats, ...contents];
+      return children.sort(compareTreeItems);
     }
 
     if (element.contextValue === 'file') {
@@ -113,7 +171,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricItem> 
     carbonSaved: number;
   }): MetricItem {
     return new MetricItem(
-      `${data.acronym}: ${data.carbonSaved.toFixed(2)} kg`,
+      `${data.acronym}: ${formatNumber(data.carbonSaved)} kg`,
       vscode.TreeItemCollapsibleState.None,
       'smell',
       undefined,
@@ -246,9 +304,6 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricItem> 
       [path: string]: MetricsDataItem;
     }>(envConfig.WORKSPACE_METRICS_DATA!, {});
 
-    // Get the acronym for the smell
-    const acronym = getEnabledSmells()[smellSymbol].acronym;
-
     if (!metrics[filePath]) {
       metrics[filePath] = {
         totalCarbonSaved: 0,
@@ -259,10 +314,10 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricItem> 
     metrics[filePath].totalCarbonSaved =
       (metrics[filePath].totalCarbonSaved || 0) + carbonSaved;
 
-    if (!metrics[filePath].smellDistribution[acronym]) {
-      metrics[filePath].smellDistribution[acronym] = 0;
+    if (!metrics[filePath].smellDistribution[smellSymbol]) {
+      metrics[filePath].smellDistribution[smellSymbol] = 0;
     }
-    metrics[filePath].smellDistribution[acronym] += carbonSaved;
+    metrics[filePath].smellDistribution[smellSymbol] += carbonSaved;
 
     this.context.workspaceState.update(envConfig.WORKSPACE_METRICS_DATA!, metrics);
 
@@ -270,57 +325,32 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricItem> 
   }
 }
 
-/**
- * Represents a metric item in the tree view.
- */
-class MetricItem extends vscode.TreeItem {
-  constructor(
-    public readonly label: string,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    public readonly contextValue: string,
-    public readonly carbonSaved?: number,
-    public readonly resourceUri?: vscode.Uri, // For file/folder paths
-    public readonly smellName?: string, // For smell names
-  ) {
-    super(label, collapsibleState);
+const contextPriority: { [key: string]: number } = {
+  folder: 1,
+  file: 2,
+  smell: 3,
+  'folder-stats': 4,
+};
 
-    // Set icon based on contextValue
-    switch (this.contextValue) {
-      case 'folder':
-        this.iconPath = new vscode.ThemeIcon('folder'); // Built-in folder icon
-        break;
-      case 'file':
-        this.iconPath = new vscode.ThemeIcon('file'); // Built-in file icon
-        break;
-      case 'smell':
-        this.iconPath = new vscode.ThemeIcon('tag'); // Built-in warning icon
-        break;
-      case 'folder-stats':
-        this.iconPath = new vscode.ThemeIcon('graph'); // Optional stats icon
-        break;
-    }
+function compareTreeItems(a: MetricItem, b: MetricItem): number {
+  // Sort by contextValue priority first
+  const priorityA = contextPriority[a.contextValue] || 0;
+  const priorityB = contextPriority[b.contextValue] || 0;
+  if (priorityA < priorityB) return -1;
+  if (priorityA > priorityB) return 1;
 
-    // Set description for carbon saved
-    this.description =
-      carbonSaved !== undefined ? `Carbon Saved: ${carbonSaved.toFixed(2)} kg` : '';
-    this.tooltip = this.description;
+  // If contextValue is the same, sort by label
+  if (a.label < b.label) return -1;
+  if (a.label > b.label) return 1;
 
-    this.tooltip = smellName !== undefined ? smellName : '';
-
-    if (resourceUri && contextValue === 'file') {
-      this.resourceUri = resourceUri;
-      this.command = {
-        title: 'Open File',
-        command: 'vscode.open',
-        arguments: [resourceUri],
-      };
-    }
-  }
+  return 0;
 }
 
-export interface MetricsDataItem {
-  totalCarbonSaved: number;
-  smellDistribution: {
-    [smell: string]: number;
-  };
+function formatNumber(number: number, decimalPlaces: number = 2): string {
+  const threshold = 0.001;
+  if (Math.abs(number) < threshold) {
+    return number.toExponential(decimalPlaces);
+  } else {
+    return number.toFixed(decimalPlaces);
+  }
 }
