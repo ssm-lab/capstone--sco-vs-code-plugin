@@ -8,6 +8,10 @@ import { MetricsViewProvider } from '../providers/MetricsViewProvider';
 /**
  * Prompts the user to configure a workspace by selecting either a Python file or folder.
  * Updates the workspace state accordingly and refreshes the tree view to reflect the changes.
+ *
+ * @param context - The extension context for managing workspace state.
+ * @param smellsViewProvider - The provider for the smells view.
+ * @param metricsViewProvider - The provider for the metrics view.
  */
 export async function configureWorkspace(
   context: vscode.ExtensionContext,
@@ -28,21 +32,32 @@ export async function configureWorkspace(
   }
 }
 
+/**
+ * Configures the workspace using a selected Python file.
+ * Prompts the user to select a Python file from open editors or the workspace.
+ *
+ * @param context - The extension context for managing workspace state.
+ * @param smellsViewProvider - The provider for the smells view.
+ * @param metricsViewProvider - The provider for the metrics view.
+ */
 async function configurePythonFile(
   context: vscode.ExtensionContext,
   smellsViewProvider: SmellsViewProvider,
   metricsViewProvider: MetricsViewProvider,
 ) {
+  // Get Python files from open editors
   const openEditorFiles = vscode.window.tabGroups.activeTabGroup.tabs
     .map((tab) => (tab.input as any)?.uri?.fsPath)
     .filter((filePath) => filePath && filePath.endsWith('.py'));
 
+  // Get Python files from the workspace
   const workspaceFiles = await vscode.workspace.findFiles(
     '**/*.py',
     '**/node_modules/**',
   );
   const workspaceFilePaths = workspaceFiles.map((uri) => uri.fsPath);
 
+  // Combine and deduplicate file paths
   const allPythonFiles = Array.from(
     new Set([...openEditorFiles, ...workspaceFilePaths]),
   );
@@ -54,6 +69,7 @@ async function configurePythonFile(
     return;
   }
 
+  // Prompt the user to select a Python file
   const selectedFile = await vscode.window.showQuickPick(allPythonFiles, {
     placeHolder: 'Select a Python file to use as your workspace.',
   });
@@ -71,6 +87,12 @@ async function configurePythonFile(
   }
 }
 
+/**
+ * Recursively scans a folder to find subfolders containing Python files or __init__.py.
+ *
+ * @param folderPath - The path of the folder to scan.
+ * @returns An array of folder paths that contain Python files.
+ */
 function findPythonFoldersRecursively(folderPath: string): string[] {
   let pythonFolders: string[] = [];
   let hasPythonFiles = false;
@@ -78,7 +100,7 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
   try {
     const files = fs.readdirSync(folderPath);
 
-    // Check if current folder contains Python files or __init__.py
+    // Check if the current folder contains Python files or __init__.py
     if (
       files.includes('__init__.py') ||
       files.some((file) => file.endsWith('.py'))
@@ -98,17 +120,28 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
       }
     }
 
-    // Only add this folder if it or its subfolders contain Python
+    // Only add this folder if it or its subfolders contain Python files
     if (hasPythonFiles) {
       pythonFolders.push(folderPath);
     }
   } catch (error) {
-    console.error(`Error scanning folder ${folderPath}:`, error);
+    // Log the error and notify the user
+    vscode.window.showErrorMessage(
+      `Error scanning folder ${folderPath}: ${(error as Error).message}`,
+    );
   }
 
   return pythonFolders;
 }
 
+/**
+ * Configures the workspace using a selected Python folder.
+ * Prompts the user to select a folder containing Python files from the workspace.
+ *
+ * @param context - The extension context for managing workspace state.
+ * @param smellsViewProvider - The provider for the smells view.
+ * @param metricsViewProvider - The provider for the metrics view.
+ */
 async function configurePythonFolder(
   context: vscode.ExtensionContext,
   smellsViewProvider: SmellsViewProvider,
@@ -123,6 +156,7 @@ async function configurePythonFolder(
     return;
   }
 
+  // Find all valid Python folders in the workspace
   const validPythonFolders = workspaceFolders
     .map((folder) => folder.uri.fsPath)
     .flatMap((folderPath) => findPythonFoldersRecursively(folderPath));
@@ -134,6 +168,7 @@ async function configurePythonFolder(
     return;
   }
 
+  // Prompt the user to select a Python folder
   const selectedFolder = await vscode.window.showQuickPick(validPythonFolders, {
     placeHolder: 'Select a Python folder to use as your workspace.',
   });
@@ -151,20 +186,31 @@ async function configurePythonFolder(
   }
 }
 
+/**
+ * Updates the workspace configuration and refreshes the views.
+ *
+ * @param context - The extension context for managing workspace state.
+ * @param workspacePath - The path of the selected workspace (file or folder).
+ * @param smellsViewProvider - The provider for the smells view.
+ * @param metricsViewProvider - The provider for the metrics view.
+ */
 export async function updateWorkspace(
   context: vscode.ExtensionContext,
   workspacePath: string,
   smellsViewProvider: SmellsViewProvider,
   metricsViewProvider: MetricsViewProvider,
 ) {
+  // Update the workspace state with the selected path
   await context.workspaceState.update('workspaceConfiguredPath', workspacePath);
 
+  // Set the workspace context to indicate that the workspace is configured
   vscode.commands.executeCommand(
     'setContext',
     'workspaceState.workspaceConfigured',
     true,
   );
 
+  // Refresh the views to reflect the changes
   smellsViewProvider.refresh();
   metricsViewProvider.refresh();
 }
