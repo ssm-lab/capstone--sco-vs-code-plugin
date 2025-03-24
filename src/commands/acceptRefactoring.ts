@@ -5,6 +5,7 @@ import { MetricsViewProvider } from '../providers/MetricsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { ecoOutput } from '../extension';
+import { hideRefactorActionButtons } from '../utils/refactorActionButtons';
 
 function normalizePath(filePath: string): string {
   return filePath.toLowerCase();
@@ -15,6 +16,7 @@ export async function acceptRefactoring(
   metricsDataProvider: MetricsViewProvider,
   smellsCacheManager: SmellsCacheManager,
   smellsViewProvider: SmellsViewProvider,
+  context: vscode.ExtensionContext,
 ): Promise<void> {
   const targetFile = refactoringDetailsViewProvider.targetFile;
   const affectedFiles = refactoringDetailsViewProvider.affectedFiles;
@@ -31,7 +33,7 @@ export async function acceptRefactoring(
     }
 
     const energySaved = refactoringDetailsViewProvider.energySaved;
-    const targetSmell = refactoringDetailsViewProvider.targetSmell;
+    const targetSmell = refactoringDetailsViewProvider.targetSmell?.symbol;
     const file = vscode.Uri.file(targetFile.original).fsPath;
 
     if (energySaved && targetSmell) {
@@ -57,7 +59,9 @@ export async function acceptRefactoring(
 
     refactoringDetailsViewProvider.resetRefactoringDetails();
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-    vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+
+    hideRefactorActionButtons(context);
+
     smellsViewProvider.refresh();
   } catch (error) {
     console.error('Failed to accept refactoring:', error);

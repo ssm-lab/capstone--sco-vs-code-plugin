@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { getDescriptionByMessageId, getNameByMessageId } from '../utils/smellsData';
 
 export class RefactoringDetailsViewProvider
   implements vscode.TreeDataProvider<RefactoringDetailItem>
@@ -12,8 +13,8 @@ export class RefactoringDetailsViewProvider
   private refactoringDetails: RefactoringDetailItem[] = [];
   public targetFile: { original: string; refactored: string } | undefined;
   public affectedFiles: { original: string; refactored: string }[] = [];
-  public energySaved: number | undefined; // Add energySaved as a class property
-  public targetSmell: string | undefined;
+  public energySaved: number | undefined;
+  public targetSmell: Smell | undefined;
 
   constructor() {
     this.resetRefactoringDetails();
@@ -21,12 +22,13 @@ export class RefactoringDetailsViewProvider
 
   /**
    * Updates the refactoring details with the given target file, affected files, and energy saved.
+   * @param targetSmell - The smell being refactored.
    * @param targetFile - The target file (original and refactored paths).
    * @param affectedFiles - The list of affected files (original and refactored paths).
    * @param energySaved - The amount of energy saved in kg CO2.
    */
   updateRefactoringDetails(
-    targetSmell: string,
+    targetSmell: Smell,
     targetFile: { original: string; refactored: string },
     affectedFiles: { original: string; refactored: string }[],
     energySaved: number | undefined,
@@ -39,16 +41,33 @@ export class RefactoringDetailsViewProvider
     // Clear the existing refactoring details
     this.refactoringDetails = [];
 
-    // Add energy saved as the first item
+    // Add the smell being refactored as the first item
+    if (targetSmell) {
+      const smellName =
+        getNameByMessageId(targetSmell.messageId) || targetSmell.messageId;
+      this.refactoringDetails.push(
+        new RefactoringDetailItem(
+          `Refactoring: ${smellName}`,
+          '', // Empty description since we'll show it as a child
+          '',
+          '',
+          true, // Make it collapsible to show description as child
+          false,
+          true, // isSmellItem
+        ),
+      );
+    }
+
+    // Add energy saved as the second item
     if (energySaved) {
       this.refactoringDetails.push(
         new RefactoringDetailItem(
-          `Energy Saved: ${energySaved} kg CO2`, // Label
-          '', // No description
-          '', // No file path
-          '', // No file path
-          false, // Not collapsible
-          true, // Special item for energy saved
+          `Energy Saved: ${energySaved} kg CO2`,
+          '',
+          '',
+          '',
+          false,
+          true, // isEnergySaved
         ),
       );
     }
@@ -56,18 +75,15 @@ export class RefactoringDetailsViewProvider
     // Add the target file
     this.refactoringDetails.push(
       new RefactoringDetailItem(
-        path.basename(targetFile.original), // File name as label
-        'Target File', // Description
+        path.basename(targetFile.original),
+        'Target File',
         targetFile.original,
         targetFile.refactored,
-        affectedFiles.length > 0, // This is a parent item (collapsible)
+        affectedFiles.length > 0,
       ),
     );
 
-    // Do not add affected files to refactoringDetails here
-    // They will be added dynamically in getChildren when the parent item is expanded
-
-    this._onDidChangeTreeData.fire(undefined); // Refresh the view
+    this._onDidChangeTreeData.fire(undefined);
   }
 
   /**
@@ -79,7 +95,7 @@ export class RefactoringDetailsViewProvider
     this.targetSmell = undefined;
     this.energySaved = undefined;
     this.refactoringDetails = [];
-    this._onDidChangeTreeData.fire(undefined); // Refresh the view
+    this._onDidChangeTreeData.fire(undefined);
   }
 
   getTreeItem(element: RefactoringDetailItem): vscode.TreeItem {
@@ -88,22 +104,40 @@ export class RefactoringDetailsViewProvider
 
   getChildren(element?: RefactoringDetailItem): RefactoringDetailItem[] {
     if (element) {
+      // If this is the smell parent item, return the description as child
+      if (element.isSmellItem && this.targetSmell) {
+        const smellDescription =
+          getDescriptionByMessageId(this.targetSmell.messageId) ||
+          this.targetSmell.messageId;
+        return [
+          new RefactoringDetailItem(
+            '',
+            smellDescription,
+            '',
+            '',
+            false, // Not collapsible
+            false,
+            false,
+            'info', // New parameter for description type
+          ),
+        ];
+      }
+
       // If this is the parent item (Target File), return the affected files as children
       if (element.isParent) {
         return this.affectedFiles.map(
           (file) =>
             new RefactoringDetailItem(
-              path.basename(file.original), // File name as label
-              'Affected File', // Description
+              path.basename(file.original),
+              'Affected File',
               file.original,
               file.refactored,
-              false, // This is a child item (not collapsible)
+              false,
             ),
         );
       }
-      return []; // No nested items for child items
+      return [];
     }
-    // If no element is provided, return the top-level items (Energy Saved and Target File)
     return this.refactoringDetails;
   }
 }
@@ -116,26 +150,33 @@ class RefactoringDetailItem extends vscode.TreeItem {
     public readonly refactoredFilePath: string,
     public readonly isParent: boolean = false,
     public readonly isEnergySaved: boolean = false,
+    public readonly isSmellItem: boolean = false,
+    public readonly itemType?: 'info' | 'file', // New parameter to distinguish types
   ) {
     super(
       label,
-      isParent
+      isParent || isSmellItem // Make smell items collapsible too
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None,
     );
     this.description = description;
 
-    // Customize the icon for the Energy Saved item
+    // Custom icons based on type
     if (isEnergySaved) {
       this.iconPath = new vscode.ThemeIcon(
-        'lightbulb', // Use a lightbulb icon for energy saved
+        'lightbulb',
         new vscode.ThemeColor('charts.yellow'),
       );
       this.tooltip = 'This is the amount of energy saved by refactoring.';
+    } else if (isSmellItem) {
+      this.iconPath = new vscode.ThemeIcon(
+        'symbol-class',
+        new vscode.ThemeColor('charts.'),
+      );
     }
 
-    // Add a command to open the diff editor for file items (not energy saved)
-    if (!isEnergySaved) {
+    // Add commands where appropriate
+    if (!isEnergySaved && !isSmellItem && itemType !== 'info' && originalFilePath) {
       this.command = {
         command: 'ecooptimizer.openDiffEditor',
         title: 'Open Diff Editor',

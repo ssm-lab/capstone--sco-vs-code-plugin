@@ -29,6 +29,8 @@ import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener
 import { LineSelectionManager } from './ui/LineSelection';
 import { envConfig } from './utils/envConfig';
 import { exportMetricsData } from './commands/exportMetricsData';
+import { acceptRefactoring } from './commands/acceptRefactoring';
+import { rejectRefactoring } from './commands/rejectRefactoring';
 
 export function activate(context: vscode.ExtensionContext): void {
   const acceptRefactoringItem = vscode.window.createStatusBarItem(
@@ -211,11 +213,23 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand('ecooptimizer.exportMetricsData', () =>
-      exportMetricsData(context),
-    ),
-  );
+  vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', async () => {
+    await acceptRefactoring(
+      refactoringDetailsViewProvider,
+      metricsViewProvider,
+      smellsCacheManager,
+      smellsViewProvider,
+      context,
+    );
+  }),
+    vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', async () => {
+      await rejectRefactoring(refactoringDetailsViewProvider, context);
+    }),
+    context.subscriptions.push(
+      vscode.commands.registerCommand('ecooptimizer.exportMetricsData', () =>
+        exportMetricsData(context),
+      ),
+    );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.metricsView.refresh', () => {

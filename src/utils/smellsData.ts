@@ -11,6 +11,7 @@ export interface FilterSmellConfig {
   name: string;
   message_id: string;
   acronym: string;
+  smell_description: string;
   enabled: boolean;
   analyzer_options?: Record<
     string,
@@ -132,4 +133,28 @@ export function getAcronymByMessageId(messageId: string): string | undefined {
     (smell) => smell.message_id === messageId,
   );
   return match?.acronym;
+}
+
+/**
+ * Returns the full name for a given message ID.
+ * @param messageId - The message ID to look up (e.g., "R0913").
+ * @returns The full name (e.g., "Long Parameter List") or undefined if not found.
+ */
+export function getNameByMessageId(messageId: string): string | undefined {
+  const match = Object.values(filterSmells).find(
+    (smell) => smell.message_id === messageId,
+  );
+  return match?.name;
+}
+
+/**
+ * Returns the description for a given message ID.
+ * @param messageId - The message ID to look up (e.g., "R0913").
+ * @returns The description or undefined if not found.
+ */
+export function getDescriptionByMessageId(messageId: string): string | undefined {
+  const match = Object.values(filterSmells).find(
+    (smell) => smell.message_id === messageId,
+  );
+  return match?.smell_description; // This assumes your FilterSmellConfig has a description field
 }

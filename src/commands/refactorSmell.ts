@@ -67,7 +67,7 @@ export async function refactorSmell(
     return;
   }
 
-  smellsViewProvider.setStatus(smell.path, 'queue');
+  smellsViewProvider.setStatus(smell.path, 'queued');
 
   try {
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
@@ -77,7 +77,7 @@ export async function refactorSmell(
     ecoOutput.appendLine(`Refactoring response: ${JSON.stringify(refactoredData)}`);
 
     refactoringDetailsViewProvider.updateRefactoringDetails(
-      smell.symbol,
+      smell,
       refactoredData.targetFile,
       refactoredData.affectedFiles,
       refactoredData.energySaved,
