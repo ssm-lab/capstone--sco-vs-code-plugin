@@ -140,8 +140,6 @@ class TreeItem extends vscode.TreeItem {
 class SmellTreeItem extends vscode.TreeItem {
   constructor(public readonly smell: Smell) {
     const acronym = getAcronymByMessageId(smell.messageId) ?? smell.messageId;
-
-    // Build the line number string: "Line 13, 18, 19"
     const lines = smell.occurences
       ?.map((occ) => occ.line)
       .filter((line) => line !== undefined)
@@ -149,10 +147,19 @@ class SmellTreeItem extends vscode.TreeItem {
       .join(', ');
 
     const label = lines ? `${acronym}: Line ${lines}` : acronym;
-
     super(label, vscode.TreeItemCollapsibleState.None);
+
     this.tooltip = smell.message;
     this.contextValue = 'smell';
     this.iconPath = new vscode.ThemeIcon('snake');
+
+    const firstLine = smell.occurences?.[0]?.line;
+    if (smell.path && typeof firstLine === 'number') {
+      this.command = {
+        title: 'Jump to Smell',
+        command: 'ecooptimizer.jumpToSmell',
+        arguments: [smell.path, firstLine],
+      };
+    }
   }
 }

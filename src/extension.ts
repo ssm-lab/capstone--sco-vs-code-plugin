@@ -22,6 +22,7 @@ import { registerFilterSmellCommands } from './commands/filterSmells';
 
 // Listeners
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
+import { jumpToSmell } from './commands/jumpToSmell';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary components.
@@ -95,6 +96,8 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('ecooptimizer.openFile', openFile),
+
+    vscode.commands.registerCommand('ecooptimizer.jumpToSmell', jumpToSmell),
 
     vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileItem) => {
       try {
