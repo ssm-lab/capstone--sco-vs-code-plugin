@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getStatusIcon, getStatusMessage } from '../utils/fileStatus';
 import { buildPythonTree } from '../utils/TreeStructureBuilder';
 import { getAcronymByMessageId } from '../utils/smellsData';
+import { ecoOutput } from '../extension';
 
 export class SmellsViewProvider
   implements vscode.TreeDataProvider<TreeItem | SmellTreeItem>
@@ -14,7 +17,7 @@ export class SmellsViewProvider
   > = this._onDidChangeTreeData.event;
 
   private fileStatuses: Map<string, string> = new Map();
-  private fileSmells: Map<string, Smell[]> = new Map(); // Store smells for each file
+  private fileSmells: Map<string, Smell[]> = new Map();
 
   constructor(private context: vscode.ExtensionContext) {}
 
@@ -26,17 +29,12 @@ export class SmellsViewProvider
     this.fileStatuses.set(filePath, status);
 
     if (status === 'outdated') {
-      this.fileSmells.delete(filePath); // Remove associated smells
+      this.fileSmells.delete(filePath);
     }
 
     this._onDidChangeTreeData.fire();
   }
 
-  /**
-   * Sets the smells for a specific file.
-   * @param filePath - The path of the file.
-   * @param smells - The list of smells for the file.
-   */
   setSmells(filePath: string, smells: Smell[]): void {
     this.fileSmells.set(filePath, smells);
     this._onDidChangeTreeData.fire();
@@ -46,14 +44,14 @@ export class SmellsViewProvider
     const exists = this.fileStatuses.has(filePath);
     if (exists) {
       this.fileStatuses.delete(filePath);
-      this.fileSmells.delete(filePath); // Remove smells for the file as well
+      this.fileSmells.delete(filePath);
     }
     return exists;
   }
 
   public clearAllStatuses(): void {
     this.fileStatuses.clear();
-    this.fileSmells.clear(); // Clear all smells
+    this.fileSmells.clear();
     this._onDidChangeTreeData.fire();
   }
 
@@ -67,57 +65,82 @@ export class SmellsViewProvider
     const rootPath = this.context.workspaceState.get<string>(
       'workspaceConfiguredPath',
     );
-    if (!rootPath) return [];
-
-    // If the element is a smell item, it has no children
-    if (element instanceof SmellTreeItem) {
+    if (!rootPath) {
+      ecoOutput.appendLine('No workspace configured.');
       return [];
     }
 
-    const currentPath = element?.resourceUri?.fsPath ?? rootPath;
-    const nodes = buildPythonTree(currentPath);
+    // Smell nodes never have children
+    if (element instanceof SmellTreeItem) {
+      ecoOutput.appendLine('SmellTreeItem has no children.');
+      return [];
+    }
 
-    // If the element is a file, return its smells as children
+    // If file node, show smells
     if (element?.contextValue === 'file') {
+      ecoOutput.appendLine(`Getting smells for file: ${element.fullPath}`);
       const smells = this.fileSmells.get(element.fullPath) ?? [];
       return smells.map((smell) => new SmellTreeItem(smell));
     }
 
-    // Otherwise, return the files and folders
-    return nodes.map(({ label, fullPath, isFile }) => {
-      const status = this.fileStatuses.get(fullPath) ?? 'not_yet_detected';
-      const icon = isFile ? getStatusIcon(status) : new vscode.ThemeIcon('folder');
-      const tooltip = isFile ? getStatusMessage(status) : undefined;
-
-      // Set collapsible state for files based on whether they have smells
-      const collapsibleState = isFile
-        ? this.fileSmells.has(fullPath) && this.fileSmells.get(fullPath)!.length > 0
-          ? vscode.TreeItemCollapsibleState.Collapsed // Files with smells are collapsible
-          : vscode.TreeItemCollapsibleState.None // Files without smells are not collapsible
-        : vscode.TreeItemCollapsibleState.Collapsed; // Folders are always collapsible
-
-      const item = new TreeItem(
-        label,
-        fullPath,
-        collapsibleState,
-        isFile ? 'file' : 'directory',
-      );
-      item.iconPath = icon;
-      item.tooltip = tooltip;
-
-      // Add "Outdated" description
-      if (status === 'outdated') {
-        item.description = 'outdated';
+    // If root element (first load)
+    if (!element) {
+      const stat = fs.statSync(rootPath);
+      if (stat.isFile()) {
+        ecoOutput.appendLine(`Root is a file: ${rootPath}`);
+        return [this.createTreeItem(rootPath, true)];
+      } else if (stat.isDirectory()) {
+        ecoOutput.appendLine(`Root is a directory: ${rootPath}`);
+        return [this.createTreeItem(rootPath, false)]; // 👈 Show the root folder as the top node
       }
+    }
 
-      return item;
-    });
+    // Folder node – get its children
+    const currentPath = element?.resourceUri?.fsPath;
+    if (!currentPath) return [];
+
+    ecoOutput.appendLine(`Getting children of folder: ${currentPath}`);
+    const childNodes = buildPythonTree(currentPath);
+    ecoOutput.appendLine(`  Found ${childNodes.length} children.`);
+    childNodes.forEach((node) =>
+      ecoOutput.appendLine(`    - ${node.fullPath} (isFile: ${node.isFile})`),
+    );
+
+    return childNodes.map(({ fullPath, isFile }) =>
+      this.createTreeItem(fullPath, isFile),
+    );
+  }
+
+  private createTreeItem(filePath: string, isFile: boolean): TreeItem {
+    const label = path.basename(filePath);
+    const status = this.fileStatuses.get(filePath) ?? 'not_yet_detected';
+    const icon = isFile ? getStatusIcon(status) : new vscode.ThemeIcon('folder');
+    const tooltip = isFile ? getStatusMessage(status) : undefined;
+
+    // Set collapsible state
+    const collapsibleState = isFile
+      ? this.fileSmells.has(filePath) && this.fileSmells.get(filePath)!.length > 0
+        ? vscode.TreeItemCollapsibleState.Collapsed // Files with smells are collapsible
+        : vscode.TreeItemCollapsibleState.None // Files without smells are not collapsible
+      : vscode.TreeItemCollapsibleState.Collapsed; // Folders are always collapsible
+
+    const item = new TreeItem(
+      label,
+      filePath,
+      collapsibleState,
+      isFile ? 'file' : 'directory',
+    );
+    item.iconPath = icon;
+    item.tooltip = tooltip;
+
+    if (status === 'outdated') {
+      item.description = 'outdated';
+    }
+
+    return item;
   }
 }
 
-/**
- * Represents a file or folder in the tree.
- */
 class TreeItem extends vscode.TreeItem {
   constructor(
     label: string,
@@ -139,9 +162,6 @@ class TreeItem extends vscode.TreeItem {
   }
 }
 
-/**
- * Represents a smell item in the tree.
- */
 class SmellTreeItem extends vscode.TreeItem {
   constructor(public readonly smell: Smell) {
     const acronym = getAcronymByMessageId(smell.messageId) ?? smell.messageId;
