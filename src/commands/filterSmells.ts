@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 import { FilterViewProvider } from '../providers/FilterViewProvider';
 
 /**

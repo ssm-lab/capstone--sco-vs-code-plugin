@@ -167,16 +167,11 @@ export function activate(context: vscode.ExtensionContext): void {
         metricsViewProvider,
         smellsCacheManager,
         smellsViewProvider,
-        context,
       );
     }),
 
     vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', async () => {
-      await rejectRefactoring(
-        refactoringDetailsViewProvider,
-        smellsViewProvider,
-        context,
-      );
+      await rejectRefactoring(refactoringDetailsViewProvider, smellsViewProvider);
     }),
 
     vscode.commands.registerCommand(

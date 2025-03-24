@@ -35,7 +35,6 @@ export async function acceptRefactoring(
   metricsDataProvider: MetricsViewProvider,
   smellsCacheManager: SmellsCacheManager,
   smellsViewProvider: SmellsViewProvider,
-  context: vscode.ExtensionContext,
 ): Promise<void> {
   const targetFile = refactoringDetailsViewProvider.targetFile;
   const affectedFiles = refactoringDetailsViewProvider.affectedFiles;

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 
@@ -12,7 +13,7 @@ export async function wipeWorkCache(
   smellsViewProvider: SmellsViewProvider,
 ) {
   const userResponse = await vscode.window.showWarningMessage(
-    'Are you sure you want to clear the smells cache? This action cannot be undone.',
+    'Are you sure you want to clear the entire workspace analysis? This action cannot be undone.',
     { modal: true },
     'Confirm',
   );
@@ -22,7 +23,7 @@ export async function wipeWorkCache(
     smellsViewProvider.clearAllStatuses();
     smellsViewProvider.refresh();
 
-    vscode.window.showInformationMessage('Smells cache cleared successfully.');
+    vscode.window.showInformationMessage('Workspace analysis cleared successfully.');
   } else {
     vscode.window.showInformationMessage('Operation cancelled.');
   }
