@@ -27,8 +27,42 @@ import { refactorSmell } from './commands/refactorSmell';
 // === Listeners & UI ===
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 import { LineSelectionManager } from './ui/LineSelection';
+import { envConfig } from './utils/envConfig';
+import { exportMetricsData } from './commands/exportMetricsData';
 
 export function activate(context: vscode.ExtensionContext): void {
+  const acceptRefactoringItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100,
+  );
+  acceptRefactoringItem.text = '$(check) Accept Refactoring';
+  acceptRefactoringItem.command = 'ecooptimizer.acceptRefactoring';
+  acceptRefactoringItem.tooltip = 'Accept and apply the suggested refactoring';
+  acceptRefactoringItem.hide(); // Hidden by default
+
+  const rejectRefactoringItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    99,
+  );
+  rejectRefactoringItem.text = '$(x) Reject Refactoring';
+  rejectRefactoringItem.command = 'ecooptimizer.rejectRefactoring';
+  rejectRefactoringItem.tooltip = 'Reject the suggested refactoring';
+  rejectRefactoringItem.hide(); // Hidden by default
+
+  context.subscriptions.push(acceptRefactoringItem, rejectRefactoringItem);
+
+  vscode.commands.executeCommand('setContext', 'refactoringInProgress', false); // initially
+
+  vscode.commands.registerCommand('ecooptimizer.showRefactorStatusBar', () => {
+    acceptRefactoringItem.show();
+    rejectRefactoringItem.show();
+  });
+
+  vscode.commands.registerCommand('ecooptimizer.hideRefactorStatusBar', () => {
+    acceptRefactoringItem.hide();
+    rejectRefactoringItem.hide();
+  });
+
   // Load smell definitions
   loadSmells();
 
@@ -174,6 +208,40 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((event) => {
       lineSelectManager.commentLine(event.textEditor);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.exportMetricsData', () =>
+      exportMetricsData(context),
+    ),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.metricsView.refresh', () => {
+      metricsViewProvider.refresh();
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.clearMetricsData', () => {
+      vscode.window
+        .showWarningMessage(
+          'Are you sure you want to clear the metrics data? This action is irreversible, and the data will be permanently lost unless exported.',
+          { modal: true },
+          'Yes',
+          'No',
+        )
+        .then((selection) => {
+          if (selection === 'Yes') {
+            context.workspaceState.update(
+              envConfig.WORKSPACE_METRICS_DATA!,
+              undefined,
+            );
+            vscode.window.showInformationMessage('Metrics data has been cleared.');
+          }
+        });
+      metricsViewProvider.refresh();
     }),
   );
 }

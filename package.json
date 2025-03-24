@@ -239,66 +239,87 @@
         "title": "Reject Refactoring",
         "category": "Eco",
         "icon": "$(close)"
+      },
+      {
+        "command": "ecooptimizer.exportMetricsData",
+        "title": "Export Metrics Data as JSON",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.clearMetricsData",
+        "title": "Clear Metrics Data",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.metricsView.refresh",
+        "title": "Refresh Metrics Data",
+        "icon": "$(sync)",
+        "category": "Eco"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "ecooptimizer.resetConfiguration",
-          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured",
+          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured && !refactoringInProgress",
           "group": "resource"
         },
         {
           "command": "ecooptimizer.wipeWorkCache",
-          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured",
+          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured && !refactoringInProgress",
           "group": "resource"
         },
         {
           "command": "ecooptimizer.selectAllFilterSmells",
-          "when": "view == ecooptimizer.filterView",
+          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
           "group": "resource"
         },
         {
           "command": "ecooptimizer.deselectAllFilterSmells",
-          "when": "view == ecooptimizer.filterView",
+          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
           "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.exportMetricsData",
+          "when": "view == ecooptimizer.metricsView",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.clearMetricsData",
+          "when": "view == ecooptimizer.metricsView",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.metricsView.refresh",
+          "when": "view == ecooptimizer.metricsView",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
         {
           "command": "ecooptimizer.editSmellFilterOption",
-          "when": "viewItem == smellOption",
+          "when": "viewItem == smellOption && !refactoringInProgress",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.detectSmellsFolder",
-          "when": "view == ecooptimizer.smellsView && viewItem == directory",
+          "when": "view == ecooptimizer.smellsView && viewItem == directory && !refactoringInProgress",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.detectSmellsFile",
-          "when": "view == ecooptimizer.smellsView && (viewItem == file || viewItem == file_with_smells)",
+          "when": "view == ecooptimizer.smellsView && (viewItem == file || viewItem == file_with_smells) && !refactoringInProgress",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.refactorAllSmellsOfType",
-          "when": "view == ecooptimizer.smellsView && viewItem == file_with_smells",
+          "when": "view == ecooptimizer.smellsView && viewItem == file_with_smells && !refactoringInProgress",
           "group": "inline"
         },
         {
           "command": "ecooptimizer.refactorSmell",
-          "when": "view == ecooptimizer.smellsView && viewItem == smell",
+          "when": "view == ecooptimizer.smellsView && viewItem == smell && !refactoringInProgress",
           "group": "inline"
-        },
-        {
-          "command": "ecooptimizer.acceptRefactoring",
-          "when": "view == ecooptimizer.refactorView && refactoringInProgress",
-          "group": "navigation"
-        },
-        {
-          "command": "ecooptimizer.rejectRefactoring",
-          "when": "view == ecooptimizer.refactorView && refactoringInProgress",
-          "group": "navigation"
         }
       ]
     },

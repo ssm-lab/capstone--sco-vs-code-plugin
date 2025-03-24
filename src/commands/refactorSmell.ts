@@ -8,6 +8,7 @@ import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsV
 import { ecoOutput } from '../extension';
 import { openDiffEditor } from '../utils/openDiffEditor';
 import { serverStatus, ServerStatusType } from '../emitters/serverStatus';
+import { showRefactorActionButtons } from '../utils/refactorActionButtons'; // ← add this at the top
 
 /**
  * Recursively collects all `.py` files in the given directory.
@@ -66,6 +67,8 @@ export async function refactorSmell(
     return;
   }
 
+  smellsViewProvider.setStatus(smell.path, 'queue');
+
   try {
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
 
@@ -86,6 +89,8 @@ export async function refactorSmell(
     );
 
     await vscode.commands.executeCommand('ecooptimizer.refactorView.focus');
+
+    showRefactorActionButtons(context);
 
     vscode.window.showInformationMessage(
       `Refactoring successful! Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
