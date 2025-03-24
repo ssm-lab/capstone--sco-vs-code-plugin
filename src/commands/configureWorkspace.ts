@@ -3,21 +3,23 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 /**
- * Prompts the user to configure a workspace by selecting a folder containing Python files.
- * Updates the workspace state accordingly and refreshes the tree view to reflect the changes.
+ * Initializes workspace configuration by prompting user to select a Python project folder.
+ * This is the main entry point for workspace configuration and delegates to folder-specific logic.
  *
- * @param context - The extension context for managing workspace state.
+ * @param context - VS Code extension context containing workspace state management
  */
 export async function configureWorkspace(context: vscode.ExtensionContext) {
-  // Directly configure a Python folder (removed the file option)
   await configurePythonFolder(context);
 }
 
 /**
- * Recursively scans a folder to find subfolders containing Python files or __init__.py.
+ * Recursively identifies Python project folders by scanning for:
+ * - Python files (*.py)
+ * - __init__.py package markers
+ * Maintains a hierarchical understanding of Python projects in the workspace.
  *
- * @param folderPath - The path of the folder to scan.
- * @returns An array of folder paths that contain Python files.
+ * @param folderPath - Absolute filesystem path to scan
+ * @returns Array of qualified Python project paths
  */
 function findPythonFoldersRecursively(folderPath: string): string[] {
   let pythonFolders: string[] = [];
@@ -26,7 +28,7 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
   try {
     const files = fs.readdirSync(folderPath);
 
-    // Check if the current folder contains Python files or __init__.py
+    // Validate current folder contains Python artifacts
     if (
       files.includes('__init__.py') ||
       files.some((file) => file.endsWith('.py'))
@@ -34,7 +36,7 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
       hasPythonFiles = true;
     }
 
-    // Recursively scan subfolders
+    // Recursively process subdirectories
     for (const file of files) {
       const filePath = path.join(folderPath, file);
       if (fs.statSync(filePath).isDirectory()) {
@@ -46,14 +48,13 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
       }
     }
 
-    // Only add this folder if it or its subfolders contain Python files
+    // Include current folder if Python content found at any level
     if (hasPythonFiles) {
       pythonFolders.push(folderPath);
     }
   } catch (error) {
-    // Log the error and notify the user
     vscode.window.showErrorMessage(
-      `Error scanning folder ${folderPath}: ${(error as Error).message}`,
+      `Workspace scanning error in ${path.basename(folderPath)}: ${(error as Error).message}`,
     );
   }
 
@@ -61,46 +62,46 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
 }
 
 /**
- * Configures the workspace using a selected Python folder.
- * Prompts the user to select a folder containing Python files from the workspace.
+ * Guides user through Python workspace selection process with validation.
+ * Presents filtered list of valid Python project folders and handles selection.
  *
- * @param context - The extension context for managing workspace state.
+ * @param context - Extension context for state persistence
  */
 async function configurePythonFolder(context: vscode.ExtensionContext) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
 
-  if (!workspaceFolders || workspaceFolders.length === 0) {
+  if (!workspaceFolders?.length) {
     vscode.window.showErrorMessage(
-      'No workspace folders found. Open a project in Explorer first.',
+      'No workspace detected. Please open a project folder first.',
     );
     return;
   }
 
-  // Find all valid Python folders in the workspace
+  // Identify all Python project roots
   const validPythonFolders = workspaceFolders
     .map((folder) => folder.uri.fsPath)
-    .flatMap((folderPath) => findPythonFoldersRecursively(folderPath));
+    .flatMap(findPythonFoldersRecursively);
 
   if (validPythonFolders.length === 0) {
     vscode.window.showErrorMessage(
-      'No valid Python folders found in your workspace. A valid folder must contain Python files (*.py) or an __init__.py file.',
+      'No Python projects found. Workspace must contain .py files or __init__.py markers.',
     );
     return;
   }
 
-  // Show folder selection dialog
+  // Present interactive folder selection
   const selectedFolder = await vscode.window.showQuickPick(
     validPythonFolders.map((folder) => ({
       label: path.basename(folder),
       description: folder,
-      detail: `Contains Python files: ${fs
+      detail: `Python content: ${fs
         .readdirSync(folder)
         .filter((file) => file.endsWith('.py') || file === '__init__.py')
         .join(', ')}`,
       folderPath: folder,
     })),
     {
-      placeHolder: 'Select a Python folder to use as your workspace',
+      placeHolder: 'Select Python project root',
       matchOnDescription: true,
       matchOnDetail: true,
     },
@@ -109,25 +110,26 @@ async function configurePythonFolder(context: vscode.ExtensionContext) {
   if (selectedFolder) {
     await updateWorkspace(context, selectedFolder.folderPath);
     vscode.window.showInformationMessage(
-      `Workspace configured for folder: ${path.basename(selectedFolder.folderPath)}`,
+      `Configured workspace: ${path.basename(selectedFolder.folderPath)}`,
     );
   }
 }
 
 /**
- * Updates the workspace configuration and refreshes the views.
+ * Persists workspace configuration and updates extension context.
+ * Triggers view refreshes to reflect new workspace state.
  *
- * @param context - The extension context for managing workspace state.
- * @param workspacePath - The path of the selected workspace (file or folder).
+ * @param context - Extension context for state management
+ * @param workspacePath - Absolute path to selected workspace root
  */
 export async function updateWorkspace(
   context: vscode.ExtensionContext,
   workspacePath: string,
 ) {
-  // Update the workspace state with the selected path
+  // Persist workspace path
   await context.workspaceState.update('workspaceConfiguredPath', workspacePath);
 
-  // Set the workspace context to indicate that the workspace is configured
+  // Update extension context for UI state management
   vscode.commands.executeCommand(
     'setContext',
     'workspaceState.workspaceConfigured',
