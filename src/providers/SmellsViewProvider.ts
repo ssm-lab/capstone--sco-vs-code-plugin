@@ -4,7 +4,6 @@ import * as path from 'path';
 import { getStatusIcon, getStatusMessage } from '../utils/fileStatus';
 import { buildPythonTree } from '../utils/TreeStructureBuilder';
 import { getAcronymByMessageId } from '../utils/smellsData';
-import { ecoOutput } from '../extension';
 
 export class SmellsViewProvider
   implements vscode.TreeDataProvider<TreeItem | SmellTreeItem>
@@ -66,13 +65,11 @@ export class SmellsViewProvider
       'workspaceConfiguredPath',
     );
     if (!rootPath) {
-      ecoOutput.appendLine('No workspace configured.');
       return [];
     }
 
     // Smell nodes never have children
     if (element instanceof SmellTreeItem) {
-      ecoOutput.appendLine('SmellTreeItem has no children.');
       return [];
     }
 
@@ -81,7 +78,6 @@ export class SmellsViewProvider
       element?.contextValue === 'file' ||
       element?.contextValue === 'file_with_smells'
     ) {
-      ecoOutput.appendLine(`Getting smells for file: ${element.fullPath}`);
       const smells = this.fileSmells.get(element.fullPath) ?? [];
       return smells.map((smell) => new SmellTreeItem(smell));
     }
@@ -90,10 +86,8 @@ export class SmellsViewProvider
     if (!element) {
       const stat = fs.statSync(rootPath);
       if (stat.isFile()) {
-        ecoOutput.appendLine(`Root is a file: ${rootPath}`);
         return [this.createTreeItem(rootPath, true)];
       } else if (stat.isDirectory()) {
-        ecoOutput.appendLine(`Root is a directory: ${rootPath}`);
         return [this.createTreeItem(rootPath, false)]; // 👈 Show the root folder as the top node
       }
     }
@@ -102,12 +96,7 @@ export class SmellsViewProvider
     const currentPath = element?.resourceUri?.fsPath;
     if (!currentPath) return [];
 
-    ecoOutput.appendLine(`Getting children of folder: ${currentPath}`);
     const childNodes = buildPythonTree(currentPath);
-    ecoOutput.appendLine(`  Found ${childNodes.length} children.`);
-    childNodes.forEach((node) =>
-      ecoOutput.appendLine(`    - ${node.fullPath} (isFile: ${node.isFile})`),
-    );
 
     return childNodes.map(({ fullPath, isFile }) =>
       this.createTreeItem(fullPath, isFile),
@@ -143,13 +132,6 @@ export class SmellsViewProvider
     if (status === 'outdated') {
       item.description = 'outdated';
     }
-
-    // ✅ Log the context value
-    ecoOutput.appendLine(`Created TreeItem: ${filePath}`);
-    ecoOutput.appendLine(`  → Label: ${label}`);
-    ecoOutput.appendLine(`  → isFile: ${isFile}`);
-    ecoOutput.appendLine(`  → Context Value: ${item.contextValue}`);
-    ecoOutput.appendLine(`  → Status: ${status}`);
 
     return item;
   }

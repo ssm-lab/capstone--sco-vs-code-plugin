@@ -88,7 +88,7 @@ export async function refactorSmell(
       'vscode.diff',
       vscode.Uri.file(targetFile.original),
       vscode.Uri.file(targetFile.refactored),
-      `Refactoring: ${fileName}`,
+      `Refactoring Comparison (${fileName})`,
       { preview: false },
     );
     registerDiffEditor(
