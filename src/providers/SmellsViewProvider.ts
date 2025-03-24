@@ -120,22 +120,18 @@ export class SmellsViewProvider
     const icon = isFile ? getStatusIcon(status) : new vscode.ThemeIcon('folder');
     const tooltip = isFile ? getStatusMessage(status) : undefined;
 
-    // Set collapsible state
     const collapsibleState = isFile
       ? this.fileSmells.has(filePath) && this.fileSmells.get(filePath)!.length > 0
-        ? vscode.TreeItemCollapsibleState.Collapsed // Files with smells are collapsible
-        : vscode.TreeItemCollapsibleState.None // Files without smells are not collapsible
-      : vscode.TreeItemCollapsibleState.Collapsed; // Folders are always collapsible
+        ? vscode.TreeItemCollapsibleState.Collapsed
+        : vscode.TreeItemCollapsibleState.None
+      : vscode.TreeItemCollapsibleState.Collapsed;
 
-    const item = new TreeItem(
-      label,
-      filePath,
-      collapsibleState,
-      isFile ? 'file' : 'directory',
-    );
+    const baseContext = isFile ? 'file' : 'directory';
+    const item = new TreeItem(label, filePath, collapsibleState, baseContext);
     item.iconPath = icon;
     item.tooltip = tooltip;
 
+    // Override contextValue if file has smells
     if (
       isFile &&
       this.fileSmells.has(filePath) &&
@@ -147,6 +143,13 @@ export class SmellsViewProvider
     if (status === 'outdated') {
       item.description = 'outdated';
     }
+
+    // ✅ Log the context value
+    ecoOutput.appendLine(`Created TreeItem: ${filePath}`);
+    ecoOutput.appendLine(`  → Label: ${label}`);
+    ecoOutput.appendLine(`  → isFile: ${isFile}`);
+    ecoOutput.appendLine(`  → Context Value: ${item.contextValue}`);
+    ecoOutput.appendLine(`  → Status: ${status}`);
 
     return item;
   }
