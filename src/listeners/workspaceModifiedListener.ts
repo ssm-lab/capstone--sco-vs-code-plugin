@@ -9,6 +9,7 @@ import { MetricsViewProvider } from '../providers/MetricsViewProvider';
  */
 export class WorkspaceModifiedListener {
   private fileWatcher: vscode.FileSystemWatcher | undefined;
+  private saveListener: vscode.Disposable | undefined;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -17,6 +18,7 @@ export class WorkspaceModifiedListener {
     private metricsViewProvider: MetricsViewProvider,
   ) {
     this.initializeFileWatcher();
+    this.initializeSaveListener();
   }
 
   /**
@@ -26,9 +28,7 @@ export class WorkspaceModifiedListener {
     const configuredPath = this.context.workspaceState.get<string>(
       'workspaceConfiguredPath',
     );
-    if (!configuredPath) {
-      return; // No workspace configured
-    }
+    if (!configuredPath) return;
 
     this.fileWatcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(configuredPath, '**/*.py'),
@@ -37,32 +37,38 @@ export class WorkspaceModifiedListener {
       false, // Do not ignore delete events
     );
 
-    this.fileWatcher.onDidCreate(() => {
-      this.refreshViews();
-    });
+    this.fileWatcher.onDidCreate(() => this.refreshViews());
+    this.fileWatcher.onDidChange((uri) => this.handleFileChange(uri.fsPath));
+    this.fileWatcher.onDidDelete((uri) => this.handleFileDeletion(uri.fsPath));
+  }
 
-    this.fileWatcher.onDidChange((uri) => {
-      this.handleFileChange(uri.fsPath);
-    });
-
-    this.fileWatcher.onDidDelete((uri) => {
-      this.handleFileDeletion(uri.fsPath);
+  /**
+   * Initializes a listener for file save events to handle changes in Python files.
+   */
+  private initializeSaveListener(): void {
+    this.saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
+      if (document.languageId === 'python') {
+        this.handleFileChange(document.uri.fsPath);
+      }
     });
   }
 
   /**
-   * Handles file changes by clearing the cache for the modified file and marking it as outdated.
+   * Handles file changes by clearing the cache for the modified file and marking it as outdated,
+   * but only if the file had previously been analyzed (i.e., is in the cache).
    * @param filePath - The path of the modified file.
    */
   private async handleFileChange(filePath: string): Promise<void> {
-    if (this.smellsCacheManager.hasCachedSmells(filePath)) {
-      await this.smellsCacheManager.clearCachedSmellsForFile(filePath);
-      this.smellsViewProvider.setStatus(filePath, 'outdated');
+    const hadCache = this.smellsCacheManager.getAllFilePaths().includes(filePath);
+    if (!hadCache) return; // Skip if no analysis was done before
 
-      vscode.window.showInformationMessage(
-        `File modified: ${filePath}\nAnalysis data for this file is now outdated. Please reanalyze.`,
-      );
-    }
+    await this.smellsCacheManager.clearCachedSmellsForFile(filePath);
+    this.smellsViewProvider.setStatus(filePath, 'outdated');
+
+    vscode.window.showInformationMessage(
+      `File modified: ${filePath}\nAnalysis data is now outdated.`,
+    );
+
     this.refreshViews();
   }
 
@@ -71,10 +77,11 @@ export class WorkspaceModifiedListener {
    * @param filePath - The path of the deleted file.
    */
   private async handleFileDeletion(filePath: string): Promise<void> {
+    const hadCache = this.smellsCacheManager.getAllFilePaths().includes(filePath);
     let removed = false;
 
-    if (this.smellsCacheManager.hasCachedSmells(filePath)) {
-      await this.smellsCacheManager.clearCachedSmellsForFile(filePath);
+    if (hadCache) {
+      await this.smellsCacheManager.clearCachedSmellsByPath(filePath);
       removed = true;
     }
 
@@ -99,11 +106,10 @@ export class WorkspaceModifiedListener {
   }
 
   /**
-   * Disposes of the file watcher and any associated resources.
+   * Disposes of the file watcher and save listener to clean up resources.
    */
   public dispose(): void {
-    if (this.fileWatcher) {
-      this.fileWatcher.dispose();
-    }
+    this.fileWatcher?.dispose();
+    this.saveListener?.dispose();
   }
 }

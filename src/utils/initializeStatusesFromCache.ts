@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs/promises';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 
@@ -16,13 +17,23 @@ export async function initializeStatusesFromCache(
   );
   if (!configuredPath) return;
 
-  const cache = smellsCacheManager.getFullSmellCache();
-  for (const filePath of Object.keys(cache)) {
+  const pathMap = smellsCacheManager.getAllFilePaths(); // returns string[]
+  for (const filePath of pathMap) {
+    // Ignore files outside the configured workspace or that don't exist anymore
     if (!filePath.startsWith(configuredPath)) {
-      // Remove cache entry outside of configured workspace
       await smellsCacheManager.clearCachedSmellsForFile(filePath);
-    } else {
-      const smells = cache[filePath];
+      continue;
+    }
+
+    try {
+      await fs.access(filePath); // throws if file doesn't exist
+    } catch {
+      await smellsCacheManager.clearCachedSmellsForFile(filePath);
+      continue;
+    }
+
+    const smells = smellsCacheManager.getCachedSmells(filePath);
+    if (smells !== undefined) {
       const status = smells.length > 0 ? 'passed' : 'no_issues';
       smellsViewProvider.setStatus(filePath, status);
     }

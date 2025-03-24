@@ -2,22 +2,13 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { SmellsViewProvider } from '../providers/SmellsViewProvider';
-import { MetricsViewProvider } from '../providers/MetricsViewProvider';
-
 /**
  * Prompts the user to configure a workspace by selecting either a Python file or folder.
  * Updates the workspace state accordingly and refreshes the tree view to reflect the changes.
  *
  * @param context - The extension context for managing workspace state.
- * @param smellsViewProvider - The provider for the smells view.
- * @param metricsViewProvider - The provider for the metrics view.
  */
-export async function configureWorkspace(
-  context: vscode.ExtensionContext,
-  smellsViewProvider: SmellsViewProvider,
-  metricsViewProvider: MetricsViewProvider,
-) {
+export async function configureWorkspace(context: vscode.ExtensionContext) {
   const choice = await vscode.window.showQuickPick(
     ['Configure a Python File', 'Configure a Python Folder'],
     { placeHolder: 'Choose whether to configure a Python file or folder.' },
@@ -26,9 +17,9 @@ export async function configureWorkspace(
   if (!choice) return;
 
   if (choice === 'Configure a Python File') {
-    await configurePythonFile(context, smellsViewProvider, metricsViewProvider);
+    await configurePythonFile(context);
   } else {
-    await configurePythonFolder(context, smellsViewProvider, metricsViewProvider);
+    await configurePythonFolder(context);
   }
 }
 
@@ -40,11 +31,7 @@ export async function configureWorkspace(
  * @param smellsViewProvider - The provider for the smells view.
  * @param metricsViewProvider - The provider for the metrics view.
  */
-async function configurePythonFile(
-  context: vscode.ExtensionContext,
-  smellsViewProvider: SmellsViewProvider,
-  metricsViewProvider: MetricsViewProvider,
-) {
+async function configurePythonFile(context: vscode.ExtensionContext) {
   // Get Python files from open editors
   const openEditorFiles = vscode.window.tabGroups.activeTabGroup.tabs
     .map((tab) => (tab.input as any)?.uri?.fsPath)
@@ -75,12 +62,7 @@ async function configurePythonFile(
   });
 
   if (selectedFile) {
-    await updateWorkspace(
-      context,
-      selectedFile,
-      smellsViewProvider,
-      metricsViewProvider,
-    );
+    await updateWorkspace(context, selectedFile);
     vscode.window.showInformationMessage(
       `Workspace configured for file: ${path.basename(selectedFile)}`,
     );
@@ -139,14 +121,8 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
  * Prompts the user to select a folder containing Python files from the workspace.
  *
  * @param context - The extension context for managing workspace state.
- * @param smellsViewProvider - The provider for the smells view.
- * @param metricsViewProvider - The provider for the metrics view.
  */
-async function configurePythonFolder(
-  context: vscode.ExtensionContext,
-  smellsViewProvider: SmellsViewProvider,
-  metricsViewProvider: MetricsViewProvider,
-) {
+async function configurePythonFolder(context: vscode.ExtensionContext) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
 
   if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -174,12 +150,7 @@ async function configurePythonFolder(
   });
 
   if (selectedFolder) {
-    await updateWorkspace(
-      context,
-      selectedFolder,
-      smellsViewProvider,
-      metricsViewProvider,
-    );
+    await updateWorkspace(context, selectedFolder);
     vscode.window.showInformationMessage(
       `Workspace configured for folder: ${path.basename(selectedFolder)}`,
     );
@@ -191,14 +162,10 @@ async function configurePythonFolder(
  *
  * @param context - The extension context for managing workspace state.
  * @param workspacePath - The path of the selected workspace (file or folder).
- * @param smellsViewProvider - The provider for the smells view.
- * @param metricsViewProvider - The provider for the metrics view.
  */
 export async function updateWorkspace(
   context: vscode.ExtensionContext,
   workspacePath: string,
-  smellsViewProvider: SmellsViewProvider,
-  metricsViewProvider: MetricsViewProvider,
 ) {
   // Update the workspace state with the selected path
   await context.workspaceState.update('workspaceConfiguredPath', workspacePath);
@@ -209,8 +176,4 @@ export async function updateWorkspace(
     'workspaceState.workspaceConfigured',
     true,
   );
-
-  // Refresh the views to reflect the changes
-  smellsViewProvider.refresh();
-  metricsViewProvider.refresh();
 }
