@@ -24,6 +24,11 @@ export class SmellsViewProvider
 
   setStatus(filePath: string, status: string): void {
     this.fileStatuses.set(filePath, status);
+
+    if (status === 'outdated') {
+      this.fileSmells.delete(filePath); // Remove associated smells
+    }
+
     this._onDidChangeTreeData.fire();
   }
 
