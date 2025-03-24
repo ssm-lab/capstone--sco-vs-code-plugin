@@ -16,34 +16,79 @@ export async function initializeStatusesFromCache(
   const configuredPath = context.workspaceState.get<string>(
     'workspaceConfiguredPath',
   );
-  if (!configuredPath) return;
 
-  const pathMap = smellsCacheManager.getAllFilePaths(); // Returns string[]
+  if (!configuredPath) {
+    ecoOutput.appendLine(
+      '[CacheInit] No configured workspace path found - skipping cache initialization',
+    );
+    return;
+  }
+
+  ecoOutput.appendLine(
+    `[CacheInit] Starting cache initialization for workspace: ${configuredPath}`,
+  );
+
+  const pathMap = smellsCacheManager.getAllFilePaths();
+  ecoOutput.appendLine(`[CacheInit] Found ${pathMap.length} files in cache`);
+  ecoOutput.appendLine(`[CacheInit] Found ${pathMap} files in cache`);
+  let validFiles = 0;
+  let removedFiles = 0;
+  let filesWithSmells = 0;
+  let cleanFiles = 0;
+
   for (const filePath of pathMap) {
-    // Ignore files outside the configured workspace or that don't exist anymore
-    ecoOutput.appendLine(`Checking file: ${filePath}`);
+    ecoOutput.appendLine(`[CacheInit] Processing cache entry: ${filePath}`);
+
+    // Ignore files outside the configured workspace
     if (!filePath.startsWith(configuredPath)) {
+      ecoOutput.appendLine(
+        `[CacheInit] File outside workspace - removing from cache: ${filePath}`,
+      );
       await smellsCacheManager.clearCachedSmellsForFile(filePath);
+      removedFiles++;
       continue;
     }
 
+    // Verify file still exists
     try {
-      await fs.access(filePath); // Throws if file doesn't exist
+      await fs.access(filePath);
+      ecoOutput.appendLine(`[CacheInit] File verified: ${filePath}`);
     } catch {
+      ecoOutput.appendLine(
+        `[CacheInit] File not found - removing from cache: ${filePath}`,
+      );
       await smellsCacheManager.clearCachedSmellsForFile(filePath);
+      removedFiles++;
       continue;
     }
 
     const smells = smellsCacheManager.getCachedSmells(filePath);
     if (smells !== undefined) {
+      validFiles++;
+
       if (smells.length > 0) {
-        // The file has one or more smells
+        ecoOutput.appendLine(
+          `[CacheInit] Found ${smells.length} smells for file: ${filePath}`,
+        );
         smellsViewProvider.setStatus(filePath, 'passed');
         smellsViewProvider.setSmells(filePath, smells);
+        filesWithSmells++;
       } else {
-        // The file was analyzed but has no smells
+        ecoOutput.appendLine(`[CacheInit] File has no smells: ${filePath}`);
         smellsViewProvider.setStatus(filePath, 'no_issues');
+        cleanFiles++;
       }
+    } else {
+      ecoOutput.appendLine(
+        `[CacheInit] No cache data found for file (should not happen): ${filePath}`,
+      );
     }
   }
+
+  // Summary statistics
+  ecoOutput.appendLine(
+    `[CacheInit] Cache initialization complete. ` +
+      `Results: ${validFiles} valid files (${filesWithSmells} with smells, ${cleanFiles} clean), ` +
+      `${removedFiles} files removed from cache`,
+  );
 }

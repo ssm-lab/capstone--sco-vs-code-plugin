@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import { ecoOutput } from '../extension';
 
 /**
  * Manages line selection and decoration in a VS Code editor, specifically for
@@ -20,9 +19,6 @@ export class LineSelectionManager {
 
       const activeEditor = vscode.window.activeTextEditor;
       if (activeEditor && activeEditor.document.uri.fsPath === targetFilePath) {
-        ecoOutput.appendLine(
-          `[LineSelect] Cache cleared for active file — removing comment`,
-        );
         this.removeLastComment();
       }
     });
@@ -33,7 +29,6 @@ export class LineSelectionManager {
    */
   public removeLastComment(): void {
     if (this.decoration) {
-      ecoOutput.appendLine('[LineSelect] Removing decoration');
       this.decoration.dispose();
       this.decoration = null;
     }
@@ -62,7 +57,6 @@ export class LineSelectionManager {
 
     this.removeLastComment();
     this.lastDecoratedLine = selectedLine;
-    ecoOutput.appendLine(`[LineSelect] Decorating line ${selectedLine + 1}`);
 
     const smellsAtLine = smells.filter((smell) =>
       smell.occurences.some((occ) => occ.line === selectedLine + 1),

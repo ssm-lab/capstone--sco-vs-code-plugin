@@ -6,14 +6,22 @@ import { ecoOutput } from '../extension';
 
 /**
  * Manages caching of detected smells to avoid redundant backend calls.
- * This class handles storing, retrieving, and clearing cached smells.
+ * Uses workspace storage to persist cache between sessions.
+ * Implements file content hashing for change detection and maintains
+ * a bidirectional mapping between file paths and their content hashes.
  */
 export class SmellsCacheManager {
+  // Event emitter for cache update notifications
   private cacheUpdatedEmitter = new vscode.EventEmitter<string>();
   public readonly onSmellsUpdated = this.cacheUpdatedEmitter.event;
 
   constructor(private context: vscode.ExtensionContext) {}
 
+  /**
+   * Generates a stable identifier for a smell based on its properties
+   * @param smell - The smell object to generate ID for
+   * @returns Short SHA-256 hash (first 5 chars) of the serialized smell
+   */
   private generateSmellId(smell: Smell): string {
     return createHash('sha256')
       .update(JSON.stringify(smell))
@@ -21,16 +29,27 @@ export class SmellsCacheManager {
       .substring(0, 5);
   }
 
+  /**
+   * Generates content hash for a file to detect changes
+   * @param filePath - Absolute path to the file
+   * @returns SHA-256 hash of file content
+   */
   private generateFileHash(filePath: string): string {
     const content = fs.readFileSync(filePath, 'utf-8');
     return createHash('sha256').update(content).digest('hex');
   }
 
+  /**
+   * Stores smells in cache for specified file
+   * @param filePath - File path to associate with smells
+   * @param smells - Array of smell objects to cache
+   */
   public async setCachedSmells(filePath: string, smells: Smell[]): Promise<void> {
     const cache = this.getFullSmellCache();
     const pathMap = this.getHashToPathMap();
     const fileHash = this.generateFileHash(filePath);
 
+    // Augment smells with stable identifiers
     const smellsWithIds = smells.map((smell) => ({
       ...smell,
       id: this.generateSmellId(smell),
@@ -45,27 +64,32 @@ export class SmellsCacheManager {
     this.cacheUpdatedEmitter.fire(filePath);
   }
 
+  /**
+   * Retrieves cached smells for a file
+   * @param filePath - File path to look up in cache
+   * @returns Array of smells or undefined if not found
+   */
   public getCachedSmells(filePath: string): Smell[] | undefined {
     const fileHash = this.generateFileHash(filePath);
     const cache = this.getFullSmellCache();
     return cache[fileHash];
   }
 
+  /**
+   * Checks if smells exist in cache for a file
+   * @param filePath - File path to check
+   * @returns True if file has cached smells
+   */
   public hasCachedSmells(filePath: string): boolean {
     const fileHash = this.generateFileHash(filePath);
     const cache = this.getFullSmellCache();
     return cache[fileHash] !== undefined;
   }
 
-  public getSmellById(id: string): Smell | undefined {
-    const cache = this.getFullSmellCache();
-    for (const hash in cache) {
-      const smell = cache[hash].find((s) => s.id === id);
-      if (smell) return smell;
-    }
-    return undefined;
-  }
-
+  /**
+   * Clears cache for a file by its current content hash
+   * @param filePath - File path to clear from cache
+   */
   public async clearCachedSmellsForFile(filePath: string): Promise<void> {
     const fileHash = this.generateFileHash(filePath);
     const cache = this.getFullSmellCache();
@@ -80,6 +104,10 @@ export class SmellsCacheManager {
     this.cacheUpdatedEmitter.fire(filePath);
   }
 
+  /**
+   * Clears cache for a file by path (regardless of current content hash)
+   * @param filePath - File path to clear from cache
+   */
   public async clearCachedSmellsByPath(filePath: string): Promise<void> {
     const pathMap = this.getHashToPathMap();
     const hash = Object.keys(pathMap).find((h) => pathMap[h] === filePath);
@@ -95,6 +123,10 @@ export class SmellsCacheManager {
     this.cacheUpdatedEmitter.fire(filePath);
   }
 
+  /**
+   * Retrieves complete smell cache
+   * @returns Object mapping file hashes to smell arrays
+   */
   public getFullSmellCache(): Record<string, Smell[]> {
     return this.context.workspaceState.get<Record<string, Smell[]>>(
       envConfig.SMELL_CACHE_KEY!,
@@ -102,6 +134,10 @@ export class SmellsCacheManager {
     );
   }
 
+  /**
+   * Retrieves hash-to-path mapping
+   * @returns Object mapping file hashes to original paths
+   */
   public getHashToPathMap(): Record<string, string> {
     return this.context.workspaceState.get<Record<string, string>>(
       envConfig.HASH_PATH_MAP_KEY!,
@@ -109,6 +145,9 @@ export class SmellsCacheManager {
     );
   }
 
+  /**
+   * Clears entire smell cache
+   */
   public async clearAllCachedSmells(): Promise<void> {
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, {});
     await this.context.workspaceState.update(envConfig.HASH_PATH_MAP_KEY!, {});
@@ -116,31 +155,10 @@ export class SmellsCacheManager {
     this.cacheUpdatedEmitter.fire('all');
   }
 
-  public async reassociateCacheFromHash(
-    hash: string,
-    newPath: string,
-  ): Promise<boolean> {
-    const cache = this.getFullSmellCache();
-    const pathMap = this.getHashToPathMap();
-
-    if (cache[hash]) {
-      pathMap[hash] = newPath;
-      await this.context.workspaceState.update(
-        envConfig.HASH_PATH_MAP_KEY!,
-        pathMap,
-      );
-      this.cacheUpdatedEmitter.fire(newPath);
-      return true;
-    }
-
-    return false;
-  }
-
-  public getPreviousFilePathForHash(hash: string): string | undefined {
-    const pathMap = this.getHashToPathMap();
-    return pathMap[hash];
-  }
-
+  /**
+   * Retrieves all file paths currently in cache
+   * @returns Array of cached file paths
+   */
   public getAllFilePaths(): string[] {
     const map = this.context.workspaceState.get<Record<string, string>>(
       envConfig.HASH_PATH_MAP_KEY!,
@@ -150,16 +168,16 @@ export class SmellsCacheManager {
   }
 
   /**
-   * Checks if a file exists in the cache (by path) regardless of its current content hash
-   * @param filePath - The file path to check
-   * @returns true if the file has any cache entries (current or historical), false otherwise
+   * Checks if a file has any cache entries (current or historical)
+   * @param filePath - File path to check
+   * @returns True if file exists in cache metadata
    */
   public hasFileInCache(filePath: string): boolean {
     const pathMap = this.getHashToPathMap();
-
     const fileExistsInCache = Object.values(pathMap).includes(filePath);
+
     ecoOutput.appendLine(
-      `[SmellsCache] Path existence check for ${filePath}: ` +
+      `[SmellCacheManager] Path existence check for ${filePath}: ` +
         `${fileExistsInCache ? 'EXISTS' : 'NOT FOUND'} in cache`,
     );
 
