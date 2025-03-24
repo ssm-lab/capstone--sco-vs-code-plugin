@@ -3,70 +3,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 /**
- * Prompts the user to configure a workspace by selecting either a Python file or folder.
+ * Prompts the user to configure a workspace by selecting a folder containing Python files.
  * Updates the workspace state accordingly and refreshes the tree view to reflect the changes.
  *
  * @param context - The extension context for managing workspace state.
  */
 export async function configureWorkspace(context: vscode.ExtensionContext) {
-  const choice = await vscode.window.showQuickPick(
-    ['Configure a Python File', 'Configure a Python Folder'],
-    { placeHolder: 'Choose whether to configure a Python file or folder.' },
-  );
-
-  if (!choice) return;
-
-  if (choice === 'Configure a Python File') {
-    await configurePythonFile(context);
-  } else {
-    await configurePythonFolder(context);
-  }
-}
-
-/**
- * Configures the workspace using a selected Python file.
- * Prompts the user to select a Python file from open editors or the workspace.
- *
- * @param context - The extension context for managing workspace state.
- * @param smellsViewProvider - The provider for the smells view.
- * @param metricsViewProvider - The provider for the metrics view.
- */
-async function configurePythonFile(context: vscode.ExtensionContext) {
-  // Get Python files from open editors
-  const openEditorFiles = vscode.window.tabGroups.activeTabGroup.tabs
-    .map((tab) => (tab.input as any)?.uri?.fsPath)
-    .filter((filePath) => filePath && filePath.endsWith('.py'));
-
-  // Get Python files from the workspace
-  const workspaceFiles = await vscode.workspace.findFiles(
-    '**/*.py',
-    '**/node_modules/**',
-  );
-  const workspaceFilePaths = workspaceFiles.map((uri) => uri.fsPath);
-
-  // Combine and deduplicate file paths
-  const allPythonFiles = Array.from(
-    new Set([...openEditorFiles, ...workspaceFilePaths]),
-  );
-
-  if (allPythonFiles.length === 0) {
-    vscode.window.showErrorMessage(
-      'No Python files found in open editors or workspace.',
-    );
-    return;
-  }
-
-  // Prompt the user to select a Python file
-  const selectedFile = await vscode.window.showQuickPick(allPythonFiles, {
-    placeHolder: 'Select a Python file to use as your workspace.',
-  });
-
-  if (selectedFile) {
-    await updateWorkspace(context, selectedFile);
-    vscode.window.showInformationMessage(
-      `Workspace configured for file: ${path.basename(selectedFile)}`,
-    );
-  }
+  // Directly configure a Python folder (removed the file option)
+  await configurePythonFolder(context);
 }
 
 /**
@@ -139,20 +83,33 @@ async function configurePythonFolder(context: vscode.ExtensionContext) {
 
   if (validPythonFolders.length === 0) {
     vscode.window.showErrorMessage(
-      'No valid Python folders found in your workspace.',
+      'No valid Python folders found in your workspace. A valid folder must contain Python files (*.py) or an __init__.py file.',
     );
     return;
   }
 
-  // Prompt the user to select a Python folder
-  const selectedFolder = await vscode.window.showQuickPick(validPythonFolders, {
-    placeHolder: 'Select a Python folder to use as your workspace.',
-  });
+  // Show folder selection dialog
+  const selectedFolder = await vscode.window.showQuickPick(
+    validPythonFolders.map((folder) => ({
+      label: path.basename(folder),
+      description: folder,
+      detail: `Contains Python files: ${fs
+        .readdirSync(folder)
+        .filter((file) => file.endsWith('.py') || file === '__init__.py')
+        .join(', ')}`,
+      folderPath: folder,
+    })),
+    {
+      placeHolder: 'Select a Python folder to use as your workspace',
+      matchOnDescription: true,
+      matchOnDetail: true,
+    },
+  );
 
   if (selectedFolder) {
-    await updateWorkspace(context, selectedFolder);
+    await updateWorkspace(context, selectedFolder.folderPath);
     vscode.window.showInformationMessage(
-      `Workspace configured for folder: ${path.basename(selectedFolder)}`,
+      `Workspace configured for folder: ${path.basename(selectedFolder.folderPath)}`,
     );
   }
 }

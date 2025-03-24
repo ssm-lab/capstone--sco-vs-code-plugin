@@ -60,7 +60,7 @@ export class RefactoringDetailsViewProvider
         'Target File', // Description
         targetFile.original,
         targetFile.refactored,
-        true, // This is a parent item (collapsible)
+        affectedFiles.length > 0, // This is a parent item (collapsible)
       ),
     );
 

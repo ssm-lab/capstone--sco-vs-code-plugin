@@ -1,7 +1,6 @@
 import { envConfig } from '../utils/envConfig';
 import { serverStatus } from '../emitters/serverStatus';
 import { ServerStatusType } from '../emitters/serverStatus';
-import * as vscode from 'vscode';
 import { ecoOutput } from '../extension';
 
 const BASE_URL = `http://${envConfig.SERVER_URL}`; // API URL for Python backend
@@ -71,37 +70,25 @@ export async function fetchSmells(
  * Sends a request to the backend to refactor a specific smell.
  *
  * @param smell - The smell to refactor.
+ * @param workspacePath - The user-configured workspace root directory.
  * @returns A promise resolving to the refactored data or throwing an error if unsuccessful.
  */
 export async function backendRefactorSmell(
   smell: Smell,
+  workspacePath: string,
 ): Promise<RefactoredData> {
   const url = `${BASE_URL}/refactor`;
 
-  // Extract the file path from the smell object
-  const filePath = smell.path;
-
-  // Find the workspace folder containing the file
-  const workspaceFolder = vscode.workspace.workspaceFolders?.find((folder) =>
-    filePath.includes(folder.uri.fsPath),
-  );
-
-  if (!workspaceFolder) {
-    console.error('Eco: Error - Unable to determine workspace folder for', filePath);
-    throw new Error(
-      `Eco: Unable to find a matching workspace folder for file: ${filePath}`,
-    );
+  if (!workspacePath) {
+    throw new Error('No workspace path provided for refactoring.');
   }
 
-  const workspaceFolderPath = workspaceFolder.uri.fsPath;
-
   ecoOutput.appendLine(
-    `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspaceFolderPath}"`,
+    `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspacePath}"`,
   );
 
-  // Prepare the payload for the backend
   const payload = {
-    source_dir: workspaceFolderPath,
+    source_dir: workspacePath,
     smell,
   };
 
@@ -122,7 +109,7 @@ export async function backendRefactorSmell(
     const refactorResult = (await response.json()) as RefactoredData;
     return refactorResult;
   } catch (error: any) {
-    console.error('Eco: Unexpected error in refactorSmell:', error);
+    console.error('Eco: Unexpected error in backendRefactorSmell:', error);
     throw new Error(`Refactoring failed: ${error.message}`);
   }
 }

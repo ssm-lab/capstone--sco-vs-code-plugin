@@ -139,7 +139,12 @@ export function activate(context: vscode.ExtensionContext): void {
           vscode.window.showErrorMessage('No smell found for this item.');
           return;
         }
-        refactorSmell(smellsViewProvider, refactoringDetailsViewProvider, smell);
+        refactorSmell(
+          smellsViewProvider,
+          refactoringDetailsViewProvider,
+          smell,
+          context,
+        );
       },
     ),
 

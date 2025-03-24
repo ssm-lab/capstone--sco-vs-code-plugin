@@ -1,66 +1,92 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { backendRefactorSmell } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import { ecoOutput } from '../extension';
 import { openDiffEditor } from '../utils/openDiffEditor';
+import { serverStatus, ServerStatusType } from '../emitters/serverStatus';
 
-function normalizePath(filePath: string): string {
-  const normalizedPath = filePath.toLowerCase(); // Normalize case for consistent Map keying
-  return normalizedPath;
+/**
+ * Recursively collects all `.py` files in the given directory.
+ */
+function getAllPythonFiles(dir: string): string[] {
+  const result: string[] = [];
+
+  const walk = (current: string) => {
+    const entries = fs.readdirSync(current);
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        walk(fullPath);
+      } else if (stat.isFile() && fullPath.endsWith('.py')) {
+        result.push(fullPath);
+      }
+    }
+  };
+
+  walk(dir);
+  return result;
 }
 
 /**
  * Handles the refactoring of a specific smell.
- *
- * @param treeDataProvider - The tree data provider for updating the UI.
- * @param refactoringDetailsViewProvider - The refactoring details view provider.
- * @param smell - The smell to refactor.
  */
 export async function refactorSmell(
-  smellsDataProvider: SmellsViewProvider,
+  smellsViewProvider: SmellsViewProvider,
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
   smell: Smell,
+  context: vscode.ExtensionContext,
 ): Promise<void> {
-  if (!smell) {
-    vscode.window.showErrorMessage('Error: Invalid smell.');
+  vscode.window.showInformationMessage(`Refactoring code smell: ${smell.symbol}`);
+
+  const workspacePath = context.workspaceState.get<string>(
+    'workspaceConfiguredPath',
+  );
+  if (!workspacePath) {
+    vscode.window.showErrorMessage('No workspace configured.');
     return;
   }
 
-  vscode.window.showInformationMessage(`Refactoring code smell: ${smell.symbol}`);
+  // Step 1: Mark every Python file in the workspace as "refactoring"
+  const allPythonFiles = getAllPythonFiles(workspacePath);
+  for (const filePath of allPythonFiles) {
+    smellsViewProvider.setStatus(filePath, 'refactoring');
+  }
 
-  // Update UI to indicate the file is queued for analysis
-  smellsDataProvider.setStatus(smell.path, 'queued');
+  // Step 2: Check if the server is down (can overwrite to "server_down" if needed)
+  if (serverStatus.getStatus() === ServerStatusType.DOWN) {
+    vscode.window.showWarningMessage(
+      'Action blocked: Server is down and no cached smells exist for this file version.',
+    );
+    smellsViewProvider.setStatus(smell.path, 'server_down');
+    return;
+  }
 
   try {
-    // Set a context key to track that refactoring is in progress
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
 
-    // Call the backend to refactor the smell
-    const refactoredData = await backendRefactorSmell(smell);
+    const refactoredData = await backendRefactorSmell(smell, workspacePath);
 
-    // Log the response from the backend
     ecoOutput.appendLine(`Refactoring response: ${JSON.stringify(refactoredData)}`);
 
-    // Update the refactoring details view with the target file, affected files, and energy saved
     refactoringDetailsViewProvider.updateRefactoringDetails(
       smell.symbol,
       refactoredData.targetFile,
       refactoredData.affectedFiles,
-      refactoredData.energySaved, // Pass the energy saved value
+      refactoredData.energySaved,
     );
 
-    // Show a diff view for the target file
     await openDiffEditor(
       refactoredData.targetFile.original,
       refactoredData.targetFile.refactored,
     );
 
-    // Focus on the Refactoring Details view
     await vscode.commands.executeCommand('ecooptimizer.refactorView.focus');
 
-    // Notify the user
     vscode.window.showInformationMessage(
       `Refactoring successful! Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
     );
@@ -68,7 +94,6 @@ export async function refactorSmell(
     console.error('Refactoring failed:', error.message);
     vscode.window.showErrorMessage(`Refactoring failed: ${error.message}`);
 
-    // Reset the refactoring details view on failure
     refactoringDetailsViewProvider.resetRefactoringDetails();
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
   }
