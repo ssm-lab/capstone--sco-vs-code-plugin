@@ -34,6 +34,8 @@ import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener
 import { LineSelectionManager } from './ui/LineSelection';
 
 export function activate(context: vscode.ExtensionContext): void {
+  ecoOutput.appendLine('Initializing Eco-Optimizer extension...');
+
   // === Status Bar Buttons for Refactoring ===
   const acceptRefactoringItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
@@ -138,7 +140,7 @@ export function activate(context: vscode.ExtensionContext): void {
         smellsViewProvider.refresh();
         metricsViewProvider.refresh();
         vscode.window.showInformationMessage(
-          'Workspace configuration has been reset. All analysis data has been cleared.',
+          'Workspace configuration and analysis data have been reset.',
         );
       }
     }),
@@ -152,7 +154,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileItem) => {
       const filePath = fileItem?.resourceUri?.fsPath;
       if (!filePath) {
-        vscode.window.showWarningMessage('No file selected or file path not found.');
+        vscode.window.showWarningMessage('Please select a file to analyze.');
         return;
       }
       detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
@@ -163,7 +165,7 @@ export function activate(context: vscode.ExtensionContext): void {
       (folderItem) => {
         const folderPath = folderItem?.resourceUri?.fsPath;
         if (!folderPath) {
-          vscode.window.showWarningMessage('No folder selected.');
+          vscode.window.showWarningMessage('Please select a folder to analyze.');
           return;
         }
         detectSmellsFolder(folderPath, smellsViewProvider, smellsCacheManager);
@@ -175,7 +177,7 @@ export function activate(context: vscode.ExtensionContext): void {
       (item: SmellTreeItem) => {
         const smell = item?.smell;
         if (!smell) {
-          vscode.window.showErrorMessage('No smell found for this item.');
+          vscode.window.showErrorMessage('No code smell detected for this item.');
           return;
         }
         refactorSmell(
@@ -219,20 +221,20 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('ecooptimizer.clearMetricsData', () => {
       vscode.window
         .showWarningMessage(
-          'Are you sure you want to clear the metrics data? This action is irreversible, and the data will be permanently lost unless exported.',
+          'Clear all metrics data? This cannot be undone unless you have exported it.',
           { modal: true },
-          'Yes',
-          'No',
+          'Clear',
+          'Cancel',
         )
         .then((selection) => {
-          if (selection === 'Yes') {
+          if (selection === 'Clear') {
             context.workspaceState.update(
               envConfig.WORKSPACE_METRICS_DATA!,
               undefined,
             );
-            vscode.window.showInformationMessage('Metrics data has been cleared.');
+            metricsViewProvider.refresh();
+            vscode.window.showInformationMessage('Metrics data cleared.');
           }
-          metricsViewProvider.refresh();
         });
     }),
   );
@@ -257,8 +259,10 @@ export function activate(context: vscode.ExtensionContext): void {
       lineSelectManager.commentLine(event.textEditor);
     }),
   );
+
+  ecoOutput.appendLine('Eco-Optimizer extension activated successfully');
 }
 
 export function deactivate(): void {
-  ecoOutput.appendLine('Deactivating Eco-Optimizer extension...');
+  ecoOutput.appendLine('Extension deactivated');
 }
