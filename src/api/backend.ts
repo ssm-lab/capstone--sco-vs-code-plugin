@@ -1,38 +1,42 @@
+import path from 'path';
+
 import { envConfig } from '../utils/envConfig';
 import { serverStatus } from '../emitters/serverStatus';
 import { ServerStatusType } from '../emitters/serverStatus';
 import { ecoOutput } from '../extension';
 
-const BASE_URL = `http://${envConfig.SERVER_URL}`; // API URL for Python backend
+const BASE_URL = `http://${envConfig.SERVER_URL}`;
 
 /**
- * Checks the status of the backend server.
+ * Checks the health status of the backend server and updates the extension's status emitter.
  */
 export async function checkServerStatus(): Promise<void> {
   try {
+    ecoOutput.appendLine('[backend.ts] Checking backend server health status...');
     const response = await fetch(`${BASE_URL}/health`);
+    
     if (response.ok) {
       serverStatus.setStatus(ServerStatusType.UP);
+      ecoOutput.appendLine('[backend.ts] Backend server is healthy');
     } else {
       serverStatus.setStatus(ServerStatusType.DOWN);
+      ecoOutput.appendLine(`[backend.ts] Backend server unhealthy status: ${response.status}`);
     }
-  } catch {
+  } catch (error) {
     serverStatus.setStatus(ServerStatusType.DOWN);
+    ecoOutput.appendLine(`[backend.ts] Server connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 /**
- * Sends a request to the backend to detect code smells in the specified file.
- *
- * @param filePath - The absolute path to the file being analyzed.
- * @param enabledSmells - A dictionary containing enabled smells and their configured options.
- * @returns A promise resolving to the backend response or throwing an error if unsuccessful.
+ * Detects code smells in a specified file by communicating with the backend service.
  */
 export async function fetchSmells(
   filePath: string,
   enabledSmells: Record<string, Record<string, number | string>>,
 ): Promise<{ smells: Smell[]; status: number }> {
   const url = `${BASE_URL}/smells`;
+  ecoOutput.appendLine(`[backend.ts] Starting smell detection for: ${path.basename(filePath)}`);
 
   try {
     const response = await fetch(url, {
@@ -47,31 +51,23 @@ export async function fetchSmells(
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Backend request failed with status ${response.status}: ${response.statusText}`,
-      );
+      const errorMsg = `Backend request failed (${response.status})`;
+      ecoOutput.appendLine(`[backend.ts] ${errorMsg}`);
+      throw new Error(errorMsg);
     }
 
     const smellsList = await response.json();
-
-    if (!Array.isArray(smellsList)) {
-      throw new Error('Unexpected response format from backend.');
-    }
-
+    ecoOutput.appendLine(`[backend.ts] Detected ${smellsList.length} smells in ${path.basename(filePath)}`);
     return { smells: smellsList, status: response.status };
+
   } catch (error: any) {
-    throw new Error(
-      `Failed to connect to the backend: ${error.message}. Please check your network and try again.`,
-    );
+    ecoOutput.appendLine(`[backend.ts] Smell detection failed: ${error.message}`);
+    throw new Error(`Detection failed: ${error.message}`);
   }
 }
 
 /**
- * Sends a request to the backend to refactor a specific smell.
- *
- * @param smell - The smell to refactor.
- * @param workspacePath - The user-configured workspace root directory.
- * @returns A promise resolving to the refactored data or throwing an error if unsuccessful.
+ * Initiates refactoring of a specific code smell through the backend service.
  */
 export async function backendRefactorSmell(
   smell: Smell,
@@ -80,17 +76,11 @@ export async function backendRefactorSmell(
   const url = `${BASE_URL}/refactor`;
 
   if (!workspacePath) {
-    throw new Error('No workspace path provided for refactoring.');
+    ecoOutput.appendLine('[backend.ts] Refactoring aborted: No workspace path');
+    throw new Error('No workspace path provided');
   }
 
-  ecoOutput.appendLine(
-    `Eco: Initiating refactoring for smell "${smell.symbol}" in "${workspacePath}"`,
-  );
-
-  const payload = {
-    source_dir: workspacePath,
-    smell,
-  };
+  ecoOutput.appendLine(`[backend.ts] Starting refactoring for smell: ${smell.symbol}`);
 
   try {
     const response = await fetch(url, {
@@ -98,18 +88,24 @@ export async function backendRefactorSmell(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        source_dir: workspacePath,
+        smell,
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
+      ecoOutput.appendLine(`[backend.ts] Refactoring failed: ${errorData.detail || 'Unknown error'}`);
       throw new Error(errorData.detail || 'Refactoring failed');
     }
 
-    const refactorResult = (await response.json()) as RefactoredData;
-    return refactorResult;
+    const result = await response.json();
+    ecoOutput.appendLine(`[backend.ts] Refactoring successful for ${smell.symbol}`);
+    return result;
+
   } catch (error: any) {
-    console.error('Eco: Unexpected error in backendRefactorSmell:', error);
+    ecoOutput.appendLine(`[backend.ts] Refactoring error: ${error.message}`);
     throw new Error(`Refactoring failed: ${error.message}`);
   }
 }

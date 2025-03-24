@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // === Start periodic backend status checks ===
   checkServerStatus();
-  setInterval(checkServerStatus, 10000);
+  setInterval(checkServerStatus, 300000); // 5 minutes
 
   // === Initialize Refactor Action Buttons ===
   initializeRefactorActionButtons(context);
