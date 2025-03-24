@@ -41,6 +41,7 @@ import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener
 import { LineSelectionManager } from './ui/LineSelection';
 import { registerDiffEditor } from './utils/trackedDiffEditors';
 import { initializeRefactorActionButtons } from './utils/refactorActionButtons';
+import { HoverManager } from './ui/hoverManager';
 
 export function activate(context: vscode.ExtensionContext): void {
   ecoOutput.appendLine('Initializing Eco-Optimizer extension...');
@@ -322,6 +323,11 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  // == Hover Manager ===
+  const hoverManager = new HoverManager(smellsCacheManager);
+  hoverManager.register(context);
+
+  // === Smell Linting ===
   function updateSmellLintingContext() {
     vscode.commands.executeCommand(
       'setContext',
