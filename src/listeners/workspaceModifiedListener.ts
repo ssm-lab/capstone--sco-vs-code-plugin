@@ -4,7 +4,8 @@ import path from 'path';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { MetricsViewProvider } from '../providers/MetricsViewProvider';
-import { ecoOutput } from '../extension';
+import { ecoOutput, isSmellLintingEnabled } from '../extension';
+import { detectSmellsFile } from '../commands/detectSmells';
 
 /**
  * Monitors workspace modifications and maintains analysis state consistency by:
@@ -57,13 +58,6 @@ export class WorkspaceModifiedListener {
         this.refreshViews();
       });
 
-      this.fileWatcher.onDidChange((uri) => {
-        ecoOutput.appendLine(
-          `[WorkspaceListener] Detected changes in ${uri.fsPath}`,
-        );
-        this.handleFileChange(uri.fsPath);
-      });
-
       this.fileWatcher.onDidDelete((uri) => {
         ecoOutput.appendLine(
           `[WorkspaceListener] Detected deletion of ${uri.fsPath}`,
@@ -91,6 +85,17 @@ export class WorkspaceModifiedListener {
           `[WorkspaceListener] Detected save in ${document.uri.fsPath}`,
         );
         this.handleFileChange(document.uri.fsPath);
+
+        if (isSmellLintingEnabled()) {
+          ecoOutput.appendLine(
+            `[WorkspaceListener] Smell linting is ON — auto-detecting smells for ${document.uri.fsPath}`,
+          );
+          detectSmellsFile(
+            document.uri.fsPath,
+            this.smellsViewProvider,
+            this.smellsCacheManager,
+          );
+        }
       }
     });
   }
@@ -102,7 +107,14 @@ export class WorkspaceModifiedListener {
    * @param filePath - Absolute path to modified file
    */
   private async handleFileChange(filePath: string): Promise<void> {
-    const hadCache = this.smellsCacheManager.hasCachedSmells(filePath);
+    // Log current cache state for debugging
+    const cachedFiles = this.smellsCacheManager.getAllFilePaths();
+    ecoOutput.appendLine(
+      `[WorkspaceListener] Current cached files (${cachedFiles.length}):\n` +
+        cachedFiles.map((f) => `  - ${f}`).join('\n'),
+    );
+
+    const hadCache = this.smellsCacheManager.hasFileInCache(filePath);
     if (!hadCache) {
       ecoOutput.appendLine(
         `[WorkspaceListener] No cache to invalidate for ${filePath}`,

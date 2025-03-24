@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { createHash } from 'crypto';
 import { envConfig } from '../utils/envConfig';
+import { ecoOutput } from '../extension';
 
 /**
  * Manages caching of detected smells to avoid redundant backend calls.
@@ -146,5 +147,22 @@ export class SmellsCacheManager {
       {},
     );
     return Object.values(map);
+  }
+
+  /**
+   * Checks if a file exists in the cache (by path) regardless of its current content hash
+   * @param filePath - The file path to check
+   * @returns true if the file has any cache entries (current or historical), false otherwise
+   */
+  public hasFileInCache(filePath: string): boolean {
+    const pathMap = this.getHashToPathMap();
+
+    const fileExistsInCache = Object.values(pathMap).includes(filePath);
+    ecoOutput.appendLine(
+      `[SmellsCache] Path existence check for ${filePath}: ` +
+        `${fileExistsInCache ? 'EXISTS' : 'NOT FOUND'} in cache`,
+    );
+
+    return fileExistsInCache;
   }
 }

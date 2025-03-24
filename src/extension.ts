@@ -4,6 +4,13 @@ import path from 'path';
 // === Output Channel ===
 export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer');
 
+// === Smell Linting ===
+let smellLintingEnabled = false;
+
+export function isSmellLintingEnabled(): boolean {
+  return smellLintingEnabled;
+}
+
 // === Core Utilities ===
 import { getNameByMessageId, loadSmells } from './utils/smellsData';
 import { initializeStatusesFromCache } from './utils/initializeStatusesFromCache';
@@ -313,6 +320,34 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.onDidChangeTextEditorSelection((event) => {
       lineSelectManager.commentLine(event.textEditor);
     }),
+  );
+
+  function updateSmellLintingContext() {
+    vscode.commands.executeCommand(
+      'setContext',
+      'ecooptimizer.smellLintingEnabled',
+      smellLintingEnabled,
+    );
+  }
+
+  const toggleSmellLinting = () => {
+    smellLintingEnabled = !smellLintingEnabled;
+    updateSmellLintingContext();
+    const msg = smellLintingEnabled
+      ? 'Smell linting enabled'
+      : 'Smell linting disabled';
+    vscode.window.showInformationMessage(msg);
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer.toggleSmellLintingOn',
+      toggleSmellLinting,
+    ),
+    vscode.commands.registerCommand(
+      'ecooptimizer.toggleSmellLintingOff',
+      toggleSmellLinting,
+    ),
   );
 
   ecoOutput.appendLine('Eco-Optimizer extension activated successfully');

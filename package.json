@@ -6,7 +6,7 @@
     "Tanveer Brar",
     "Ayushi Amin",
     "Mya Hussain",
-    "Nivetah Kuruparan"
+    "Nivetha Kuruparan"
   ],
   "description": "VS Code Plugin for EcoOptimizer Refactoring Tool",
   "version": "0.0.1",
@@ -255,6 +255,24 @@
         "title": "Refresh Metrics Data",
         "icon": "$(sync)",
         "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.toggleSmellLintingOn",
+        "title": "Toggle Smell Linting",
+        "category": "Eco",
+        "icon": {
+          "light": "assets/green_leaf.png",
+          "dark": "assets/green_leaf.png"
+        }
+      },
+      {
+        "command": "ecooptimizer.toggleSmellLintingOff",
+        "title": "Toggle Smell Linting",
+        "category": "Eco",
+        "icon": {
+          "light": "assets/white_leaf.png",
+          "dark": "assets/black_leaf.png"
+        }
       }
     ],
     "menus": {
@@ -320,6 +338,18 @@
           "command": "ecooptimizer.refactorSmell",
           "when": "view == ecooptimizer.smellsView && viewItem == smell && !refactoringInProgress",
           "group": "inline"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "ecooptimizer.toggleSmellLintingOn",
+          "when": "workspaceState.workspaceConfigured && editorLangId == python && ecooptimizer.smellLintingEnabled",
+          "group": "navigation"
+        },
+        {
+          "command": "ecooptimizer.toggleSmellLintingOff",
+          "when": "workspaceState.workspaceConfigured && editorLangId == python && !ecooptimizer.smellLintingEnabled",
+          "group": "navigation"
         }
       ]
     },
