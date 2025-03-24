@@ -2,14 +2,20 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getDescriptionByMessageId, getNameByMessageId } from '../utils/smellsData';
 
+/**
+ * Provides a tree view that displays detailed information about ongoing refactoring operations.
+ * Shows the target smell, affected files, and estimated energy savings.
+ */
 export class RefactoringDetailsViewProvider
   implements vscode.TreeDataProvider<RefactoringDetailItem>
 {
+  // Event emitter for tree data changes
   private _onDidChangeTreeData = new vscode.EventEmitter<
     RefactoringDetailItem | undefined
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+  // State properties
   private refactoringDetails: RefactoringDetailItem[] = [];
   public targetFile: { original: string; refactored: string } | undefined;
   public affectedFiles: { original: string; refactored: string }[] = [];
@@ -21,11 +27,11 @@ export class RefactoringDetailsViewProvider
   }
 
   /**
-   * Updates the refactoring details with the given target file, affected files, and energy saved.
-   * @param targetSmell - The smell being refactored.
-   * @param targetFile - The target file (original and refactored paths).
-   * @param affectedFiles - The list of affected files (original and refactored paths).
-   * @param energySaved - The amount of energy saved in kg CO2.
+   * Updates the view with new refactoring details
+   * @param targetSmell - The code smell being refactored
+   * @param targetFile - Paths to original and refactored target files
+   * @param affectedFiles - Additional files impacted by the refactoring
+   * @param energySaved - Estimated energy savings in kg CO2
    */
   updateRefactoringDetails(
     targetSmell: Smell,
@@ -37,57 +43,57 @@ export class RefactoringDetailsViewProvider
     this.targetFile = targetFile;
     this.affectedFiles = affectedFiles;
     this.energySaved = energySaved;
-
-    // Clear the existing refactoring details
     this.refactoringDetails = [];
 
-    // Add the smell being refactored as the first item
+    // Add smell information
     if (targetSmell) {
       const smellName =
         getNameByMessageId(targetSmell.messageId) || targetSmell.messageId;
       this.refactoringDetails.push(
         new RefactoringDetailItem(
           `Refactoring: ${smellName}`,
-          '', // Empty description since we'll show it as a child
           '',
           '',
-          true, // Make it collapsible to show description as child
+          '',
+          true,
           false,
-          true, // isSmellItem
+          true,
         ),
       );
     }
 
-    // Add energy saved as the second item
-    if (energySaved) {
+    // Add energy savings
+    if (energySaved !== undefined) {
       this.refactoringDetails.push(
         new RefactoringDetailItem(
-          `Energy Saved: ${energySaved} kg CO2`,
-          '',
+          `Estimated Savings: ${energySaved} kg CO2`,
+          'Based on energy impact analysis',
           '',
           '',
           false,
-          true, // isEnergySaved
+          true,
         ),
       );
     }
 
-    // Add the target file
-    this.refactoringDetails.push(
-      new RefactoringDetailItem(
-        path.basename(targetFile.original),
-        'Target File',
-        targetFile.original,
-        targetFile.refactored,
-        affectedFiles.length > 0,
-      ),
-    );
+    // Add target file
+    if (targetFile) {
+      this.refactoringDetails.push(
+        new RefactoringDetailItem(
+          `${path.basename(targetFile.original)}`,
+          'Main refactored file',
+          targetFile.original,
+          targetFile.refactored,
+          affectedFiles.length > 0,
+        ),
+      );
+    }
 
     this._onDidChangeTreeData.fire(undefined);
   }
 
   /**
-   * Resets the refactoring details to indicate no refactoring is in progress.
+   * Resets the view to its initial state
    */
   resetRefactoringDetails(): void {
     this.targetFile = undefined;
@@ -98,90 +104,97 @@ export class RefactoringDetailsViewProvider
     this._onDidChangeTreeData.fire(undefined);
   }
 
+  // VS Code TreeDataProvider implementation
   getTreeItem(element: RefactoringDetailItem): vscode.TreeItem {
     return element;
   }
 
   getChildren(element?: RefactoringDetailItem): RefactoringDetailItem[] {
-    if (element) {
-      // If this is the smell parent item, return the description as child
-      if (element.isSmellItem && this.targetSmell) {
-        const smellDescription =
-          getDescriptionByMessageId(this.targetSmell.messageId) ||
-          this.targetSmell.messageId;
-        return [
-          new RefactoringDetailItem(
-            '',
-            smellDescription,
-            '',
-            '',
-            false, // Not collapsible
-            false,
-            false,
-            'info', // New parameter for description type
-          ),
-        ];
-      }
-
-      // If this is the parent item (Target File), return the affected files as children
-      if (element.isParent) {
-        return this.affectedFiles.map(
-          (file) =>
-            new RefactoringDetailItem(
-              path.basename(file.original),
-              'Affected File',
-              file.original,
-              file.refactored,
-              false,
-            ),
-        );
-      }
-      return [];
+    if (!element) {
+      return this.refactoringDetails;
     }
-    return this.refactoringDetails;
+
+    // Handle smell description expansion
+    if (element.isSmellItem && this.targetSmell) {
+      const description =
+        getDescriptionByMessageId(this.targetSmell.messageId) ||
+        this.targetSmell.message;
+      return [
+        new RefactoringDetailItem(
+          '',
+          description,
+          '',
+          '',
+          false,
+          false,
+          false,
+          'info',
+        ),
+      ];
+    }
+
+    // Handle affected files expansion
+    if (element.isParent && this.affectedFiles.length > 0) {
+      return this.affectedFiles.map(
+        (file) =>
+          new RefactoringDetailItem(
+            path.basename(file.original),
+            'Affected file',
+            file.original,
+            file.refactored,
+          ),
+      );
+    }
+
+    return [];
   }
 }
 
+/**
+ * Represents an item in the refactoring details tree view
+ */
 class RefactoringDetailItem extends vscode.TreeItem {
   constructor(
-    label: string,
-    description: string,
+    public readonly label: string,
+    public readonly description: string,
     public readonly originalFilePath: string,
     public readonly refactoredFilePath: string,
     public readonly isParent: boolean = false,
     public readonly isEnergySaved: boolean = false,
     public readonly isSmellItem: boolean = false,
-    public readonly itemType?: 'info' | 'file', // New parameter to distinguish types
+    public readonly itemType: 'info' | 'file' | 'none' = 'none',
   ) {
     super(
       label,
-      isParent || isSmellItem // Make smell items collapsible too
+      isParent || isSmellItem
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None,
     );
-    this.description = description;
 
-    // Custom icons based on type
+    // Configure item based on type
     if (isEnergySaved) {
       this.iconPath = new vscode.ThemeIcon(
         'lightbulb',
         new vscode.ThemeColor('charts.yellow'),
       );
-      this.tooltip = 'This is the amount of energy saved by refactoring.';
+      this.tooltip = 'Estimated energy savings from this refactoring';
     } else if (isSmellItem) {
       this.iconPath = new vscode.ThemeIcon(
-        'symbol-class',
-        new vscode.ThemeColor('charts.'),
+        'warning',
+        new vscode.ThemeColor('charts.orange'),
       );
+    } else if (itemType === 'info') {
+      this.iconPath = new vscode.ThemeIcon('info');
     }
 
-    // Add commands where appropriate
-    if (!isEnergySaved && !isSmellItem && itemType !== 'info' && originalFilePath) {
+    // Make files clickable to open diffs
+    if (originalFilePath && refactoredFilePath && itemType !== 'info') {
       this.command = {
         command: 'ecooptimizer.openDiffEditor',
-        title: 'Open Diff Editor',
+        title: 'Compare Changes',
         arguments: [originalFilePath, refactoredFilePath],
       };
+      this.contextValue = 'refactoringFile';
     }
   }
 }

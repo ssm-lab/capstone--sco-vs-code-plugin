@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import path from 'path';
 
 // === Output Channel ===
 export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer');
@@ -6,7 +7,6 @@ export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer');
 // === Core Utilities ===
 import { loadSmells } from './utils/smellsData';
 import { initializeStatusesFromCache } from './utils/initializeStatusesFromCache';
-import { openDiffEditor } from './utils/openDiffEditor';
 import { envConfig } from './utils/envConfig';
 import { checkServerStatus } from './api/backend';
 
@@ -32,6 +32,7 @@ import { exportMetricsData } from './commands/exportMetricsData';
 // === Listeners & UI ===
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 import { LineSelectionManager } from './ui/LineSelection';
+import { registerDiffEditor } from './utils/trackedDiffEditors';
 
 export function activate(context: vscode.ExtensionContext): void {
   ecoOutput.appendLine('Initializing Eco-Optimizer extension...');
@@ -206,7 +207,23 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       'ecooptimizer.openDiffEditor',
       (originalFilePath: string, refactoredFilePath: string) => {
-        openDiffEditor(originalFilePath, refactoredFilePath);
+        // Get the file name for the diff editor title
+        const fileName = path.basename(originalFilePath);
+
+        // Show the diff editor with the updated title
+        const originalUri = vscode.Uri.file(originalFilePath);
+        const refactoredUri = vscode.Uri.file(refactoredFilePath);
+        vscode.commands.executeCommand(
+          'vscode.diff',
+          originalUri,
+          refactoredUri,
+          `Refactoring Comparison (${fileName})`,
+          {
+            preview: false,
+          },
+        );
+
+        registerDiffEditor(originalUri, refactoredUri);
       },
     ),
 

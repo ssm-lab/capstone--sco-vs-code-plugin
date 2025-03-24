@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
-import { closeAllRefactorDiffEditors } from '../utils/openDiffEditor';
 import { hideRefactorActionButtons } from '../utils/refactorActionButtons';
+import { closeAllTrackedDiffEditors } from '../utils/trackedDiffEditors';
+
 export async function rejectRefactoring(
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
   context: vscode.ExtensionContext,
@@ -10,6 +11,8 @@ export async function rejectRefactoring(
 
   // Clear state + UI
   refactoringDetailsViewProvider.resetRefactoringDetails();
-  await closeAllRefactorDiffEditors();
   hideRefactorActionButtons(context);
+
+  // Close any tracked diff editors
+  await closeAllTrackedDiffEditors();
 }
