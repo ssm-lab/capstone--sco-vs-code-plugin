@@ -13,11 +13,13 @@ import {
 import { registerDiffEditor } from '../utils/trackedDiffEditors';
 
 /**
- * Handles the complete refactoring workflow for a detected code smell
- * @param smellsViewProvider - Reference to the smells view provider
- * @param refactoringDetailsViewProvider - Reference to the refactoring details provider
- * @param smell - The smell object to refactor
- * @param context - VS Code extension context
+ * Orchestrates the complete refactoring workflow including:
+ * - Pre-flight validation checks
+ * - Backend communication
+ * - UI updates and diff visualization
+ * - Success/error handling
+ *
+ * Shows carefully selected user notifications for key milestones and errors.
  */
 export async function refactorSmell(
   smellsViewProvider: SmellsViewProvider,
@@ -25,44 +27,53 @@ export async function refactorSmell(
   smell: Smell,
   context: vscode.ExtensionContext,
 ): Promise<void> {
-  // Notify user about refactoring start
-  ecoOutput.appendLine(`Starting refactoring for smell: ${smell.symbol}`);
-  vscode.window.showInformationMessage(`Refactoring ${smell.symbol} smell...`);
+  // Log and notify refactoring initiation
+  ecoOutput.appendLine(
+    `[refactor.ts] Initiating refactoring for ${smell.symbol} in ${smell.path}`,
+  );
+  vscode.window.showInformationMessage(
+    `Starting refactoring for ${smell.symbol}...`,
+  );
 
-  // Verify workspace configuration
+  // Validate workspace configuration
   const workspacePath = context.workspaceState.get<string>(
     'workspaceConfiguredPath',
   );
   if (!workspacePath) {
-    const errorMsg = 'No workspace configured. Please set up workspace first.';
+    const errorMsg = '[refactor.ts] Refactoring aborted: No workspace configured';
     ecoOutput.appendLine(errorMsg);
-    vscode.window.showErrorMessage(errorMsg);
+    vscode.window.showErrorMessage('Please configure workspace first');
     return;
   }
 
-  // Check backend server status
+  // Verify backend availability
   if (serverStatus.getStatus() === ServerStatusType.DOWN) {
-    const warningMsg =
-      'Server unavailable - cannot refactor without backend connection';
+    const warningMsg = '[refactor.ts] Refactoring blocked: Backend unavailable';
     ecoOutput.appendLine(warningMsg);
-    vscode.window.showWarningMessage(warningMsg);
+    vscode.window.showWarningMessage(
+      'Cannot refactor - backend service unavailable',
+    );
     smellsViewProvider.setStatus(smell.path, 'server_down');
     return;
   }
 
-  // Begin refactoring process
+  // Update UI state
   smellsViewProvider.setStatus(smell.path, 'queued');
   vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
 
   try {
-    // Step 1: Send refactoring request to backend
-    const refactoredData = await backendRefactorSmell(smell, workspacePath);
-    ecoOutput.appendLine(`Refactoring completed for ${smell.path}`);
+    // Execute backend refactoring
     ecoOutput.appendLine(
-      `Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
+      `[refactor.ts] Sending refactoring request for ${smell.symbol}`,
+    );
+    const refactoredData = await backendRefactorSmell(smell, workspacePath);
+
+    ecoOutput.appendLine(
+      `[refactor.ts] Refactoring completed for ${path.basename(smell.path)}. ` +
+        `Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
     );
 
-    // Step 2: Update UI with refactoring results
+    // Update refactoring details view
     refactoringDetailsViewProvider.updateRefactoringDetails(
       smell,
       refactoredData.targetFile,
@@ -70,42 +81,44 @@ export async function refactorSmell(
       refactoredData.energySaved,
     );
 
-    // Step 3: Show diff editor comparison
+    // Show diff comparison
     const targetFile = refactoredData.targetFile;
     const fileName = path.basename(targetFile.original);
-    const originalUri = vscode.Uri.file(targetFile.original);
-    const refactoredUri = vscode.Uri.file(targetFile.refactored);
     await vscode.commands.executeCommand(
       'vscode.diff',
-      originalUri,
-      refactoredUri,
-      `Refactoring Comparison (${fileName})`,
-      {
-        preview: false, // Ensure the diff editor is not in preview mode
-      },
+      vscode.Uri.file(targetFile.original),
+      vscode.Uri.file(targetFile.refactored),
+      `Refactoring: ${fileName}`,
+      { preview: false },
     );
-    registerDiffEditor(originalUri, refactoredUri);
+    registerDiffEditor(
+      vscode.Uri.file(targetFile.original),
+      vscode.Uri.file(targetFile.refactored),
+    );
 
-    // Step 4: Focus refactoring view and show action buttons
+    // Finalize UI updates
     await vscode.commands.executeCommand('ecooptimizer.refactorView.focus');
     showRefactorActionButtons();
 
-    // Step 5: Notify user of success
-    const successMsg = `Refactoring successful! Estimated savings: ${refactoredData.energySaved ?? 'N/A'} kg CO2`;
-    ecoOutput.appendLine(successMsg);
+    // Show completion notification
+    const successMsg = `Refactoring complete. Estimated savings: ${refactoredData.energySaved ?? 'N/A'} kg CO2`;
+    ecoOutput.appendLine(`[refactor.ts] ${successMsg}`);
     vscode.window.showInformationMessage(successMsg);
   } catch (error) {
-    // Handle refactoring failures
-    const errorMsg = `Refactoring failed: ${error instanceof Error ? error.message : String(error)}`;
+    // Handle errors and cleanup
+    const errorMsg = `[refactor.ts] Refactoring failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
     ecoOutput.appendLine(errorMsg);
-    console.error('Refactoring error:', error);
-    vscode.window.showErrorMessage(errorMsg);
+
+    vscode.window.showErrorMessage('Refactoring failed. See output for details.', {
+      modal: false,
+    });
 
     // Reset UI state
     refactoringDetailsViewProvider.resetRefactoringDetails();
     hideRefactorActionButtons();
-
-    // Update file status
     smellsViewProvider.setStatus(smell.path, 'failed');
+  } finally {
+    // Ensure context is always reset
+    vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
   }
 }
