@@ -1,14 +1,18 @@
 import path from 'path';
-
 import { envConfig } from '../utils/envConfig';
 import { serverStatus } from '../emitters/serverStatus';
 import { ServerStatusType } from '../emitters/serverStatus';
 import { ecoOutput } from '../extension';
 
+// Base URL for backend API endpoints constructed from environment configuration
 const BASE_URL = `http://${envConfig.SERVER_URL}`;
 
 /**
- * Checks the health status of the backend server and updates the extension's status emitter.
+ * Verifies backend service availability and updates extension status.
+ * Performs health check by hitting the /health endpoint and handles three scenarios:
+ * 1. Successful response (200-299) - marks server as UP
+ * 2. Error response - marks server as DOWN with status code
+ * 3. Network failure - marks server as DOWN with error details
  */
 export async function checkServerStatus(): Promise<void> {
   try {
@@ -24,12 +28,21 @@ export async function checkServerStatus(): Promise<void> {
     }
   } catch (error) {
     serverStatus.setStatus(ServerStatusType.DOWN);
-    ecoOutput.appendLine(`[backend.ts] Server connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    ecoOutput.appendLine(
+      `[backend.ts] Server connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
 /**
- * Detects code smells in a specified file by communicating with the backend service.
+ * Analyzes source code for code smells using backend detection service.
+ * @param filePath - Absolute path to the source file for analysis
+ * @param enabledSmells - Configuration object specifying which smells to detect
+ * @returns Promise resolving to smell detection results and HTTP status
+ * @throws Error when:
+ * - Network request fails
+ * - Backend returns non-OK status
+ * - Response contains invalid data format
  */
 export async function fetchSmells(
   filePath: string,
@@ -67,7 +80,14 @@ export async function fetchSmells(
 }
 
 /**
- * Initiates refactoring of a specific code smell through the backend service.
+ * Executes code refactoring for a specific detected smell pattern.
+ * @param smell - The smell object containing detection details
+ * @param workspacePath - Root directory of the project workspace
+ * @returns Promise resolving to refactoring result data
+ * @throws Error when:
+ * - Workspace path is not provided
+ * - Refactoring request fails
+ * - Network errors occur
  */
 export async function backendRefactorSmell(
   smell: Smell,
@@ -75,6 +95,7 @@ export async function backendRefactorSmell(
 ): Promise<RefactoredData> {
   const url = `${BASE_URL}/refactor`;
 
+  // Validate workspace configuration
   if (!workspacePath) {
     ecoOutput.appendLine('[backend.ts] Refactoring aborted: No workspace path');
     throw new Error('No workspace path provided');
