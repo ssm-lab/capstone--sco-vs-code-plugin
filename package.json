@@ -261,7 +261,7 @@
         "title": "Toggle Smell Linting",
         "category": "Eco",
         "icon": {
-          "light": "assets/green_leaf.png",
+          "light": "assets/darkgreen_leaf.png",
           "dark": "assets/green_leaf.png"
         }
       },
