@@ -32,6 +32,9 @@ import { registerWorkspaceModifiedListener } from './listeners/workspaceModified
 import { checkServerStatus } from './api/backend';
 import { loadSmells } from './utils/smellsData';
 import { LineSelectionManager } from './ui/LineSelection';
+import { LogManager } from './commands/showLogs';
+
+let logManager: LogManager;
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary commands, providers, and listeners.
@@ -39,6 +42,8 @@ import { LineSelectionManager } from './ui/LineSelection';
  */
 export function activate(context: vscode.ExtensionContext): void {
   console.log('Activating Eco-Optimizer extension...');
+
+  logManager = new LogManager(context);
 
   loadSmells();
 
@@ -300,4 +305,5 @@ export function activate(context: vscode.ExtensionContext): void {
  */
 export function deactivate(): void {
   console.log('Deactivating Eco-Optimizer extension...');
+  logManager.stopWatchingLogs();
 }
