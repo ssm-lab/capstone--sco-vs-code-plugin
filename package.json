@@ -248,7 +248,7 @@
         },
         {
           "command": "ecooptimizer.detectSmellsFolder",
-          "when": "viewItem == ecooptimizer.smellsView && viewItem == folder",
+          "when": "view == ecooptimizer.smellsView && viewItem == directory",
           "group": "inline"
         },
         {

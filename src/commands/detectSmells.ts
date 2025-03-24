@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { fetchSmells } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { getEnabledSmells } from '../utils/smellsData';
@@ -6,58 +8,25 @@ import { serverStatus, ServerStatusType } from '../emitters/serverStatus';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 
 /**
- * Detects code smells for a given file.
- * Uses cached smells if available; otherwise, fetches from the backend.
- *
- * @param filePath - The VS Code file URI or string path of the file to analyze.
- * @param smellsViewProvider - UI provider for updating tree view.
- * @param smellsCacheManager - Manager for caching smells.
+ * Runs smell detection on a single file if valid.
  */
 export async function detectSmellsFile(
   filePath: string,
   smellsViewProvider: SmellsViewProvider,
   smellsCacheManager: SmellsCacheManager,
 ): Promise<void> {
-  // STEP 0: Check cache first
-  if (smellsCacheManager.hasCachedSmells(filePath)) {
-    const cached = smellsCacheManager.getCachedSmells(filePath);
-    vscode.window.showInformationMessage('Using cached smells for this file.');
-    if (cached && cached.length > 0) {
-      smellsViewProvider.setStatus(filePath, 'passed');
-      smellsViewProvider.setSmells(filePath, cached); // Render cached smells in the tree
-    } else {
-      smellsViewProvider.setStatus(filePath, 'no_issues');
-      smellsViewProvider.setSmells(filePath, []); // Clear any existing smells
-    }
-    return;
-  }
+  const shouldProceed = await precheckAndMarkQueued(
+    filePath,
+    smellsViewProvider,
+    smellsCacheManager,
+  );
 
-  // STEP 1: Check if server is down
-  if (serverStatus.getStatus() === ServerStatusType.DOWN) {
-    vscode.window.showWarningMessage(
-      'Action blocked: Server is down and no cached smells exist for this file version.',
-    );
-    smellsViewProvider.setStatus(filePath, 'server_down');
-    smellsViewProvider.setSmells(filePath, []); // Clear any existing smells
-    return;
-  }
+  if (!shouldProceed) return;
 
-  // STEP 2: Get enabled smells
   const enabledSmells = getEnabledSmells();
-  if (Object.keys(enabledSmells).length === 0) {
-    vscode.window.showWarningMessage(
-      'No enabled smells found. Please configure enabled smells in the settings.',
-    );
-    smellsViewProvider.setSmells(filePath, []); // Clear any existing smells
-    return;
-  }
-
   const enabledSmellsForBackend = Object.fromEntries(
     Object.entries(enabledSmells).map(([key, value]) => [key, value.options]),
   );
-
-  // STEP 3: Queue analysis
-  smellsViewProvider.setStatus(filePath, 'queued');
 
   try {
     const { smells, status } = await fetchSmells(filePath, enabledSmellsForBackend);
@@ -66,20 +35,93 @@ export async function detectSmellsFile(
       if (smells.length > 0) {
         smellsViewProvider.setStatus(filePath, 'passed');
         await smellsCacheManager.setCachedSmells(filePath, smells);
-        smellsViewProvider.setSmells(filePath, smells); // Render detected smells in the tree
+        smellsViewProvider.setSmells(filePath, smells);
       } else {
         smellsViewProvider.setStatus(filePath, 'no_issues');
         await smellsCacheManager.setCachedSmells(filePath, []);
-        smellsViewProvider.setSmells(filePath, []); // Clear any existing smells
+        smellsViewProvider.setSmells(filePath, []);
       }
     } else {
       smellsViewProvider.setStatus(filePath, 'failed');
       vscode.window.showErrorMessage(`Analysis failed (status ${status}).`);
-      smellsViewProvider.setSmells(filePath, []); // Clear any existing smells
+      smellsViewProvider.setSmells(filePath, []);
     }
   } catch (error: any) {
     smellsViewProvider.setStatus(filePath, 'failed');
     vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
-    smellsViewProvider.setSmells(filePath, []); // Clear any existing smells
+    smellsViewProvider.setSmells(filePath, []);
+  }
+}
+
+/**
+ * Validates workspace state before initiating detection.
+ */
+async function precheckAndMarkQueued(
+  filePath: string,
+  smellsViewProvider: SmellsViewProvider,
+  smellsCacheManager: SmellsCacheManager,
+): Promise<boolean> {
+  if (smellsCacheManager.hasCachedSmells(filePath)) {
+    const cached = smellsCacheManager.getCachedSmells(filePath);
+    vscode.window.showInformationMessage('Using cached smells for this file.');
+    if (cached && cached.length > 0) {
+      smellsViewProvider.setStatus(filePath, 'passed');
+      smellsViewProvider.setSmells(filePath, cached);
+    } else {
+      smellsViewProvider.setStatus(filePath, 'no_issues');
+      smellsViewProvider.setSmells(filePath, []);
+    }
+    return false;
+  }
+
+  if (serverStatus.getStatus() === ServerStatusType.DOWN) {
+    vscode.window.showWarningMessage(
+      'Action blocked: Server is down and no cached smells exist for this file version.',
+    );
+    smellsViewProvider.setStatus(filePath, 'server_down');
+    smellsViewProvider.setSmells(filePath, []);
+    return false;
+  }
+
+  const enabledSmells = getEnabledSmells();
+  if (Object.keys(enabledSmells).length === 0) {
+    vscode.window.showWarningMessage(
+      'No enabled smells found. Please configure enabled smells in the settings.',
+    );
+    smellsViewProvider.setSmells(filePath, []);
+    return false;
+  }
+
+  smellsViewProvider.setStatus(filePath, 'queued');
+  return true;
+}
+
+/**
+ * Detects smells in all Python files within the selected folder.
+ */
+export async function detectSmellsFolder(
+  folderPath: string,
+  smellsViewProvider: SmellsViewProvider,
+  smellsCacheManager: SmellsCacheManager,
+): Promise<void> {
+  const pythonFiles: string[] = [];
+
+  function walk(dir: string): void {
+    const entries = fs.readdirSync(dir);
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        walk(fullPath);
+      } else if (stat.isFile() && fullPath.endsWith('.py')) {
+        pythonFiles.push(fullPath);
+      }
+    }
+  }
+
+  walk(folderPath);
+
+  for (const file of pythonFiles) {
+    await detectSmellsFile(file, smellsViewProvider, smellsCacheManager);
   }
 }

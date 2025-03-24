@@ -16,7 +16,7 @@ import { FilterViewProvider } from './providers/FilterViewProvider';
 // Commands
 import { configureWorkspace } from './commands/configureWorkspace';
 import { resetConfiguration } from './commands/resetConfiguration';
-import { detectSmellsFile } from './commands/detectSmells';
+import { detectSmellsFile, detectSmellsFolder } from './commands/detectSmells';
 import { registerFilterSmellCommands } from './commands/filterSmells';
 
 // Listeners
@@ -121,6 +121,18 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
       }
     }),
+
+    vscode.commands.registerCommand(
+      'ecooptimizer.detectSmellsFolder',
+      (folderItem) => {
+        const folderPath = folderItem?.resourceUri?.fsPath;
+        if (!folderPath) {
+          vscode.window.showWarningMessage('No folder selected.');
+          return;
+        }
+        detectSmellsFolder(folderPath, smellsViewProvider, smellsCacheManager);
+      },
+    ),
   );
 
   // Register filter UI toggle/edit/select-all/deselect-all
