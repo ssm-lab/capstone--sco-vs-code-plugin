@@ -5,7 +5,7 @@ import path from 'path';
 export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer');
 
 // === Core Utilities ===
-import { loadSmells } from './utils/smellsData';
+import { getNameByMessageId, loadSmells } from './utils/smellsData';
 import { initializeStatusesFromCache } from './utils/initializeStatusesFromCache';
 import { envConfig } from './utils/envConfig';
 import { checkServerStatus } from './api/backend';
@@ -24,7 +24,7 @@ import { detectSmellsFile, detectSmellsFolder } from './commands/detectSmells';
 import { registerFilterSmellCommands } from './commands/filterSmells';
 import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
-import { refactorSmell } from './commands/refactorSmell';
+import { refactor } from './commands/refactor';
 import { acceptRefactoring } from './commands/acceptRefactoring';
 import { rejectRefactoring } from './commands/rejectRefactoring';
 import { exportMetricsData } from './commands/exportMetricsData';
@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // === Start periodic backend status checks ===
   checkServerStatus();
-  setInterval(checkServerStatus, 300000); // 5 minutes
+  setInterval(checkServerStatus, 50000);
 
   // === Initialize Refactor Action Buttons ===
   initializeRefactorActionButtons(context);
@@ -152,12 +152,80 @@ export function activate(context: vscode.ExtensionContext): void {
           vscode.window.showErrorMessage('No code smell detected for this item.');
           return;
         }
-        refactorSmell(
-          smellsViewProvider,
-          refactoringDetailsViewProvider,
-          smell,
-          context,
+        refactor(smellsViewProvider, refactoringDetailsViewProvider, smell, context);
+      },
+    ),
+
+    vscode.commands.registerCommand(
+      'ecooptimizer.refactorAllSmellsOfType',
+      async (item: any) => {
+        const filePath = item?.fullPath;
+        if (!filePath) {
+          vscode.window.showWarningMessage(
+            'Unable to get file path for smell refactoring.',
+          );
+          return;
+        }
+
+        const cachedSmells = smellsCacheManager.getCachedSmells(filePath);
+        if (!cachedSmells || cachedSmells.length === 0) {
+          vscode.window.showInformationMessage('No smells detected in this file.');
+          return;
+        }
+
+        ecoOutput.appendLine(
+          `🟡 Found ${cachedSmells.length} smells in ${filePath}`,
         );
+
+        const uniqueMessageIds = new Set<string>();
+        for (const smell of cachedSmells) {
+          uniqueMessageIds.add(smell.messageId);
+        }
+
+        const quickPickItems: vscode.QuickPickItem[] = Array.from(
+          uniqueMessageIds,
+        ).map((id) => {
+          const name = getNameByMessageId(id) ?? id;
+          return {
+            label: name,
+            description: id,
+          };
+        });
+
+        const selected = await vscode.window.showQuickPick(quickPickItems, {
+          title: 'Select a smell type to refactor',
+          placeHolder: 'Choose the type of smell you want to refactor',
+          matchOnDescription: false,
+          matchOnDetail: false,
+          ignoreFocusOut: false,
+          canPickMany: false,
+        });
+
+        if (selected) {
+          const selectedMessageId = selected.description;
+          const firstSmell = cachedSmells.find(
+            (smell) => smell.messageId === selectedMessageId,
+          );
+
+          if (!firstSmell) {
+            vscode.window.showWarningMessage(
+              'No smells found for the selected type.',
+            );
+            return;
+          }
+
+          ecoOutput.appendLine(
+            `🔁 Triggering refactorAllSmellsOfType for: ${selectedMessageId}`,
+          );
+
+          await refactor(
+            smellsViewProvider,
+            refactoringDetailsViewProvider,
+            firstSmell,
+            context,
+            true, // isRefactorAllOfType
+          );
+        }
       },
     ),
 

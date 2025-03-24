@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { backendRefactorSmell } from '../api/backend';
+import { backendRefactorSmell, backendRefactorSmellType } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import { ecoOutput } from '../extension';
@@ -13,43 +13,45 @@ import {
 import { registerDiffEditor } from '../utils/trackedDiffEditors';
 
 /**
- * Orchestrates the complete refactoring workflow including:
- * - Pre-flight validation checks
+ * Orchestrates the complete refactoring workflow.
+ * If isRefactorAllOfType is true, it sends a request to refactor all smells of the same type.
+ *
+ *  - Pre-flight validation checks
  * - Backend communication
  * - UI updates and diff visualization
  * - Success/error handling
  *
  * Shows carefully selected user notifications for key milestones and errors.
  */
-export async function refactorSmell(
+export async function refactor(
   smellsViewProvider: SmellsViewProvider,
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
   smell: Smell,
   context: vscode.ExtensionContext,
+  isRefactorAllOfType: boolean = false,
 ): Promise<void> {
   // Log and notify refactoring initiation
-  ecoOutput.appendLine(
-    `[refactor.ts] Initiating refactoring for ${smell.symbol} in ${smell.path}`,
-  );
-  vscode.window.showInformationMessage(
-    `Starting refactoring for ${smell.symbol}...`,
-  );
+  const action = isRefactorAllOfType
+    ? 'Refactoring all smells of type'
+    : 'Refactoring';
+  ecoOutput.appendLine(`[refactor.ts] ${action} ${smell.symbol} in ${smell.path}`);
+  vscode.window.showInformationMessage(`${action} ${smell.symbol}...`);
 
   // Validate workspace configuration
   const workspacePath = context.workspaceState.get<string>(
     'workspaceConfiguredPath',
   );
   if (!workspacePath) {
-    const errorMsg = '[refactor.ts] Refactoring aborted: No workspace configured';
-    ecoOutput.appendLine(errorMsg);
+    ecoOutput.appendLine(
+      '[refactor.ts] Refactoring aborted: No workspace configured',
+    );
     vscode.window.showErrorMessage('Please configure workspace first');
     return;
   }
 
   // Verify backend availability
   if (serverStatus.getStatus() === ServerStatusType.DOWN) {
-    const warningMsg = '[refactor.ts] Refactoring blocked: Backend unavailable';
-    ecoOutput.appendLine(warningMsg);
+    ecoOutput.appendLine('[refactor.ts] Refactoring blocked: Backend unavailable');
     vscode.window.showWarningMessage(
       'Cannot refactor - backend service unavailable',
     );
@@ -63,10 +65,10 @@ export async function refactorSmell(
 
   try {
     // Execute backend refactoring
-    ecoOutput.appendLine(
-      `[refactor.ts] Sending refactoring request for ${smell.symbol}`,
-    );
-    const refactoredData = await backendRefactorSmell(smell, workspacePath);
+    ecoOutput.appendLine(`[refactor.ts] Sending ${action} request...`);
+    const refactoredData = isRefactorAllOfType
+      ? await backendRefactorSmellType(smell, workspacePath)
+      : await backendRefactorSmell(smell, workspacePath);
 
     ecoOutput.appendLine(
       `[refactor.ts] Refactoring completed for ${path.basename(smell.path)}. ` +
@@ -96,29 +98,22 @@ export async function refactorSmell(
       vscode.Uri.file(targetFile.refactored),
     );
 
-    // Finalize UI updates
     await vscode.commands.executeCommand('ecooptimizer.refactorView.focus');
     showRefactorActionButtons();
 
-    // Show completion notification
-    const successMsg = `Refactoring complete. Estimated savings: ${refactoredData.energySaved ?? 'N/A'} kg CO2`;
-    ecoOutput.appendLine(`[refactor.ts] ${successMsg}`);
-    vscode.window.showInformationMessage(successMsg);
+    vscode.window.showInformationMessage(
+      `Refactoring complete. Estimated savings: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
+    );
   } catch (error) {
-    // Handle errors and cleanup
-    const errorMsg = `[refactor.ts] Refactoring failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
-    ecoOutput.appendLine(errorMsg);
+    ecoOutput.appendLine(
+      `[refactor.ts] Refactoring failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
+    vscode.window.showErrorMessage('Refactoring failed. See output for details.');
 
-    vscode.window.showErrorMessage('Refactoring failed. See output for details.', {
-      modal: false,
-    });
-
-    // Reset UI state
     refactoringDetailsViewProvider.resetRefactoringDetails();
     hideRefactorActionButtons();
     smellsViewProvider.setStatus(smell.path, 'failed');
   } finally {
-    // Ensure context is always reset
     vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
   }
 }
