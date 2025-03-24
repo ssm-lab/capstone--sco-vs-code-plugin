@@ -34,7 +34,12 @@ export function activate(context: vscode.ExtensionContext): void {
   const smellsCacheManager = new SmellsCacheManager(context);
   const smellsViewProvider = new SmellsViewProvider(context);
   const metricsViewProvider = new MetricsViewProvider(context);
-  const filterSmellsProvider = new FilterViewProvider(context, metricsViewProvider);
+  const filterSmellsProvider = new FilterViewProvider(
+    context,
+    metricsViewProvider,
+    smellsCacheManager,
+    smellsViewProvider,
+  );
 
   // Restore cached statuses
   initializeStatusesFromCache(context, smellsCacheManager, smellsViewProvider);

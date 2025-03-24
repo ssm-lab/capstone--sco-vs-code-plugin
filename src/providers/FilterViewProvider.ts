@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { FilterSmellConfig, getFilterSmells, saveSmells } from '../utils/smellsData';
 import { MetricsViewProvider } from './MetricsViewProvider';
-import { ecoOutput } from '../extension';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
+import { SmellsViewProvider } from './SmellsViewProvider';
 
 /**
  * Provides a tree view for filtering code smells within the VS Code extension.
@@ -19,14 +20,12 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
   constructor(
     private context: vscode.ExtensionContext,
     private metricsViewProvider: MetricsViewProvider,
+    private smellsCacheManager: SmellsCacheManager,
+    private smellsViewProvider: SmellsViewProvider,
   ) {
     this.smells = getFilterSmells();
   }
 
-  /**
-   * Associates a TreeView instance with the provider and listens for checkbox state changes.
-   * @param treeView - The TreeView instance.
-   */
   setTreeView(treeView: vscode.TreeView<vscode.TreeItem>): void {
     this.treeView = treeView;
 
@@ -37,7 +36,6 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
           if (confirmed) {
             await this.toggleSmell(item.key);
           } else {
-            // Cancelled — refresh the tree to revert the checkbox UI
             this._onDidChangeTreeData.fire();
           }
         }
@@ -45,19 +43,10 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
     });
   }
 
-  /**
-   * Returns the tree item representation for a given element.
-   * @param element - The tree item element.
-   */
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
     return element;
   }
 
-  /**
-   * Retrieves the child elements for a given tree item.
-   * If no parent element is provided, returns the list of smells.
-   * @param element - The parent tree item (optional).
-   */
   getChildren(element?: SmellItem): Thenable<vscode.TreeItem[]> {
     if (!element) {
       return Promise.resolve(
@@ -95,11 +84,6 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
       : Promise.resolve([]);
   }
 
-  /**
-   * Toggles the enabled state of a specific smell and updates the configuration file.
-   * Also clears the smell cache for affected files.
-   * @param smellKey - The key of the smell to toggle.
-   */
   async toggleSmell(smellKey: string): Promise<void> {
     if (this.smells[smellKey]) {
       this.smells[smellKey].enabled = !this.smells[smellKey].enabled;
@@ -109,13 +93,6 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
     }
   }
 
-  /**
-   * Updates the value of a specific smell option and saves the configuration.
-   * Also clears the smell cache for affected files.
-   * @param smellKey - The key of the smell.
-   * @param optionKey - The key of the option.
-   * @param newValue - The new value to set.
-   */
   async updateOption(
     smellKey: string,
     optionKey: string,
@@ -136,18 +113,10 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
     }
   }
 
-  /**
-   * Refreshes the tree view, updating the UI.
-   */
   refresh(): void {
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  /**
-   * Enables or disables all smells in the filter and updates the configuration.
-   * Also clears the smell cache for affected files.
-   * @param enabled - Whether all smells should be enabled or disabled.
-   */
   async setAllSmellsEnabled(enabled: boolean): Promise<void> {
     const confirmed = await this.confirmFilterChange();
     if (!confirmed) return;
@@ -160,36 +129,47 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
     this._onDidChangeTreeData.fire();
   }
 
-  /**
-   * Clears smell cache and marks all cached file results as outdated.
-   * Cache not implemented yet.
-   */
   async invalidateCachedSmellsForAffectedFiles(): Promise<void> {
-    ecoOutput.appendLine('Invalidating cached smells for affected files...');
+    const cachedFilePaths = this.smellsCacheManager.getAllFilePaths();
+
+    for (const filePath of cachedFilePaths) {
+      this.smellsCacheManager.clearCachedSmellsForFile(filePath);
+      this.smellsViewProvider.setStatus(filePath, 'outdated');
+    }
 
     this.metricsViewProvider.refresh();
+    this.smellsViewProvider.refresh();
   }
 
-  /**
-   * Prompts the user to confirm a smell filter change.
-   * Displays a modal warning that changing filters will invalidate cached analysis results.
-   * If the user confirms, returns true. If the user cancels, returns false.
-   *
-   * @returns Whether the user chose to proceed with the filter change.
-   */
   private async confirmFilterChange(): Promise<boolean> {
+    const suppressWarning = this.context.workspaceState.get<boolean>(
+      'ecooptimizer.suppressFilterWarning',
+      false,
+    );
+
+    if (suppressWarning) {
+      return true; // Skip confirmation
+    }
+
     const result = await vscode.window.showWarningMessage(
       'Changing smell filters will invalidate existing analysis results. Do you want to continue?',
       { modal: true },
       'Yes',
+      "Don't Remind Me Again",
     );
+
+    if (result === "Don't Remind Me Again") {
+      await this.context.workspaceState.update(
+        'ecooptimizer.suppressFilterWarning',
+        true,
+      );
+      return true;
+    }
+
     return result === 'Yes';
   }
 }
 
-/**
- * Represents a smell item in the tree view.
- */
 class SmellItem extends vscode.TreeItem {
   constructor(
     public readonly key: string,
@@ -205,9 +185,6 @@ class SmellItem extends vscode.TreeItem {
   }
 }
 
-/**
- * Represents an option item for a smell in the tree view.
- */
 class SmellOptionItem extends vscode.TreeItem {
   constructor(
     public readonly optionKey: string,
