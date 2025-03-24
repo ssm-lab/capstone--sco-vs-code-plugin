@@ -39,17 +39,14 @@ export async function detectSmellsFile(
       } else {
         smellsViewProvider.setStatus(filePath, 'no_issues');
         await smellsCacheManager.setCachedSmells(filePath, []);
-        smellsViewProvider.setSmells(filePath, []);
       }
     } else {
       smellsViewProvider.setStatus(filePath, 'failed');
       vscode.window.showErrorMessage(`Analysis failed (status ${status}).`);
-      smellsViewProvider.setSmells(filePath, []);
     }
   } catch (error: any) {
     smellsViewProvider.setStatus(filePath, 'failed');
     vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
-    smellsViewProvider.setSmells(filePath, []);
   }
 }
 
@@ -69,7 +66,6 @@ async function precheckAndMarkQueued(
       smellsViewProvider.setSmells(filePath, cached);
     } else {
       smellsViewProvider.setStatus(filePath, 'no_issues');
-      smellsViewProvider.setSmells(filePath, []);
     }
     return false;
   }
@@ -79,7 +75,6 @@ async function precheckAndMarkQueued(
       'Action blocked: Server is down and no cached smells exist for this file version.',
     );
     smellsViewProvider.setStatus(filePath, 'server_down');
-    smellsViewProvider.setSmells(filePath, []);
     return false;
   }
 
@@ -88,7 +83,6 @@ async function precheckAndMarkQueued(
     vscode.window.showWarningMessage(
       'No enabled smells found. Please configure enabled smells in the settings.',
     );
-    smellsViewProvider.setSmells(filePath, []);
     return false;
   }
 

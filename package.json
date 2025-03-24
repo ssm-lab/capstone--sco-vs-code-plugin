@@ -215,6 +215,30 @@
         "title": "Detect Smells",
         "icon": "$(search)",
         "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.refactorAllSmellsOfType",
+        "title": "Refactor Smells By Type",
+        "icon": "$(tools)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.refactorSmell",
+        "title": "Refactor Smell",
+        "icon": "$(tools)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.acceptRefactoring",
+        "title": "Accept Refactoring",
+        "category": "Eco",
+        "icon": "$(check)"
+      },
+      {
+        "command": "ecooptimizer.rejectRefactoring",
+        "title": "Reject Refactoring",
+        "category": "Eco",
+        "icon": "$(close)"
       }
     ],
     "menus": {
@@ -253,7 +277,17 @@
         },
         {
           "command": "ecooptimizer.detectSmellsFile",
-          "when": "view == ecooptimizer.smellsView && viewItem == file",
+          "when": "view == ecooptimizer.smellsView && (viewItem == file || viewItem == file_with_smells)",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.refactorAllSmellsOfType",
+          "when": "view == ecooptimizer.smellsView && viewItem == file_with_smells",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.refactorSmell",
+          "when": "view == ecooptimizer.smellsView && viewItem == smell",
           "group": "inline"
         }
       ]

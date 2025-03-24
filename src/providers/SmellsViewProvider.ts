@@ -77,7 +77,10 @@ export class SmellsViewProvider
     }
 
     // If file node, show smells
-    if (element?.contextValue === 'file') {
+    if (
+      element?.contextValue === 'file' ||
+      element?.contextValue === 'file_with_smells'
+    ) {
       ecoOutput.appendLine(`Getting smells for file: ${element.fullPath}`);
       const smells = this.fileSmells.get(element.fullPath) ?? [];
       return smells.map((smell) => new SmellTreeItem(smell));
@@ -133,6 +136,14 @@ export class SmellsViewProvider
     item.iconPath = icon;
     item.tooltip = tooltip;
 
+    if (
+      isFile &&
+      this.fileSmells.has(filePath) &&
+      this.fileSmells.get(filePath)!.length > 0
+    ) {
+      item.contextValue = 'file_with_smells';
+    }
+
     if (status === 'outdated') {
       item.description = 'outdated';
     }
@@ -152,7 +163,7 @@ class TreeItem extends vscode.TreeItem {
     this.resourceUri = vscode.Uri.file(fullPath);
     this.contextValue = contextValue;
 
-    if (contextValue === 'file') {
+    if (contextValue === 'file' || contextValue === 'file_with_smells') {
       this.command = {
         title: 'Open File',
         command: 'vscode.open',
