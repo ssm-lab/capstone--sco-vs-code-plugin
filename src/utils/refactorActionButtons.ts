@@ -1,46 +1,71 @@
 import * as vscode from 'vscode';
+import { ecoOutput } from '../extension';
 
-export function showRefactorActionButtons(context: vscode.ExtensionContext) {
-  const acceptButton = vscode.window.createStatusBarItem(
+let acceptButton: vscode.StatusBarItem | undefined;
+let rejectButton: vscode.StatusBarItem | undefined;
+
+/**
+ * Create and register the status bar buttons (called once at activation).
+ */
+export function initializeRefactorActionButtons(
+  context: vscode.ExtensionContext,
+): void {
+  ecoOutput.appendLine('Initializing refactor action buttons...');
+
+  acceptButton = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
     0,
   );
-  acceptButton.text = '$(check) Accept Refactoring';
-  acceptButton.command = 'ecooptimizer.acceptRefactoring';
-  acceptButton.color = 'lightgreen';
-  acceptButton.tooltip = 'Apply the suggested refactoring';
-
-  const rejectButton = vscode.window.createStatusBarItem(
+  rejectButton = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
     1,
   );
-  rejectButton.text = '$(x) Reject Refactoring';
+
+  acceptButton.text = '$(check) ACCEPT REFACTOR';
+  acceptButton.command = 'ecooptimizer.acceptRefactoring';
+  acceptButton.tooltip = 'Accept and apply the suggested refactoring';
+  acceptButton.color = new vscode.ThemeColor('charts.green');
+
+  rejectButton.text = '$(x) REJECT REFACTOR';
   rejectButton.command = 'ecooptimizer.rejectRefactoring';
-  rejectButton.color = 'red';
-  rejectButton.tooltip = 'Discard the suggested refactoring';
+  rejectButton.tooltip = 'Reject the suggested refactoring';
+  rejectButton.color = new vscode.ThemeColor('charts.red');
 
   context.subscriptions.push(acceptButton, rejectButton);
 
-  // Show them only when refactoring is active
-  vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
-
-  acceptButton.show();
-  rejectButton.show();
+  ecoOutput.appendLine('Status bar buttons created and registered.');
 }
 
 /**
- * Hides the refactor action buttons from the status bar.
+ * Show the status bar buttons when a refactoring is in progress.
  */
-export function hideRefactorActionButtons(context: vscode.ExtensionContext) {
-  const acceptButton = context.workspaceState.get<vscode.StatusBarItem>(
-    'ecooptimizer.refactorAcceptButton',
-  );
-  const rejectButton = context.workspaceState.get<vscode.StatusBarItem>(
-    'ecooptimizer.refactorRejectButton',
-  );
+export function showRefactorActionButtons(): void {
+  if (!acceptButton || !rejectButton) {
+    ecoOutput.appendLine(
+      '❌ Tried to show refactor buttons but they are not initialized.',
+    );
+    return;
+  }
 
-  acceptButton?.hide();
-  rejectButton?.hide();
+  ecoOutput.appendLine('Showing refactor action buttons...');
+  acceptButton.show();
+  rejectButton.show();
+  vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
+}
 
+/**
+ * Hide the status bar buttons when the refactoring ends.
+ */
+export function hideRefactorActionButtons(): void {
+  if (!acceptButton || !rejectButton) {
+    ecoOutput.appendLine(
+      '❌ Tried to hide refactor buttons but they are not initialized.',
+    );
+    return;
+  }
+
+  ecoOutput.appendLine('Hiding refactor action buttons...');
+  acceptButton.hide();
+  rejectButton.hide();
   vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
 }

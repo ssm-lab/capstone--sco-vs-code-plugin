@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { backendRefactorSmell } from '../api/backend';
@@ -7,44 +6,11 @@ import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import { ecoOutput } from '../extension';
 import { serverStatus, ServerStatusType } from '../emitters/serverStatus';
-import { showRefactorActionButtons } from '../utils/refactorActionButtons';
+import {
+  showRefactorActionButtons,
+  hideRefactorActionButtons,
+} from '../utils/refactorActionButtons';
 import { registerDiffEditor } from '../utils/trackedDiffEditors';
-
-/**
- * Recursively collects all Python files (.py) in a directory and its subdirectories
- * @param dir - The root directory path to search from
- * @returns Array of absolute file paths to all Python files found
- */
-function getAllPythonFiles(dir: string): string[] {
-  const pythonFiles: string[] = [];
-
-  /**
-   * Recursive directory walker function
-   * @param currentDir - Current directory being processed
-   */
-  const walkDirectory = (currentDir: string) => {
-    try {
-      const entries = fs.readdirSync(currentDir);
-
-      for (const entry of entries) {
-        const fullPath = path.join(currentDir, entry);
-        const stat = fs.statSync(fullPath);
-
-        if (stat.isDirectory()) {
-          walkDirectory(fullPath);
-        } else if (stat.isFile() && fullPath.endsWith('.py')) {
-          pythonFiles.push(fullPath);
-        }
-      }
-    } catch (error) {
-      ecoOutput.appendLine(`Error scanning directory ${currentDir}: ${error}`);
-      console.error(`Directory scan error: ${error}`);
-    }
-  };
-
-  walkDirectory(dir);
-  return pythonFiles;
-}
 
 /**
  * Handles the complete refactoring workflow for a detected code smell
@@ -72,16 +38,6 @@ export async function refactorSmell(
     ecoOutput.appendLine(errorMsg);
     vscode.window.showErrorMessage(errorMsg);
     return;
-  }
-
-  // Mark all Python files as being refactored
-  try {
-    const allPythonFiles = getAllPythonFiles(workspacePath);
-    allPythonFiles.forEach((filePath) => {
-      smellsViewProvider.setStatus(filePath, 'refactoring');
-    });
-  } catch (error) {
-    ecoOutput.appendLine(`Error marking files for refactoring: ${error}`);
   }
 
   // Check backend server status
@@ -132,7 +88,7 @@ export async function refactorSmell(
 
     // Step 4: Focus refactoring view and show action buttons
     await vscode.commands.executeCommand('ecooptimizer.refactorView.focus');
-    showRefactorActionButtons(context);
+    showRefactorActionButtons();
 
     // Step 5: Notify user of success
     const successMsg = `Refactoring successful! Estimated savings: ${refactoredData.energySaved ?? 'N/A'} kg CO2`;
@@ -147,12 +103,9 @@ export async function refactorSmell(
 
     // Reset UI state
     refactoringDetailsViewProvider.resetRefactoringDetails();
-    vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+    hideRefactorActionButtons();
 
     // Update file status
     smellsViewProvider.setStatus(smell.path, 'failed');
-  } finally {
-    // Ensure context is reset even if errors occur
-    vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
   }
 }

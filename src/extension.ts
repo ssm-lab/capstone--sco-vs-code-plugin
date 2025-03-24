@@ -33,42 +33,10 @@ import { exportMetricsData } from './commands/exportMetricsData';
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 import { LineSelectionManager } from './ui/LineSelection';
 import { registerDiffEditor } from './utils/trackedDiffEditors';
+import { initializeRefactorActionButtons } from './utils/refactorActionButtons';
 
 export function activate(context: vscode.ExtensionContext): void {
   ecoOutput.appendLine('Initializing Eco-Optimizer extension...');
-
-  // === Status Bar Buttons for Refactoring ===
-  const acceptRefactoringItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Left,
-    100,
-  );
-  acceptRefactoringItem.text = '$(check) Accept Refactoring';
-  acceptRefactoringItem.command = 'ecooptimizer.acceptRefactoring';
-  acceptRefactoringItem.tooltip = 'Accept and apply the suggested refactoring';
-  acceptRefactoringItem.hide();
-
-  const rejectRefactoringItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Left,
-    99,
-  );
-  rejectRefactoringItem.text = '$(x) Reject Refactoring';
-  rejectRefactoringItem.command = 'ecooptimizer.rejectRefactoring';
-  rejectRefactoringItem.tooltip = 'Reject the suggested refactoring';
-  rejectRefactoringItem.hide();
-
-  context.subscriptions.push(acceptRefactoringItem, rejectRefactoringItem);
-
-  vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
-
-  vscode.commands.registerCommand('ecooptimizer.showRefactorStatusBar', () => {
-    acceptRefactoringItem.show();
-    rejectRefactoringItem.show();
-  });
-
-  vscode.commands.registerCommand('ecooptimizer.hideRefactorStatusBar', () => {
-    acceptRefactoringItem.hide();
-    rejectRefactoringItem.hide();
-  });
 
   // === Load Core Data ===
   loadSmells();
@@ -76,6 +44,9 @@ export function activate(context: vscode.ExtensionContext): void {
   // === Start periodic backend status checks ===
   checkServerStatus();
   setInterval(checkServerStatus, 10000);
+
+  // === Initialize Refactor Action Buttons ===
+  initializeRefactorActionButtons(context);
 
   // === Initialize Managers & Providers ===
   const smellsCacheManager = new SmellsCacheManager(context);
@@ -201,7 +172,11 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', async () => {
-      await rejectRefactoring(refactoringDetailsViewProvider, context);
+      await rejectRefactoring(
+        refactoringDetailsViewProvider,
+        smellsViewProvider,
+        context,
+      );
     }),
 
     vscode.commands.registerCommand(

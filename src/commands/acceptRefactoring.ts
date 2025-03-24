@@ -60,7 +60,7 @@ export async function acceptRefactoring(
     refactoringDetailsViewProvider.resetRefactoringDetails();
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
-    hideRefactorActionButtons(context);
+    hideRefactorActionButtons();
 
     smellsViewProvider.refresh();
   } catch (error) {
