@@ -91,6 +91,21 @@ export class SmellsCacheManager {
   }
 
   /**
+   * Retrieves smells of a specific type for a given file.
+   *
+   * @param filePath - The absolute path of the file.
+   * @param type - The type of smell to filter by.
+   * @returns An array of smells matching the specified type, or an empty array if none are found.
+   */
+  public getSmellsByType(filePath: string, type: string): Smell[] {
+    const cachedSmells = this.getCachedSmells(filePath);
+    if (!cachedSmells) {
+      return [];
+    }
+    return cachedSmells.filter((smell) => smell.symbol === type);
+  }
+
+  /**
    * Clears all cached smells from the workspace state.
    * This forces a fresh analysis of all files when `detectSmellsFile` is called.
    */

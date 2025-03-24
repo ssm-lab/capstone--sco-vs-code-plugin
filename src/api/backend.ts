@@ -22,6 +22,48 @@ export async function checkServerStatus(): Promise<void> {
 }
 
 /**
+ * Initializes and synchronizes logs with the backend server.
+ *
+ * This function sends a POST request to the backend to initialize logging
+ * for the specified log directory. If the request is successful, logging
+ * is initialized; otherwise, an error is logged, and an error message is
+ * displayed to the user.
+ *
+ * @param log_dir - The directory path where logs are stored.
+ * @returns A promise that resolves to `true` if logging is successfully initialized,
+ *          or `false` if an error occurs.
+ */
+export async function initLogs(log_dir: string): Promise<boolean> {
+  const url = `${BASE_URL}/logs/init`;
+
+  try {
+    console.log('Initializing and synching logs with backend');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ log_dir }),
+    });
+
+    if (!response.ok) {
+      console.error(`Unable to initialize logging: ${JSON.stringify(response)}`);
+
+      return false;
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error(`Eco: Unable to initialize logging: ${error.message}`);
+    vscode.window.showErrorMessage(
+      'Eco: Unable to reach the backend. Please check your connection.',
+    );
+    return false;
+  }
+}
+
+/**
  * Sends a request to the backend to detect code smells in the specified file.
  *
  * @param filePath - The absolute path to the file being analyzed.
@@ -100,8 +142,68 @@ export async function backendRefactorSmell(
 
   // Prepare the payload for the backend
   const payload = {
-    source_dir: workspaceFolderPath,
+    sourceDir: workspaceFolderPath,
     smell,
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Refactoring failed');
+    }
+
+    const refactorResult = (await response.json()) as RefactoredData;
+    return refactorResult;
+  } catch (error: any) {
+    console.error('Eco: Unexpected error in refactorSmell:', error);
+    throw new Error(`Refactoring failed: ${error.message}`);
+  }
+}
+
+/**
+ * Sends a request to the backend to refactor all smells of a type.
+ *
+ * @param smell - The smell to refactor.
+ * @returns A promise resolving to the refactored data or throwing an error if unsuccessful.
+ */
+export async function backendRefactorSmellType(
+  smell: Smell
+): Promise<RefactoredData> {
+  const url = `${BASE_URL}/refactor-by-type`;
+  const filePath = smell.path;
+  const smellType = smell.symbol;
+
+  // Find the workspace folder containing the file
+  const workspaceFolder = vscode.workspace.workspaceFolders?.find((folder) =>
+    filePath.includes(folder.uri.fsPath),
+  );
+
+  if (!workspaceFolder) {
+    console.error('Eco: Error - Unable to determine workspace folder for', filePath);
+    throw new Error(
+      `Eco: Unable to find a matching workspace folder for file: ${filePath}`,
+    );
+  }
+
+  const workspaceFolderPath = workspaceFolder.uri.fsPath;
+
+  console.log(
+    `Eco: Initiating refactoring for smells of type "${smellType}" in "${filePath}"`,
+  );
+
+  // Prepare the payload for the backend
+  const payload = {
+    sourceDir: workspaceFolderPath,
+    smellType,
+    firstSmell: smell,
   };
 
   try {

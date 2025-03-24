@@ -15,6 +15,7 @@ import {
   refactorSmell,
   acceptRefactoring,
   rejectRefactoring,
+  refactorSmellType,
 } from './commands/refactorSmell';
 
 import { SmellsViewProvider } from './providers/SmellsViewProvider';
@@ -30,7 +31,7 @@ import { registerFileSaveListener } from './listeners/fileSaveListener';
 import { registerWorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 
 import { checkServerStatus } from './api/backend';
-import { loadSmells } from './utils/smellsData';
+import { getEnabledSmells, loadSmells } from './utils/smellsData';
 import { LineSelectionManager } from './ui/LineSelection';
 import { LogManager } from './commands/showLogs';
 
@@ -209,6 +210,49 @@ export function activate(context: vscode.ExtensionContext): void {
       // Call the refactorSmell function with only the smell object
       refactorSmell(smellsViewProvider, refactoringDetailsViewProvider, smell);
     }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'ecooptimizer.refactorAllSmellsOfType',
+      (filePath) => {
+        // Load the smell types from the default smells configuration
+        const smellTypes = Object.keys(getEnabledSmells());
+        const smells = smellsCacheManager.getFullSmellCache()[filePath];
+
+        console.log('filePath:', filePath);
+
+        vscode.window
+          .showQuickPick(smellTypes, {
+            placeHolder: 'Select a smell type to refactor',
+          })
+          .then((selectedType) => {
+            if (!selectedType) {
+              return; // User canceled the selection
+            }
+
+            const smell = smellsCacheManager.getSmellsByType(
+              filePath,
+              selectedType,
+            )[0];
+
+            console.log('Smell:', smell);
+
+            if (!smell) {
+              vscode.window.showInformationMessage(
+                `No smells of type "${selectedType}" found.`,
+              );
+              return;
+            }
+
+            refactorSmellType(
+              smellsViewProvider,
+              refactoringDetailsViewProvider,
+              smell,
+            );
+          });
+      },
+    ),
   );
 
   // Register the acceptRefactoring command

@@ -204,6 +204,12 @@
         "when": "view == ecooptimizer.filterView && !refactoringInProgress"
       },
       {
+        "command": "ecooptimizer.setFilterDefaults",
+        "title": "Set Filter Defaults",
+        "category": "Eco",
+        "when": "view == ecooptimizer.filterView && !refactoringInProgress"
+      },
+      {
         "command": "ecooptimizer.openFile",
         "title": "Open File",
         "category": "Eco",
@@ -302,6 +308,11 @@
         },
         {
           "command": "ecooptimizer.deselectAllFilterSmells",
+          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.setFilterDefaults",
           "when": "view == ecooptimizer.filterView && !refactoringInProgress",
           "group": "resource"
         },

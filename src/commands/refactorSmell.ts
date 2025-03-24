@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { basename } from 'path';
 import * as fs from 'fs';
 
-import { backendRefactorSmell } from '../api/backend';
+import { backendRefactorSmell, backendRefactorSmellType } from '../api/backend';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
@@ -41,6 +41,73 @@ export async function refactorSmell(
 
     // Call the backend to refactor the smell
     const refactoredData = await backendRefactorSmell(smell);
+
+    // Log the response from the backend
+    console.log('Refactoring response:', refactoredData);
+
+    // Update the refactoring details view with the target file, affected files, and energy saved
+    refactoringDetailsViewProvider.updateRefactoringDetails(
+      smell.symbol,
+      refactoredData.targetFile,
+      refactoredData.affectedFiles,
+      refactoredData.energySaved, // Pass the energy saved value
+    );
+
+    // Show a diff view for the target file
+    const targetFile = refactoredData.targetFile;
+    const fileName = basename(targetFile.original);
+    const originalUri = vscode.Uri.file(targetFile.original);
+    const refactoredUri = vscode.Uri.file(targetFile.refactored);
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      originalUri,
+      refactoredUri,
+      `Refactoring Comparison (${fileName})`,
+      {
+        preview: false, // Ensure the diff editor is not in preview mode
+      },
+    );
+
+    // Focus on the Refactoring Details view
+    await vscode.commands.executeCommand('ecooptimizer.refactoringDetails.focus');
+
+    // Notify the user
+    vscode.window.showInformationMessage(
+      `Refactoring successful! Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
+    );
+  } catch (error: any) {
+    console.error('Refactoring failed:', error.message);
+    vscode.window.showErrorMessage(`Refactoring failed: ${error.message}`);
+
+    // Reset the refactoring details view on failure
+    refactoringDetailsViewProvider.resetRefactoringDetails();
+    vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
+  }
+}
+
+export async function refactorSmellType(
+  smellsDataProvider: SmellsViewProvider,
+  refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
+  smell: Smell,
+): Promise<void> {
+  if (!smell) {
+    vscode.window.showErrorMessage('Error: Invalid smell.');
+    return;
+  }
+
+  vscode.window.showInformationMessage(
+    `Refactoring all code smells of type: ${smell.symbol}`,
+  );
+
+  // Update UI to indicate the file is queued for analysis
+  smellsDataProvider.updateStatus(smell.path, 'queued');
+
+  try {
+    // Set a context key to track that refactoring is in progress
+    vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
+
+    // Call the backend to refactor the smell
+    const refactoredData = await backendRefactorSmellType(smell);
 
     // Log the response from the backend
     console.log('Refactoring response:', refactoredData);
