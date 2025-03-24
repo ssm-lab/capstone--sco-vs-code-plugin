@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getStatusIcon, getStatusMessage } from '../utils/fileStatus';
 import { buildPythonTree } from '../utils/TreeStructureBuilder';
+import { getAcronymByMessageId } from '../utils/smellsData';
 
 export class SmellsViewProvider
   implements vscode.TreeDataProvider<TreeItem | SmellTreeItem>
@@ -138,9 +139,20 @@ class TreeItem extends vscode.TreeItem {
  */
 class SmellTreeItem extends vscode.TreeItem {
   constructor(public readonly smell: Smell) {
-    super(smell.messageId, vscode.TreeItemCollapsibleState.None); // Smells are leaf nodes
-    this.tooltip = smell.message; // Show the full message as a tooltip
-    this.contextValue = 'smell'; // Context value for smell items
-    this.iconPath = new vscode.ThemeIcon('snake'); // Use a warning icon for smells
+    const acronym = getAcronymByMessageId(smell.messageId) ?? smell.messageId;
+
+    // Build the line number string: "Line 13, 18, 19"
+    const lines = smell.occurences
+      ?.map((occ) => occ.line)
+      .filter((line) => line !== undefined)
+      .sort((a, b) => a - b)
+      .join(', ');
+
+    const label = lines ? `${acronym}: Line ${lines}` : acronym;
+
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.tooltip = smell.message;
+    this.contextValue = 'smell';
+    this.iconPath = new vscode.ThemeIcon('snake');
   }
 }

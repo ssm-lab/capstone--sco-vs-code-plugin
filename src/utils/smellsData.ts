@@ -121,3 +121,15 @@ function parseSmells(
       ]),
   );
 }
+
+/**
+ * Returns the acronym for a given message ID.
+ * @param messageId - The message ID to look up (e.g., "R0913").
+ * @returns The acronym (e.g., "LPL") or undefined if not found.
+ */
+export function getAcronymByMessageId(messageId: string): string | undefined {
+  const match = Object.values(filterSmells).find(
+    (smell) => smell.message_id === messageId,
+  );
+  return match?.acronym;
+}
