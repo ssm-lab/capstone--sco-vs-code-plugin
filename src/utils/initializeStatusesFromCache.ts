@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
+import { ecoOutput } from '../extension';
 
 /**
  * Initializes file statuses and smells in the SmellsViewProvider from the smell cache.
@@ -20,6 +21,7 @@ export async function initializeStatusesFromCache(
   const pathMap = smellsCacheManager.getAllFilePaths(); // Returns string[]
   for (const filePath of pathMap) {
     // Ignore files outside the configured workspace or that don't exist anymore
+    ecoOutput.appendLine(`Checking file: ${filePath}`);
     if (!filePath.startsWith(configuredPath)) {
       await smellsCacheManager.clearCachedSmellsForFile(filePath);
       continue;
@@ -34,9 +36,14 @@ export async function initializeStatusesFromCache(
 
     const smells = smellsCacheManager.getCachedSmells(filePath);
     if (smells !== undefined) {
-      const status = smells.length > 0 ? 'passed' : 'no_issues';
-      smellsViewProvider.setStatus(filePath, status);
-      smellsViewProvider.setSmells(filePath, smells); // Set smells in the tree view
+      if (smells.length > 0) {
+        // The file has one or more smells
+        smellsViewProvider.setStatus(filePath, 'passed');
+        smellsViewProvider.setSmells(filePath, smells);
+      } else {
+        // The file was analyzed but has no smells
+        smellsViewProvider.setStatus(filePath, 'no_issues');
+      }
     }
   }
 }

@@ -5,11 +5,11 @@ import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 /**
  * Clears the smells cache and refreshes the UI.
  * @param smellsCacheManager - Manages the caching of smells and file hashes.
- * @param smellsDisplayProvider - The UI provider for updating the tree view.
+ * @param smellsViewProvider - The UI provider for updating the tree view.
  */
 export async function wipeWorkCache(
   smellsCacheManager: SmellsCacheManager,
-  smellsDisplayProvider: SmellsViewProvider,
+  smellsViewProvider: SmellsViewProvider,
 ) {
   const userResponse = await vscode.window.showWarningMessage(
     'Are you sure you want to clear the smells cache? This action cannot be undone.',
@@ -18,8 +18,9 @@ export async function wipeWorkCache(
   );
 
   if (userResponse === 'Confirm') {
-    // Use SmellsCacheManager to clear cache & refresh UI
-    await smellsCacheManager.clearCacheAndRefreshUI(smellsDisplayProvider);
+    smellsCacheManager.clearAllCachedSmells();
+    smellsViewProvider.clearAllStatuses();
+    smellsViewProvider.refresh();
 
     vscode.window.showInformationMessage('Smells cache cleared successfully.');
   } else {

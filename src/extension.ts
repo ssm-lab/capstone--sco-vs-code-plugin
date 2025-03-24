@@ -17,12 +17,12 @@ import { FilterViewProvider } from './providers/FilterViewProvider';
 import { configureWorkspace } from './commands/configureWorkspace';
 import { resetConfiguration } from './commands/resetConfiguration';
 import { detectSmellsFile } from './commands/detectSmells';
-import { openFile } from './commands/openFile';
 import { registerFilterSmellCommands } from './commands/filterSmells';
 
 // Listeners
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 import { jumpToSmell } from './commands/jumpToSmell';
+import { wipeWorkCache } from './commands/wipeWorkCache';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary components.
@@ -100,9 +100,11 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
-    vscode.commands.registerCommand('ecooptimizer.openFile', openFile),
-
     vscode.commands.registerCommand('ecooptimizer.jumpToSmell', jumpToSmell),
+
+    vscode.commands.registerCommand('ecooptimizer.wipeWorkCache', async () => {
+      await wipeWorkCache(smellsCacheManager, smellsViewProvider);
+    }),
 
     vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileItem) => {
       try {

@@ -169,6 +169,11 @@
         "category": "Eco"
       },
       {
+        "command": "ecooptimizer.wipeWorkCache",
+        "title": "Clear Smells Cache",
+        "category": "Eco"
+      },
+      {
         "command": "ecooptimizer.toggleSmellFilter",
         "title": "Toggle Smell",
         "category": "Eco"
@@ -190,12 +195,6 @@
         "category": "Eco"
       },
       {
-        "command": "ecooptimizer.openFile",
-        "title": "Open File",
-        "category": "Eco",
-        "enablement": "false"
-      },
-      {
         "command": "ecooptimizer.detectSmellsFile",
         "title": "Detect Smells",
         "icon": "$(search)",
@@ -206,6 +205,11 @@
       "view/title": [
         {
           "command": "ecooptimizer.resetConfiguration",
+          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.wipeWorkCache",
           "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured",
           "group": "resource"
         },
