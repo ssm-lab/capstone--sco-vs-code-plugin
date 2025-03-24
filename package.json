@@ -129,6 +129,11 @@
     "views": {
       "ecooptimizer": [
         {
+          "id": "ecooptimizer.refactoringDetails",
+          "name": "Refactoring Details",
+          "icon": "assets/eco-icon.png"
+        },
+        {
           "id": "ecooptimizer.smellsView",
           "name": "Code Smells",
           "icon": "assets/eco-icon.png"
@@ -147,8 +152,13 @@
     },
     "viewsWelcome": [
       {
+        "view": "ecooptimizer.refactoringDetails",
+        "contents": "Refactoring is currently not in progress. Try selecting a smell in the Code Smells view to start refactoring.",
+        "when": "!refactoringInProgress"
+      },
+      {
         "view": "ecooptimizer.smellsView",
-        "contents": "No code smells detected yet. Configure your workspace to start analysis!\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
+        "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
         "when": "!workspaceState.workspaceConfigured"
       },
       {
@@ -195,6 +205,12 @@
         "category": "Eco"
       },
       {
+        "command": "ecooptimizer.detectSmellsFolder",
+        "title": "Detect Smells for All Files",
+        "icon": "$(search)",
+        "category": "Eco"
+      },
+      {
         "command": "ecooptimizer.detectSmellsFile",
         "title": "Detect Smells",
         "icon": "$(search)",
@@ -228,6 +244,11 @@
         {
           "command": "ecooptimizer.editSmellFilterOption",
           "when": "viewItem == smellOption",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.detectSmellsFolder",
+          "when": "viewItem == ecooptimizer.smellsView && viewItem == folder",
           "group": "inline"
         },
         {

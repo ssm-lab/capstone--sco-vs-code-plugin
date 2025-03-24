@@ -183,7 +183,7 @@ class SmellTreeItem extends vscode.TreeItem {
       this.command = {
         title: 'Jump to Smell',
         command: 'ecooptimizer.jumpToSmell',
-        arguments: [smell.path, firstLine],
+        arguments: [smell.path, firstLine - 1],
       };
     }
   }

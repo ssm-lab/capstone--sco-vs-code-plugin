@@ -23,6 +23,7 @@ import { registerFilterSmellCommands } from './commands/filterSmells';
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
+import { LineSelectionManager } from './ui/LineSelection';
 
 /**
  * Activates the Eco-Optimizer extension and registers all necessary components.
@@ -133,6 +134,27 @@ export function activate(context: vscode.ExtensionContext): void {
       smellsViewProvider,
       metricsViewProvider,
     ),
+  );
+
+  // Initialize the FileHighlighter for highlighting code smells.
+  // const fileHighlighter = FileHighlighter.getInstance(smellsCacheManager);
+
+  // fileHighlighter.updateHighlightsForVisibleEditors();
+
+  // context.subscriptions.push(
+  //   vscode.window.onDidChangeVisibleTextEditors((editors) => {
+  //     editors.forEach((editor) => {
+  //       fileHighlighter.highlightSmells(editor);
+  //     });
+  //   }),
+  // );
+
+  const lineSelectManager = new LineSelectionManager(smellsCacheManager);
+  context.subscriptions.push(
+    vscode.window.onDidChangeTextEditorSelection((event) => {
+      console.log('Eco: Detected line selection event');
+      lineSelectManager.commentLine(event.textEditor);
+    }),
   );
 }
 
