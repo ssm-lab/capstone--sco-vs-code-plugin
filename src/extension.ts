@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 
-// Output channel for logging
+// === Output Channel ===
 export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer');
 
 // === Core Utilities ===
 import { loadSmells } from './utils/smellsData';
 import { initializeStatusesFromCache } from './utils/initializeStatusesFromCache';
 import { openDiffEditor } from './utils/openDiffEditor';
+import { envConfig } from './utils/envConfig';
+import { checkServerStatus } from './api/backend';
 
 // === Context & View Providers ===
 import { SmellsCacheManager } from './context/SmellsCacheManager';
@@ -23,16 +25,16 @@ import { registerFilterSmellCommands } from './commands/filterSmells';
 import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
 import { refactorSmell } from './commands/refactorSmell';
+import { acceptRefactoring } from './commands/acceptRefactoring';
+import { rejectRefactoring } from './commands/rejectRefactoring';
+import { exportMetricsData } from './commands/exportMetricsData';
 
 // === Listeners & UI ===
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 import { LineSelectionManager } from './ui/LineSelection';
-import { envConfig } from './utils/envConfig';
-import { exportMetricsData } from './commands/exportMetricsData';
-import { acceptRefactoring } from './commands/acceptRefactoring';
-import { rejectRefactoring } from './commands/rejectRefactoring';
 
 export function activate(context: vscode.ExtensionContext): void {
+  // === Status Bar Buttons for Refactoring ===
   const acceptRefactoringItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
     100,
@@ -40,7 +42,7 @@ export function activate(context: vscode.ExtensionContext): void {
   acceptRefactoringItem.text = '$(check) Accept Refactoring';
   acceptRefactoringItem.command = 'ecooptimizer.acceptRefactoring';
   acceptRefactoringItem.tooltip = 'Accept and apply the suggested refactoring';
-  acceptRefactoringItem.hide(); // Hidden by default
+  acceptRefactoringItem.hide();
 
   const rejectRefactoringItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
@@ -49,11 +51,11 @@ export function activate(context: vscode.ExtensionContext): void {
   rejectRefactoringItem.text = '$(x) Reject Refactoring';
   rejectRefactoringItem.command = 'ecooptimizer.rejectRefactoring';
   rejectRefactoringItem.tooltip = 'Reject the suggested refactoring';
-  rejectRefactoringItem.hide(); // Hidden by default
+  rejectRefactoringItem.hide();
 
   context.subscriptions.push(acceptRefactoringItem, rejectRefactoringItem);
 
-  vscode.commands.executeCommand('setContext', 'refactoringInProgress', false); // initially
+  vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);
 
   vscode.commands.registerCommand('ecooptimizer.showRefactorStatusBar', () => {
     acceptRefactoringItem.show();
@@ -65,8 +67,12 @@ export function activate(context: vscode.ExtensionContext): void {
     rejectRefactoringItem.hide();
   });
 
-  // Load smell definitions
+  // === Load Core Data ===
   loadSmells();
+
+  // === Start periodic backend status checks ===
+  checkServerStatus();
+  setInterval(checkServerStatus, 10000);
 
   // === Initialize Managers & Providers ===
   const smellsCacheManager = new SmellsCacheManager(context);
@@ -80,7 +86,6 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   const refactoringDetailsViewProvider = new RefactoringDetailsViewProvider();
 
-  // Restore cached statuses
   initializeStatusesFromCache(context, smellsCacheManager, smellsViewProvider);
 
   // === Register Tree Views ===
@@ -101,7 +106,6 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // Connect checkbox UI logic
   filterSmellsProvider.setTreeView(
     vscode.window.createTreeView('ecooptimizer.filterView', {
       treeDataProvider: filterSmellsProvider,
@@ -109,7 +113,6 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // Set workspace configuration context
   const workspaceConfigured = Boolean(
     context.workspaceState.get<string>('workspaceConfiguredPath'),
   );
@@ -184,60 +187,35 @@ export function activate(context: vscode.ExtensionContext): void {
       },
     ),
 
+    vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', async () => {
+      await acceptRefactoring(
+        refactoringDetailsViewProvider,
+        metricsViewProvider,
+        smellsCacheManager,
+        smellsViewProvider,
+        context,
+      );
+    }),
+
+    vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', async () => {
+      await rejectRefactoring(refactoringDetailsViewProvider, context);
+    }),
+
     vscode.commands.registerCommand(
       'ecooptimizer.openDiffEditor',
       (originalFilePath: string, refactoredFilePath: string) => {
         openDiffEditor(originalFilePath, refactoredFilePath);
       },
     ),
-  );
 
-  // Register filter-related commands
-  registerFilterSmellCommands(context, filterSmellsProvider);
-
-  // === Watch for workspace changes ===
-  context.subscriptions.push(
-    new WorkspaceModifiedListener(
-      context,
-      smellsCacheManager,
-      smellsViewProvider,
-      metricsViewProvider,
-    ),
-  );
-
-  // === Register Line Selection Listener ===
-  const lineSelectManager = new LineSelectionManager(smellsCacheManager);
-  context.subscriptions.push(
-    vscode.window.onDidChangeTextEditorSelection((event) => {
-      lineSelectManager.commentLine(event.textEditor);
+    vscode.commands.registerCommand('ecooptimizer.exportMetricsData', () => {
+      exportMetricsData(context);
     }),
-  );
 
-  vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', async () => {
-    await acceptRefactoring(
-      refactoringDetailsViewProvider,
-      metricsViewProvider,
-      smellsCacheManager,
-      smellsViewProvider,
-      context,
-    );
-  }),
-    vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', async () => {
-      await rejectRefactoring(refactoringDetailsViewProvider, context);
-    }),
-    context.subscriptions.push(
-      vscode.commands.registerCommand('ecooptimizer.exportMetricsData', () =>
-        exportMetricsData(context),
-      ),
-    );
-
-  context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.metricsView.refresh', () => {
       metricsViewProvider.refresh();
     }),
-  );
 
-  context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.clearMetricsData', () => {
       vscode.window
         .showWarningMessage(
@@ -254,8 +232,29 @@ export function activate(context: vscode.ExtensionContext): void {
             );
             vscode.window.showInformationMessage('Metrics data has been cleared.');
           }
+          metricsViewProvider.refresh();
         });
-      metricsViewProvider.refresh();
+    }),
+  );
+
+  // === Register Filter UI Commands ===
+  registerFilterSmellCommands(context, filterSmellsProvider);
+
+  // === Workspace File Listener ===
+  context.subscriptions.push(
+    new WorkspaceModifiedListener(
+      context,
+      smellsCacheManager,
+      smellsViewProvider,
+      metricsViewProvider,
+    ),
+  );
+
+  // === Line Selection ===
+  const lineSelectManager = new LineSelectionManager(smellsCacheManager);
+  context.subscriptions.push(
+    vscode.window.onDidChangeTextEditorSelection((event) => {
+      lineSelectManager.commentLine(event.textEditor);
     }),
   );
 }
