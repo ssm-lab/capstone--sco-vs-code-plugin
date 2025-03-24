@@ -7,6 +7,7 @@ import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { MetricsViewProvider } from '../providers/MetricsViewProvider';
+import { ecoOutput } from '../extension';
 
 function normalizePath(filePath: string): string {
   const normalizedPath = filePath.toLowerCase(); // Normalize case for consistent Map keying
@@ -33,7 +34,7 @@ export async function refactorSmell(
   vscode.window.showInformationMessage(`Refactoring code smell: ${smell.symbol}`);
 
   // Update UI to indicate the file is queued for analysis
-  smellsDataProvider.updateStatus(smell.path, 'queued');
+  smellsDataProvider.setStatus(smell.path, 'queued');
 
   try {
     // Set a context key to track that refactoring is in progress
@@ -43,7 +44,7 @@ export async function refactorSmell(
     const refactoredData = await backendRefactorSmell(smell);
 
     // Log the response from the backend
-    ecoOutput.appendLine('Refactoring response:', refactoredData);
+    ecoOutput.appendLine(`Refactoring response: ${JSON.stringify(refactoredData)}`);
 
     // Update the refactoring details view with the target file, affected files, and energy saved
     refactoringDetailsViewProvider.updateRefactoringDetails(
@@ -116,10 +117,10 @@ export async function acceptRefactoring(
     const targetSmell = refactoringDetailsViewProvider.targetSmell;
     const file = vscode.Uri.file(targetFile.original).fsPath;
 
-    ecoOutput.appendLine('Energy: %d, smell: %s', energySaved, targetSmell);
+    ecoOutput.appendLine(`Energy: ${energySaved}, smell: ${targetSmell}`);
 
     if (energySaved && targetSmell) {
-      ecoOutput.appendLine('Updating metrics for', file);
+      ecoOutput.appendLine(`Updating metrics for ${file}`);
       metricsDataProvider.updateMetrics(file, energySaved, targetSmell);
     }
 
@@ -137,9 +138,9 @@ export async function acceptRefactoring(
     }
 
     // Mark the target file and affected files as outdated
-    smellsViewProvider.markFileAsOutdated(normalizePath(targetFile.original));
+    smellsViewProvider.setStatus(normalizePath(targetFile.original), 'outdated');
     for (const file of affectedFiles) {
-      smellsViewProvider.markFileAsOutdated(normalizePath(file.original));
+      smellsViewProvider.setStatus(normalizePath(targetFile.original), 'outdated');
     }
 
     // Reset the refactoring details view
