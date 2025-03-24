@@ -176,7 +176,7 @@ class TreeItem extends vscode.TreeItem {
   }
 }
 
-class SmellTreeItem extends vscode.TreeItem {
+export class SmellTreeItem extends vscode.TreeItem {
   constructor(public readonly smell: Smell) {
     const acronym = getAcronymByMessageId(smell.messageId) ?? smell.messageId;
     const lines = smell.occurences

@@ -3,35 +3,36 @@ import * as vscode from 'vscode';
 // Output channel for logging
 export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer');
 
-// Core utilities
+// === Core Utilities ===
 import { loadSmells } from './utils/smellsData';
 import { initializeStatusesFromCache } from './utils/initializeStatusesFromCache';
+import { openDiffEditor } from './utils/openDiffEditor';
 
-// Context & View Providers
+// === Context & View Providers ===
 import { SmellsCacheManager } from './context/SmellsCacheManager';
-import { SmellsViewProvider } from './providers/SmellsViewProvider';
+import { SmellsViewProvider, SmellTreeItem } from './providers/SmellsViewProvider';
 import { MetricsViewProvider } from './providers/MetricsViewProvider';
 import { FilterViewProvider } from './providers/FilterViewProvider';
+import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsViewProvider';
 
-// Commands
+// === Commands ===
 import { configureWorkspace } from './commands/configureWorkspace';
 import { resetConfiguration } from './commands/resetConfiguration';
 import { detectSmellsFile, detectSmellsFolder } from './commands/detectSmells';
 import { registerFilterSmellCommands } from './commands/filterSmells';
-
-// Listeners
-import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 import { jumpToSmell } from './commands/jumpToSmell';
 import { wipeWorkCache } from './commands/wipeWorkCache';
+import { refactorSmell } from './commands/refactorSmell';
+
+// === Listeners & UI ===
+import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
 import { LineSelectionManager } from './ui/LineSelection';
 
-/**
- * Activates the Eco-Optimizer extension and registers all necessary components.
- */
 export function activate(context: vscode.ExtensionContext): void {
-  // Load smell definitions and initialize context
+  // Load smell definitions
   loadSmells();
 
+  // === Initialize Managers & Providers ===
   const smellsCacheManager = new SmellsCacheManager(context);
   const smellsViewProvider = new SmellsViewProvider(context);
   const metricsViewProvider = new MetricsViewProvider(context);
@@ -41,11 +42,12 @@ export function activate(context: vscode.ExtensionContext): void {
     smellsCacheManager,
     smellsViewProvider,
   );
+  const refactoringDetailsViewProvider = new RefactoringDetailsViewProvider();
 
   // Restore cached statuses
   initializeStatusesFromCache(context, smellsCacheManager, smellsViewProvider);
 
-  // === Tree Views ===
+  // === Register Tree Views ===
   context.subscriptions.push(
     vscode.window.createTreeView('ecooptimizer.smellsView', {
       treeDataProvider: smellsViewProvider,
@@ -58,9 +60,12 @@ export function activate(context: vscode.ExtensionContext): void {
       treeDataProvider: filterSmellsProvider,
       showCollapseAll: true,
     }),
+    vscode.window.createTreeView('ecooptimizer.refactorView', {
+      treeDataProvider: refactoringDetailsViewProvider,
+    }),
   );
 
-  // Link checkbox UI to filter logic
+  // Connect checkbox UI logic
   filterSmellsProvider.setTreeView(
     vscode.window.createTreeView('ecooptimizer.filterView', {
       treeDataProvider: filterSmellsProvider,
@@ -68,7 +73,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // === Workspace Context Flag ===
+  // Set workspace configuration context
   const workspaceConfigured = Boolean(
     context.workspaceState.get<string>('workspaceConfiguredPath'),
   );
@@ -78,7 +83,7 @@ export function activate(context: vscode.ExtensionContext): void {
     workspaceConfigured,
   );
 
-  // === Command Registration ===
+  // === Register Commands ===
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.configureWorkspace', async () => {
       await configureWorkspace(context);
@@ -88,13 +93,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand('ecooptimizer.resetConfiguration', async () => {
       const didReset = await resetConfiguration(context);
-
       if (didReset) {
         smellsCacheManager.clearAllCachedSmells();
         smellsViewProvider.clearAllStatuses();
         smellsViewProvider.refresh();
         metricsViewProvider.refresh();
-
         vscode.window.showInformationMessage(
           'Workspace configuration has been reset. All analysis data has been cleared.',
         );
@@ -108,18 +111,12 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileItem) => {
-      try {
-        const filePath = fileItem?.resourceUri?.fsPath;
-        if (!filePath) {
-          vscode.window.showWarningMessage(
-            'No file selected or file path not found.',
-          );
-          return;
-        }
-        detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
-      } catch (error: any) {
-        vscode.window.showErrorMessage(`Error detecting smells: ${error.message}`);
+      const filePath = fileItem?.resourceUri?.fsPath;
+      if (!filePath) {
+        vscode.window.showWarningMessage('No file selected or file path not found.');
+        return;
       }
+      detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
     }),
 
     vscode.commands.registerCommand(
@@ -133,12 +130,31 @@ export function activate(context: vscode.ExtensionContext): void {
         detectSmellsFolder(folderPath, smellsViewProvider, smellsCacheManager);
       },
     ),
+
+    vscode.commands.registerCommand(
+      'ecooptimizer.refactorSmell',
+      (item: SmellTreeItem) => {
+        const smell = item?.smell;
+        if (!smell) {
+          vscode.window.showErrorMessage('No smell found for this item.');
+          return;
+        }
+        refactorSmell(smellsViewProvider, refactoringDetailsViewProvider, smell);
+      },
+    ),
+
+    vscode.commands.registerCommand(
+      'ecooptimizer.openDiffEditor',
+      (originalFilePath: string, refactoredFilePath: string) => {
+        openDiffEditor(originalFilePath, refactoredFilePath);
+      },
+    ),
   );
 
-  // Register filter UI toggle/edit/select-all/deselect-all
+  // Register filter-related commands
   registerFilterSmellCommands(context, filterSmellsProvider);
 
-  // === Workspace File Listener ===
+  // === Watch for workspace changes ===
   context.subscriptions.push(
     new WorkspaceModifiedListener(
       context,
@@ -148,31 +164,15 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
-  // Initialize the FileHighlighter for highlighting code smells.
-  // const fileHighlighter = FileHighlighter.getInstance(smellsCacheManager);
-
-  // fileHighlighter.updateHighlightsForVisibleEditors();
-
-  // context.subscriptions.push(
-  //   vscode.window.onDidChangeVisibleTextEditors((editors) => {
-  //     editors.forEach((editor) => {
-  //       fileHighlighter.highlightSmells(editor);
-  //     });
-  //   }),
-  // );
-
+  // === Register Line Selection Listener ===
   const lineSelectManager = new LineSelectionManager(smellsCacheManager);
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((event) => {
-      console.log('Eco: Detected line selection event');
       lineSelectManager.commentLine(event.textEditor);
     }),
   );
 }
 
-/**
- * Called when the extension is deactivated.
- */
 export function deactivate(): void {
-  ecoOutput.appendLine('Deactivating Eco-Optimizer extension...\n');
+  ecoOutput.appendLine('Deactivating Eco-Optimizer extension...');
 }

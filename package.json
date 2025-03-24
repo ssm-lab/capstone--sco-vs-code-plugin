@@ -129,7 +129,7 @@
     "views": {
       "ecooptimizer": [
         {
-          "id": "ecooptimizer.refactoringDetails",
+          "id": "ecooptimizer.refactorView",
           "name": "Refactoring Details",
           "icon": "assets/eco-icon.png"
         },
@@ -152,7 +152,7 @@
     },
     "viewsWelcome": [
       {
-        "view": "ecooptimizer.refactoringDetails",
+        "view": "ecooptimizer.refactorView",
         "contents": "Refactoring is currently not in progress. Try selecting a smell in the Code Smells view to start refactoring.",
         "when": "!refactoringInProgress"
       },
@@ -289,6 +289,16 @@
           "command": "ecooptimizer.refactorSmell",
           "when": "view == ecooptimizer.smellsView && viewItem == smell",
           "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.acceptRefactoring",
+          "when": "view == ecooptimizer.refactorView && refactoringInProgress",
+          "group": "navigation"
+        },
+        {
+          "command": "ecooptimizer.rejectRefactoring",
+          "when": "view == ecooptimizer.refactorView && refactoringInProgress",
+          "group": "navigation"
         }
       ]
     },
