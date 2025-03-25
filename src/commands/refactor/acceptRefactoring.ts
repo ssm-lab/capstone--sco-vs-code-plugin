@@ -36,6 +36,7 @@ export async function acceptRefactoring(
 
   // Validate refactoring data exists
   if (!targetFile || !affectedFiles) {
+    console.log('no data');
     ecoOutput.error('[refactorActions.ts] Error: No refactoring data available');
     vscode.window.showErrorMessage('No refactoring data available.');
     return;

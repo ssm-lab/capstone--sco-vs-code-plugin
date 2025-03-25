@@ -12,6 +12,8 @@ export async function exportMetricsData(
     [path: string]: MetricsDataItem;
   }>(envConfig.WORKSPACE_METRICS_DATA!, {});
 
+  console.log('metrics data:', metricsData);
+
   if (Object.keys(metricsData).length === 0) {
     vscode.window.showInformationMessage('No metrics data available to export.');
     return;
@@ -20,6 +22,8 @@ export async function exportMetricsData(
   const configuredWorkspacePath = context.workspaceState.get<string>(
     envConfig.WORKSPACE_CONFIGURED_PATH!,
   );
+
+  console.log('configured path:', configuredWorkspacePath);
 
   if (!configuredWorkspacePath) {
     vscode.window.showErrorMessage('No configured workspace path found.');

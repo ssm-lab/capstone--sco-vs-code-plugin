@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { promises } from 'fs';
 
 import { backendRefactorSmell, backendRefactorSmellType } from '../../api/backend';
 import { SmellsViewProvider } from '../../providers/SmellsViewProvider';
@@ -130,11 +129,4 @@ export async function startRefactorSession(
   vscode.window.showInformationMessage(
     `Refactoring complete. Estimated savings: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
   );
-}
-
-export async function cleanTemps(pastData: RefactoredData): Promise<void> {
-  console.log('Cleaning up stale artifacts');
-  const tempDirs = pastData.tempDir;
-
-  await promises.rm(tempDirs, { recursive: true, force: true });
 }

@@ -28,7 +28,7 @@
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "test": "jest --verbose",
-    "test:watch": "jest --watch --silent --verbose",
+    "test:watch": "jest --watch --verbose",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
     "compile-tests": "tsc -p . --outDir out",

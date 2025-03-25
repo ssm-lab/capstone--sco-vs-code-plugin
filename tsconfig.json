@@ -15,7 +15,7 @@
 	  "forceConsistentCasingInFileNames": true,
 	  "allowSyntheticDefaultImports": true
 	},
-	"include": ["./src/global.d.ts", "./src/types.d.ts", "src/**/*.ts", "test/**/*.ts", "media/script.js"],
+	"include": ["./src/global.d.ts", "./src/types.d.ts", "src/**/*.ts", "test/**/*.ts"],
 	"exclude": ["node_modules", "dist"]
   }
   
