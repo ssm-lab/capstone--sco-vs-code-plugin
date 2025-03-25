@@ -47,7 +47,9 @@ export class SmellsCacheManager {
   public async setCachedSmells(filePath: string, smells: Smell[]): Promise<void> {
     const cache = this.getFullSmellCache();
     const pathMap = this.getHashToPathMap();
-    const fileHash = this.generateFileHash(filePath);
+
+    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const fileHash = this.generateFileHash(normalizedPath);
 
     // Augment smells with stable identifiers
     const smellsWithIds = smells.map((smell) => ({
@@ -56,7 +58,7 @@ export class SmellsCacheManager {
     }));
 
     cache[fileHash] = smellsWithIds;
-    pathMap[fileHash] = filePath;
+    pathMap[fileHash] = normalizedPath;
 
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
     await this.context.workspaceState.update(envConfig.HASH_PATH_MAP_KEY!, pathMap);
@@ -70,7 +72,8 @@ export class SmellsCacheManager {
    * @returns Array of smells or undefined if not found
    */
   public getCachedSmells(filePath: string): Smell[] | undefined {
-    const fileHash = this.generateFileHash(filePath);
+    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const fileHash = this.generateFileHash(normalizedPath);
     const cache = this.getFullSmellCache();
     return cache[fileHash];
   }
@@ -81,7 +84,8 @@ export class SmellsCacheManager {
    * @returns True if file has cached smells
    */
   public hasCachedSmells(filePath: string): boolean {
-    const fileHash = this.generateFileHash(filePath);
+    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const fileHash = this.generateFileHash(normalizedPath);
     const cache = this.getFullSmellCache();
     return cache[fileHash] !== undefined;
   }
@@ -91,7 +95,8 @@ export class SmellsCacheManager {
    * @param filePath - File path to clear from cache
    */
   public async clearCachedSmellsForFile(filePath: string): Promise<void> {
-    const fileHash = this.generateFileHash(filePath);
+    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const fileHash = this.generateFileHash(normalizedPath);
     const cache = this.getFullSmellCache();
     const pathMap = this.getHashToPathMap();
 
@@ -101,7 +106,7 @@ export class SmellsCacheManager {
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
     await this.context.workspaceState.update(envConfig.HASH_PATH_MAP_KEY!, pathMap);
 
-    this.cacheUpdatedEmitter.fire(filePath);
+    this.cacheUpdatedEmitter.fire(normalizedPath);
   }
 
   /**
@@ -110,7 +115,8 @@ export class SmellsCacheManager {
    */
   public async clearCachedSmellsByPath(filePath: string): Promise<void> {
     const pathMap = this.getHashToPathMap();
-    const hash = Object.keys(pathMap).find((h) => pathMap[h] === filePath);
+    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const hash = Object.keys(pathMap).find((h) => pathMap[h] === normalizedPath);
     if (!hash) return;
 
     const cache = this.getFullSmellCache();
@@ -120,7 +126,7 @@ export class SmellsCacheManager {
     await this.context.workspaceState.update(envConfig.SMELL_CACHE_KEY!, cache);
     await this.context.workspaceState.update(envConfig.HASH_PATH_MAP_KEY!, pathMap);
 
-    this.cacheUpdatedEmitter.fire(filePath);
+    this.cacheUpdatedEmitter.fire(normalizedPath);
   }
 
   /**
@@ -174,10 +180,11 @@ export class SmellsCacheManager {
    */
   public hasFileInCache(filePath: string): boolean {
     const pathMap = this.getHashToPathMap();
-    const fileExistsInCache = Object.values(pathMap).includes(filePath);
+    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const fileExistsInCache = Object.values(pathMap).includes(normalizedPath);
 
     ecoOutput.appendLine(
-      `[SmellCacheManager] Path existence check for ${filePath}: ` +
+      `[SmellCacheManager] Path existence check for ${normalizedPath}: ` +
         `${fileExistsInCache ? 'EXISTS' : 'NOT FOUND'} in cache`,
     );
 

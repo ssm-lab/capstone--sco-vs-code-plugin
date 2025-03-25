@@ -16,21 +16,63 @@ const BASE_URL = `http://${envConfig.SERVER_URL}`;
  */
 export async function checkServerStatus(): Promise<void> {
   try {
-    ecoOutput.appendLine('[backend.ts] Checking backend server health status...');
+    ecoOutput.trace('[backend.ts] Checking backend server health status...');
     const response = await fetch(`${BASE_URL}/health`);
     
     if (response.ok) {
       serverStatus.setStatus(ServerStatusType.UP);
-      ecoOutput.appendLine('[backend.ts] Backend server is healthy');
+      ecoOutput.trace('[backend.ts] Backend server is healthy');
     } else {
       serverStatus.setStatus(ServerStatusType.DOWN);
-      ecoOutput.appendLine(`[backend.ts] Backend server unhealthy status: ${response.status}`);
+      ecoOutput.trace(`[backend.ts] Backend server unhealthy status: ${response.status}`);
     }
   } catch (error) {
     serverStatus.setStatus(ServerStatusType.DOWN);
-    ecoOutput.appendLine(
+    ecoOutput.error(
       `[backend.ts] Server connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
+  }
+}
+
+/**
+ * Initializes and synchronizes logs with the backend server.
+ *
+ * This function sends a POST request to the backend to initialize logging
+ * for the specified log directory. If the request is successful, logging
+ * is initialized; otherwise, an error is logged, and an error message is
+ * displayed to the user.
+ *
+ * @param log_dir - The directory path where logs are stored.
+ * @returns A promise that resolves to `true` if logging is successfully initialized,
+ *          or `false` if an error occurs.
+ */
+export async function initLogs(log_dir: string): Promise<boolean> {
+  const url = `${BASE_URL}/logs/init`;
+
+  try {
+    console.log('Initializing and synching logs with backend');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ log_dir }),
+    });
+
+    if (!response.ok) {
+      console.error(`Unable to initialize logging: ${JSON.stringify(response)}`);
+
+      return false;
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error(`Eco: Unable to initialize logging: ${error.message}`);
+    ecoOutput.warn(
+      'Eco: Unable to reach the backend. Please check your connection.',
+    );
+    return false;
   }
 }
 
@@ -49,7 +91,7 @@ export async function fetchSmells(
   enabledSmells: Record<string, Record<string, number | string>>,
 ): Promise<{ smells: Smell[]; status: number }> {
   const url = `${BASE_URL}/smells`;
-  ecoOutput.appendLine(`[backend.ts] Starting smell detection for: ${path.basename(filePath)}`);
+  ecoOutput.info(`[backend.ts] Starting smell detection for: ${path.basename(filePath)}`);
 
   try {
     const response = await fetch(url, {
@@ -65,16 +107,16 @@ export async function fetchSmells(
 
     if (!response.ok) {
       const errorMsg = `Backend request failed (${response.status})`;
-      ecoOutput.appendLine(`[backend.ts] ${errorMsg}`);
+      ecoOutput.error(`[backend.ts] ${errorMsg}`);
       throw new Error(errorMsg);
     }
 
     const smellsList = await response.json();
-    ecoOutput.appendLine(`[backend.ts] Detected ${smellsList.length} smells in ${path.basename(filePath)}`);
+    ecoOutput.info(`[backend.ts] Detected ${smellsList.length} smells in ${path.basename(filePath)}`);
     return { smells: smellsList, status: response.status };
 
   } catch (error: any) {
-    ecoOutput.appendLine(`[backend.ts] Smell detection failed: ${error.message}`);
+    ecoOutput.error(`[backend.ts] Smell detection failed: ${error.message}`);
     throw new Error(`Detection failed: ${error.message}`);
   }
 }
@@ -97,11 +139,12 @@ export async function backendRefactorSmell(
 
   // Validate workspace configuration
   if (!workspacePath) {
-    ecoOutput.appendLine('[backend.ts] Refactoring aborted: No workspace path');
+    ecoOutput.error('[backend.ts] Refactoring aborted: No workspace path');
     throw new Error('No workspace path provided');
   }
 
-  ecoOutput.appendLine(`[backend.ts] Starting refactoring for smell: ${smell.symbol}`);
+  ecoOutput.info(`[backend.ts] Starting refactoring for smell: ${smell.symbol}`);
+  console.log('Starting refactoring for smell:', smell);
 
   try {
     const response = await fetch(url, {
@@ -110,23 +153,23 @@ export async function backendRefactorSmell(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        source_dir: workspacePath,
+        sourceDir: workspacePath,
         smell,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      ecoOutput.appendLine(`[backend.ts] Refactoring failed: ${errorData.detail || 'Unknown error'}`);
+      ecoOutput.error(`[backend.ts] Refactoring failed: ${errorData.detail || 'Unknown error'}`);
       throw new Error(errorData.detail || 'Refactoring failed');
     }
 
     const result = await response.json();
-    ecoOutput.appendLine(`[backend.ts] Refactoring successful for ${smell.symbol}`);
+    ecoOutput.info(`[backend.ts] Refactoring successful for ${smell.symbol}`);
     return result;
 
   } catch (error: any) {
-    ecoOutput.appendLine(`[backend.ts] Refactoring error: ${error.message}`);
+    ecoOutput.error(`[backend.ts] Refactoring error: ${error.message}`);
     throw new Error(`Refactoring failed: ${error.message}`);
   }
 }
@@ -148,11 +191,11 @@ export async function backendRefactorSmellType(
 
   // Validate workspace configuration
   if (!workspacePath) {
-    ecoOutput.appendLine('[backend.ts] Refactoring aborted: No workspace path');
+    ecoOutput.error('[backend.ts] Refactoring aborted: No workspace path');
     throw new Error('No workspace path provided');
   }
 
-  ecoOutput.appendLine(`[backend.ts] Starting refactoring for smells of type "${smellType}" in "${filePath}"`);
+  ecoOutput.info(`[backend.ts] Starting refactoring for smells of type "${smellType}" in "${filePath}"`);
 
   // Prepare the payload for the backend
   const payload = {
@@ -172,16 +215,16 @@ export async function backendRefactorSmellType(
 
     if (!response.ok) {
       const errorData = await response.json();
-      ecoOutput.appendLine(`[backend.ts] Refactoring failed: ${errorData.detail || 'Unknown error'}`);
+      ecoOutput.error(`[backend.ts] Refactoring failed: ${errorData.detail || 'Unknown error'}`);
       throw new Error(errorData.detail || 'Refactoring failed');
     }
 
     const result = await response.json();
-    ecoOutput.appendLine(`[backend.ts] Refactoring successful for ${smell.symbol}`);
+    ecoOutput.info(`[backend.ts] Refactoring successful for ${smell.symbol}`);
     return result;
     
   } catch (error: any) {
-    ecoOutput.appendLine(`[backend.ts] Refactoring error: ${error.message}`);
+    ecoOutput.error(`[backend.ts] Refactoring error: ${error.message}`);
     throw new Error(`Refactoring failed: ${error.message}`);
   }
 }

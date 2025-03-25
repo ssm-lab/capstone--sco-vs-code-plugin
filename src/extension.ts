@@ -2,7 +2,9 @@ import * as vscode from 'vscode';
 import path from 'path';
 
 // === Output Channel ===
-export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer');
+export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer', {
+  log: true,
+});
 
 // === Smell Linting ===
 let smellLintingEnabled = false;
@@ -38,13 +40,20 @@ import { exportMetricsData } from './commands/exportMetricsData';
 
 // === Listeners & UI ===
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
-import { LineSelectionManager } from './ui/LineSelection';
+import { FileHighlighter } from './ui/FileHighlighter';
+import { LineSelectionManager } from './ui/lineSelectionManager';
+import { HoverManager } from './ui/hoverManager';
 import { registerDiffEditor } from './utils/trackedDiffEditors';
 import { initializeRefactorActionButtons } from './utils/refactorActionButtons';
-import { HoverManager } from './ui/hoverManager';
+import { LogManager } from './commands/showLogs';
+
+let backendLogManager: LogManager;
 
 export function activate(context: vscode.ExtensionContext): void {
-  ecoOutput.appendLine('Initializing Eco-Optimizer extension...');
+  ecoOutput.info('Initializing Eco-Optimizer extension...');
+  console.log('Initializing Eco-Optimizer extension...');
+
+  backendLogManager = new LogManager(context);
 
   // === Load Core Data ===
   loadSmells();
@@ -181,9 +190,7 @@ export function activate(context: vscode.ExtensionContext): void {
           return;
         }
 
-        ecoOutput.appendLine(
-          `🟡 Found ${cachedSmells.length} smells in ${filePath}`,
-        );
+        ecoOutput.info(`🟡 Found ${cachedSmells.length} smells in ${filePath}`);
 
         const uniqueMessageIds = new Set<string>();
         for (const smell of cachedSmells) {
@@ -222,7 +229,7 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
           }
 
-          ecoOutput.appendLine(
+          ecoOutput.info(
             `🔁 Triggering refactorAllSmellsOfType for: ${selectedMessageId}`,
           );
 
@@ -315,6 +322,11 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
+  // === File Highlighting ===
+  const fileHighlighter = FileHighlighter.getInstance(smellsCacheManager);
+
+  fileHighlighter.updateHighlightsForVisibleEditors();
+
   // === Line Selection ===
   const lineSelectManager = new LineSelectionManager(smellsCacheManager);
   context.subscriptions.push(
@@ -328,15 +340,15 @@ export function activate(context: vscode.ExtensionContext): void {
   hoverManager.register(context);
 
   // === Smell Linting ===
-  function updateSmellLintingContext() {
+  const updateSmellLintingContext = (): void => {
     vscode.commands.executeCommand(
       'setContext',
       'ecooptimizer.smellLintingEnabled',
       smellLintingEnabled,
     );
-  }
+  };
 
-  const toggleSmellLinting = () => {
+  const toggleSmellLinting = (): void => {
     smellLintingEnabled = !smellLintingEnabled;
     updateSmellLintingContext();
     const msg = smellLintingEnabled
@@ -356,9 +368,13 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
   );
 
-  ecoOutput.appendLine('Eco-Optimizer extension activated successfully');
+  ecoOutput.info('Eco-Optimizer extension activated successfully');
+  console.log('Eco-Optimizer extension activated successfully');
 }
 
 export function deactivate(): void {
-  ecoOutput.appendLine('Extension deactivated');
+  ecoOutput.info('Extension deactivated');
+  console.log('Extension deactivated');
+
+  backendLogManager.stopWatchingLogs();
 }

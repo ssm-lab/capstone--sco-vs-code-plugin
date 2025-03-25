@@ -23,7 +23,7 @@ export class HoverManager implements vscode.HoverProvider {
   public provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
-    token: vscode.CancellationToken,
+    _token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.Hover> {
     const filePath = document.uri.fsPath;
     const smells = this.smellsCacheManager.getCachedSmells(filePath);
