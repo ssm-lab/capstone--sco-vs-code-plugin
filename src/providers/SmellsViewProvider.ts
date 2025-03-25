@@ -4,6 +4,8 @@ import * as path from 'path';
 import { getStatusIcon, getStatusMessage } from '../utils/fileStatus';
 import { buildPythonTree } from '../utils/TreeStructureBuilder';
 import { getAcronymByMessageId } from '../utils/smellsData';
+import { normalizePath } from '../utils/normalizePath';
+import { envConfig } from '../utils/envConfig';
 
 export class SmellsViewProvider
   implements vscode.TreeDataProvider<TreeItem | SmellTreeItem>
@@ -25,7 +27,7 @@ export class SmellsViewProvider
   }
 
   setStatus(filePath: string, status: string): void {
-    this.fileStatuses.set(filePath, status);
+    this.fileStatuses.set(normalizePath(filePath), status);
 
     if (status === 'outdated') {
       this.fileSmells.delete(filePath);
@@ -40,10 +42,11 @@ export class SmellsViewProvider
   }
 
   public removeFile(filePath: string): boolean {
-    const exists = this.fileStatuses.has(filePath);
+    const normalizedPath = normalizePath(filePath);
+    const exists = this.fileStatuses.has(normalizedPath);
     if (exists) {
-      this.fileStatuses.delete(filePath);
-      this.fileSmells.delete(filePath);
+      this.fileStatuses.delete(normalizedPath);
+      this.fileSmells.delete(normalizedPath);
     }
     return exists;
   }
@@ -62,7 +65,7 @@ export class SmellsViewProvider
     element?: TreeItem | SmellTreeItem,
   ): Promise<(TreeItem | SmellTreeItem)[]> {
     const rootPath = this.context.workspaceState.get<string>(
-      'workspaceConfiguredPath',
+      envConfig.WORKSPACE_CONFIGURED_PATH!,
     );
     if (!rootPath) {
       return [];
@@ -105,7 +108,8 @@ export class SmellsViewProvider
 
   private createTreeItem(filePath: string, isFile: boolean): TreeItem {
     const label = path.basename(filePath);
-    const status = this.fileStatuses.get(filePath) ?? 'not_yet_detected';
+    const status =
+      this.fileStatuses.get(normalizePath(filePath)) ?? 'not_yet_detected';
     const icon = isFile ? getStatusIcon(status) : new vscode.ThemeIcon('folder');
     const tooltip = isFile ? getStatusMessage(status) : undefined;
 
@@ -137,7 +141,7 @@ export class SmellsViewProvider
   }
 }
 
-class TreeItem extends vscode.TreeItem {
+export class TreeItem extends vscode.TreeItem {
   constructor(
     label: string,
     public readonly fullPath: string,

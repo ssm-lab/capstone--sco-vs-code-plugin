@@ -59,7 +59,7 @@ export class LogManager {
 
     if (!logPath) {
       throw new LogInitializationError(
-        'Missing contextManager or logUri. Cannot initialize logging.',
+        'Missing extension context or logUri. Cannot initialize logging.',
       );
     }
 

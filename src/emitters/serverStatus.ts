@@ -38,21 +38,21 @@ class ServerStatus extends EventEmitter {
       this.status = newStatus;
 
       // Log status transition
-      ecoOutput.appendLine(
+      ecoOutput.trace(
         `[serverStatus.ts] Server status changed from ${previousStatus} to ${newStatus}`,
       );
 
       // Handle status-specific notifications
       if (newStatus === ServerStatusType.UP) {
         if (previousStatus !== ServerStatusType.UNKNOWN) {
-          ecoOutput.appendLine('[serverStatus.ts] Server connection re-established');
+          ecoOutput.info('[serverStatus.ts] Server connection re-established');
           vscode.window.showInformationMessage(
             'Backend server reconnected - full functionality restored',
             { modal: false },
           );
         }
       } else {
-        ecoOutput.appendLine('[serverStatus.ts] Server connection lost');
+        ecoOutput.info('[serverStatus.ts] Server connection lost');
         vscode.window.showWarningMessage(
           'Backend server unavailable - limited functionality',
           { modal: false },

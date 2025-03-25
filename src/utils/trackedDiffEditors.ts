@@ -3,7 +3,10 @@ import * as vscode from 'vscode';
 
 const trackedDiffs = new Set<string>();
 
-export function registerDiffEditor(original: vscode.Uri, modified: vscode.Uri) {
+export function registerDiffEditor(
+  original: vscode.Uri,
+  modified: vscode.Uri,
+): void {
   trackedDiffs.add(`${original.toString()}::${modified.toString()}`);
 }
 
@@ -14,7 +17,7 @@ export function isTrackedDiffEditor(
   return trackedDiffs.has(`${original.toString()}::${modified.toString()}`);
 }
 
-export async function closeAllTrackedDiffEditors() {
+export async function closeAllTrackedDiffEditors(): Promise<void> {
   const tabs = vscode.window.tabGroups.all.flatMap((group) => group.tabs);
 
   for (const tab of tabs) {

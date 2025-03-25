@@ -5,7 +5,8 @@ import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { MetricsViewProvider } from '../providers/MetricsViewProvider';
 import { ecoOutput, isSmellLintingEnabled } from '../extension';
-import { detectSmellsFile } from '../commands/detectSmells';
+import { detectSmellsFile } from '../commands/detection/detectSmells';
+import { envConfig } from '../utils/envConfig';
 
 /**
  * Monitors workspace modifications and maintains analysis state consistency by:
@@ -26,7 +27,7 @@ export class WorkspaceModifiedListener {
   ) {
     this.initializeFileWatcher();
     this.initializeSaveListener();
-    ecoOutput.appendLine(
+    ecoOutput.trace(
       '[WorkspaceListener] Initialized workspace modification listener',
     );
   }
@@ -36,10 +37,10 @@ export class WorkspaceModifiedListener {
    */
   private initializeFileWatcher(): void {
     const configuredPath = this.context.workspaceState.get<string>(
-      'workspaceConfiguredPath',
+      envConfig.WORKSPACE_CONFIGURED_PATH!,
     );
     if (!configuredPath) {
-      ecoOutput.appendLine(
+      ecoOutput.trace(
         '[WorkspaceListener] No workspace configured - skipping file watcher',
       );
       return;
@@ -54,22 +55,20 @@ export class WorkspaceModifiedListener {
       );
 
       this.fileWatcher.onDidCreate(() => {
-        ecoOutput.appendLine('[WorkspaceListener] Detected new Python file');
+        ecoOutput.trace('[WorkspaceListener] Detected new Python file');
         this.refreshViews();
       });
 
       this.fileWatcher.onDidDelete((uri) => {
-        ecoOutput.appendLine(
-          `[WorkspaceListener] Detected deletion of ${uri.fsPath}`,
-        );
+        ecoOutput.trace(`[WorkspaceListener] Detected deletion of ${uri.fsPath}`);
         this.handleFileDeletion(uri.fsPath);
       });
 
-      ecoOutput.appendLine(
+      ecoOutput.trace(
         `[WorkspaceListener] Watching Python files in ${configuredPath}`,
       );
     } catch (error) {
-      ecoOutput.appendLine(
+      ecoOutput.error(
         `[WorkspaceListener] Error initializing file watcher: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
@@ -81,13 +80,13 @@ export class WorkspaceModifiedListener {
   private initializeSaveListener(): void {
     this.saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
       if (document.languageId === 'python') {
-        ecoOutput.appendLine(
+        ecoOutput.trace(
           `[WorkspaceListener] Detected save in ${document.uri.fsPath}`,
         );
         this.handleFileChange(document.uri.fsPath);
 
         if (isSmellLintingEnabled()) {
-          ecoOutput.appendLine(
+          ecoOutput.info(
             `[WorkspaceListener] Smell linting is ON — auto-detecting smells for ${document.uri.fsPath}`,
           );
           detectSmellsFile(
@@ -109,16 +108,14 @@ export class WorkspaceModifiedListener {
   private async handleFileChange(filePath: string): Promise<void> {
     // Log current cache state for debugging
     const cachedFiles = this.smellsCacheManager.getAllFilePaths();
-    ecoOutput.appendLine(
+    ecoOutput.trace(
       `[WorkspaceListener] Current cached files (${cachedFiles.length}):\n` +
         cachedFiles.map((f) => `  - ${f}`).join('\n'),
     );
 
     const hadCache = this.smellsCacheManager.hasFileInCache(filePath);
     if (!hadCache) {
-      ecoOutput.appendLine(
-        `[WorkspaceListener] No cache to invalidate for ${filePath}`,
-      );
+      ecoOutput.trace(`[WorkspaceListener] No cache to invalidate for ${filePath}`);
       return;
     }
 
@@ -126,7 +123,7 @@ export class WorkspaceModifiedListener {
       await this.smellsCacheManager.clearCachedSmellsForFile(filePath);
       this.smellsViewProvider.setStatus(filePath, 'outdated');
 
-      ecoOutput.appendLine(
+      ecoOutput.trace(
         `[WorkspaceListener] Invalidated cache for modified file: ${filePath}`,
       );
       vscode.window.showInformationMessage(
@@ -136,7 +133,7 @@ export class WorkspaceModifiedListener {
 
       this.refreshViews();
     } catch (error) {
-      ecoOutput.appendLine(
+      ecoOutput.error(
         `[WorkspaceListener] Error handling file change: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
@@ -156,11 +153,11 @@ export class WorkspaceModifiedListener {
       try {
         await this.smellsCacheManager.clearCachedSmellsByPath(filePath);
         removed = true;
-        ecoOutput.appendLine(
+        ecoOutput.trace(
           `[WorkspaceListener] Cleared cache for deleted file: ${filePath}`,
         );
       } catch (error) {
-        ecoOutput.appendLine(
+        ecoOutput.error(
           `[WorkspaceListener] Error clearing cache: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
@@ -169,7 +166,7 @@ export class WorkspaceModifiedListener {
     const removedFromTree = this.smellsViewProvider.removeFile(filePath);
     if (removedFromTree) {
       removed = true;
-      ecoOutput.appendLine(`[WorkspaceListener] Removed from view: ${filePath}`);
+      ecoOutput.trace(`[WorkspaceListener] Removed from view: ${filePath}`);
     }
 
     if (removed) {
@@ -188,7 +185,7 @@ export class WorkspaceModifiedListener {
   private refreshViews(): void {
     this.smellsViewProvider.refresh();
     this.metricsViewProvider.refresh();
-    ecoOutput.appendLine('[WorkspaceListener] Refreshed all views');
+    ecoOutput.trace('[WorkspaceListener] Refreshed all views');
   }
 
   /**
@@ -199,6 +196,6 @@ export class WorkspaceModifiedListener {
   public dispose(): void {
     this.fileWatcher?.dispose();
     this.saveListener?.dispose();
-    ecoOutput.appendLine('[WorkspaceListener] Disposed all listeners');
+    ecoOutput.trace('[WorkspaceListener] Disposed all listeners');
   }
 }

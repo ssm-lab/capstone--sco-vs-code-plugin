@@ -14,14 +14,18 @@ export function isSmellLintingEnabled(): boolean {
 }
 
 // === Core Utilities ===
+import { envConfig } from './utils/envConfig';
 import { getNameByMessageId, loadSmells } from './utils/smellsData';
 import { initializeStatusesFromCache } from './utils/initializeStatusesFromCache';
-import { envConfig } from './utils/envConfig';
 import { checkServerStatus } from './api/backend';
 
 // === Context & View Providers ===
 import { SmellsCacheManager } from './context/SmellsCacheManager';
-import { SmellsViewProvider, SmellTreeItem } from './providers/SmellsViewProvider';
+import {
+  SmellsViewProvider,
+  SmellTreeItem,
+  TreeItem,
+} from './providers/SmellsViewProvider';
 import { MetricsViewProvider } from './providers/MetricsViewProvider';
 import { FilterViewProvider } from './providers/FilterViewProvider';
 import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsViewProvider';
@@ -29,23 +33,31 @@ import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsVi
 // === Commands ===
 import { configureWorkspace } from './commands/configureWorkspace';
 import { resetConfiguration } from './commands/resetConfiguration';
-import { detectSmellsFile, detectSmellsFolder } from './commands/detectSmells';
-import { registerFilterSmellCommands } from './commands/filterSmells';
-import { jumpToSmell } from './commands/jumpToSmell';
-import { wipeWorkCache } from './commands/wipeWorkCache';
-import { refactor } from './commands/refactor';
-import { acceptRefactoring } from './commands/acceptRefactoring';
-import { rejectRefactoring } from './commands/rejectRefactoring';
-import { exportMetricsData } from './commands/exportMetricsData';
+import {
+  detectSmellsFile,
+  detectSmellsFolder,
+} from './commands/detection/detectSmells';
+import { registerFilterSmellCommands } from './commands/views/filterSmells';
+import { jumpToSmell } from './commands/views/jumpToSmell';
+import { wipeWorkCache } from './commands/detection/wipeWorkCache';
+import { refactor, startRefactorSession } from './commands/refactor/refactor';
+import { acceptRefactoring } from './commands/refactor/acceptRefactoring';
+import { rejectRefactoring } from './commands/refactor/rejectRefactoring';
+import { exportMetricsData } from './commands/views/exportMetricsData';
 
 // === Listeners & UI ===
 import { WorkspaceModifiedListener } from './listeners/workspaceModifiedListener';
-import { FileHighlighter } from './ui/FileHighlighter';
+import { FileHighlighter } from './ui/fileHighlighter';
 import { LineSelectionManager } from './ui/lineSelectionManager';
 import { HoverManager } from './ui/hoverManager';
-import { registerDiffEditor } from './utils/trackedDiffEditors';
+import {
+  closeAllTrackedDiffEditors,
+  registerDiffEditor,
+} from './utils/trackedDiffEditors';
 import { initializeRefactorActionButtons } from './utils/refactorActionButtons';
 import { LogManager } from './commands/showLogs';
+import { RefactorArtifacts } from './global';
+import { existsSync, promises } from 'fs';
 
 let backendLogManager: LogManager;
 
@@ -104,13 +116,13 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  const workspaceConfigured = Boolean(
-    context.workspaceState.get<string>('workspaceConfiguredPath'),
+  const workspaceConfigured = context.workspaceState.get<string>(
+    envConfig.WORKSPACE_CONFIGURED_PATH!,
   );
   vscode.commands.executeCommand(
     'setContext',
     'workspaceState.workspaceConfigured',
-    workspaceConfigured,
+    Boolean(workspaceConfigured),
   );
 
   // === Register Commands ===
@@ -140,22 +152,183 @@ export function activate(context: vscode.ExtensionContext): void {
       await wipeWorkCache(smellsCacheManager, smellsViewProvider);
     }),
 
-    vscode.commands.registerCommand('ecooptimizer.detectSmellsFile', (fileItem) => {
-      const filePath = fileItem?.resourceUri?.fsPath;
-      if (!filePath) {
-        vscode.window.showWarningMessage('Please select a file to analyze.');
-        return;
-      }
-      detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
-    }),
+    vscode.commands.registerCommand(
+      'ecooptimizer.detectSmellsFile',
+      async (fileItem: TreeItem) => {
+        let filePath: string;
+        if (!fileItem) {
+          const allPythonFiles: vscode.QuickPickItem[] = [];
+          const folderPath = workspaceConfigured;
+
+          if (!folderPath) {
+            vscode.window.showWarningMessage('No workspace configured.');
+            return;
+          }
+
+          const gatherPythonFiles = async (dirPath: string): Promise<void> => {
+            const files = await vscode.workspace.fs.readDirectory(
+              vscode.Uri.file(dirPath),
+            );
+            for (const [name, type] of files) {
+              const fullPath = path.join(dirPath, name);
+              if (type === vscode.FileType.File && name.endsWith('.py')) {
+                const relativePath = path.relative(folderPath, fullPath);
+                allPythonFiles.push({
+                  label: `${name}`,
+                  description: `${path.dirname(relativePath) === '.' ? undefined : path.dirname(relativePath)}`,
+                  iconPath: new vscode.ThemeIcon('symbol-file'),
+                });
+              } else if (type === vscode.FileType.Directory) {
+                await gatherPythonFiles(fullPath); // Recursively gather Python files in subdirectories
+              }
+            }
+          };
+
+          const currentFile = vscode.window.activeTextEditor?.document.fileName;
+          if (currentFile && currentFile.endsWith('.py')) {
+            const relativePath = path.relative(folderPath, currentFile);
+            allPythonFiles.push({
+              label: `${path.basename(currentFile)}`,
+              description: `${path.dirname(relativePath) === '.' ? undefined : path.dirname(relativePath)}`,
+              detail: 'Current File',
+              iconPath: new vscode.ThemeIcon('symbol-file'),
+            });
+
+            allPythonFiles.push({
+              label: '───────────────',
+              kind: vscode.QuickPickItemKind.Separator,
+            });
+          }
+
+          await gatherPythonFiles(folderPath);
+
+          if (allPythonFiles.length === 0) {
+            vscode.window.showWarningMessage(
+              'No Python files found in the workspace.',
+            );
+            return;
+          }
+
+          const selectedFile = await vscode.window.showQuickPick(allPythonFiles, {
+            title: 'Select a Python file to analyze',
+            placeHolder: 'Choose a Python file from the workspace',
+            canPickMany: false,
+          });
+
+          if (!selectedFile) {
+            vscode.window.showWarningMessage('No file selected.');
+            return;
+          }
+
+          filePath = path.join(
+            folderPath,
+            selectedFile.description!,
+            selectedFile.label,
+          );
+        } else {
+          if (!(fileItem instanceof vscode.TreeItem)) {
+            vscode.window.showWarningMessage('Invalid file item selected.');
+            return;
+          }
+          filePath = fileItem.resourceUri!.fsPath;
+          if (!filePath) {
+            vscode.window.showWarningMessage('Please select a file to analyze.');
+            return;
+          }
+        }
+        detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
+      },
+    ),
 
     vscode.commands.registerCommand(
       'ecooptimizer.detectSmellsFolder',
-      (folderItem) => {
-        const folderPath = folderItem?.resourceUri?.fsPath;
-        if (!folderPath) {
-          vscode.window.showWarningMessage('Please select a folder to analyze.');
-          return;
+      async (folderItem: vscode.TreeItem) => {
+        let folderPath: string;
+        if (!folderItem) {
+          if (!workspaceConfigured) {
+            vscode.window.showWarningMessage('No workspace configured.');
+            return;
+          }
+
+          const allDirectories: vscode.QuickPickItem[] = [];
+          const directoriesWithPythonFiles = new Set<string>();
+
+          const gatherDirectories = async (
+            dirPath: string,
+            relativePath = '',
+          ): Promise<boolean> => {
+            const files = await vscode.workspace.fs.readDirectory(
+              vscode.Uri.file(dirPath),
+            );
+            let hasPythonFile = false;
+
+            for (const [name, type] of files) {
+              const fullPath = path.join(dirPath, name);
+              const newRelativePath = path.join(relativePath, name);
+              if (type === vscode.FileType.File && name.endsWith('.py')) {
+                hasPythonFile = true;
+              } else if (type === vscode.FileType.Directory) {
+                const subDirHasPythonFile = await gatherDirectories(
+                  fullPath,
+                  newRelativePath,
+                );
+                if (subDirHasPythonFile) {
+                  hasPythonFile = true;
+                }
+              }
+            }
+
+            if (hasPythonFile) {
+              directoriesWithPythonFiles.add(dirPath);
+              const isDirectChild = relativePath.split(path.sep).length === 1;
+              allDirectories.push({
+                label: `${path.basename(dirPath)}`,
+                description: isDirectChild ? undefined : path.dirname(relativePath),
+                iconPath: new vscode.ThemeIcon('folder'),
+              });
+            }
+
+            return hasPythonFile;
+          };
+
+          await gatherDirectories(workspaceConfigured);
+
+          if (allDirectories.length === 0) {
+            vscode.window.showWarningMessage(
+              'No directories with Python files found in the workspace.',
+            );
+            return;
+          }
+
+          const selectedDirectory = await vscode.window.showQuickPick(
+            allDirectories,
+            {
+              title: 'Select a directory to analyze',
+              placeHolder: 'Choose a directory with Python files from the workspace',
+              canPickMany: false,
+            },
+          );
+
+          if (!selectedDirectory) {
+            vscode.window.showWarningMessage('No directory selected.');
+            return;
+          }
+
+          folderPath = path.join(
+            workspaceConfigured,
+            selectedDirectory.description
+              ? path.join(
+                  selectedDirectory.description,
+                  path.basename(selectedDirectory.label),
+                )
+              : path.basename(selectedDirectory.label),
+          );
+        } else {
+          if (!(folderItem instanceof vscode.TreeItem)) {
+            vscode.window.showWarningMessage('Invalid folder item selected.');
+            return;
+          }
+          folderPath = folderItem.resourceUri!.fsPath;
         }
         detectSmellsFolder(folderPath, smellsViewProvider, smellsCacheManager);
       },
@@ -163,8 +336,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand(
       'ecooptimizer.refactorSmell',
-      (item: SmellTreeItem) => {
-        const smell = item?.smell;
+      (item: SmellTreeItem | Smell) => {
+        let smell: Smell;
+        if (item instanceof SmellTreeItem) {
+          smell = item.smell;
+        } else {
+          smell = item;
+        }
         if (!smell) {
           vscode.window.showErrorMessage('No code smell detected for this item.');
           return;
@@ -175,8 +353,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand(
       'ecooptimizer.refactorAllSmellsOfType',
-      async (item: any) => {
-        const filePath = item?.fullPath;
+      async (item: TreeItem | { fullPath: string; smellType: string }) => {
+        let filePath = item.fullPath;
         if (!filePath) {
           vscode.window.showWarningMessage(
             'Unable to get file path for smell refactoring.',
@@ -197,55 +375,61 @@ export function activate(context: vscode.ExtensionContext): void {
           uniqueMessageIds.add(smell.messageId);
         }
 
-        const quickPickItems: vscode.QuickPickItem[] = Array.from(
-          uniqueMessageIds,
-        ).map((id) => {
-          const name = getNameByMessageId(id) ?? id;
-          return {
-            label: name,
-            description: id,
-          };
-        });
+        let selectedSmell: string;
+        if (item instanceof TreeItem) {
+          const quickPickItems: vscode.QuickPickItem[] = Array.from(
+            uniqueMessageIds,
+          ).map((id) => {
+            const name = getNameByMessageId(id) ?? id;
+            return {
+              label: name,
+              description: id,
+            };
+          });
 
-        const selected = await vscode.window.showQuickPick(quickPickItems, {
-          title: 'Select a smell type to refactor',
-          placeHolder: 'Choose the type of smell you want to refactor',
-          matchOnDescription: false,
-          matchOnDetail: false,
-          ignoreFocusOut: false,
-          canPickMany: false,
-        });
+          const selected = await vscode.window.showQuickPick(quickPickItems, {
+            title: 'Select a smell type to refactor',
+            placeHolder: 'Choose the type of smell you want to refactor',
+            matchOnDescription: false,
+            matchOnDetail: false,
+            ignoreFocusOut: false,
+            canPickMany: false,
+          });
 
-        if (selected) {
-          const selectedMessageId = selected.description;
-          const firstSmell = cachedSmells.find(
-            (smell) => smell.messageId === selectedMessageId,
-          );
-
-          if (!firstSmell) {
-            vscode.window.showWarningMessage(
-              'No smells found for the selected type.',
-            );
+          if (!selected) {
             return;
           }
-
-          ecoOutput.info(
-            `🔁 Triggering refactorAllSmellsOfType for: ${selectedMessageId}`,
-          );
-
-          await refactor(
-            smellsViewProvider,
-            refactoringDetailsViewProvider,
-            firstSmell,
-            context,
-            true, // isRefactorAllOfType
-          );
+          selectedSmell = selected.description!;
+        } else {
+          selectedSmell = item.smellType;
         }
+
+        const firstSmell = cachedSmells.find(
+          (smell) => smell.messageId === selectedSmell,
+        );
+
+        if (!firstSmell) {
+          vscode.window.showWarningMessage('No smells found for the selected type.');
+          return;
+        }
+
+        ecoOutput.info(
+          `🔁 Triggering refactorAllSmellsOfType for: ${selectedSmell}`,
+        );
+
+        await refactor(
+          smellsViewProvider,
+          refactoringDetailsViewProvider,
+          firstSmell,
+          context,
+          true, // isRefactorAllOfType
+        );
       },
     ),
 
     vscode.commands.registerCommand('ecooptimizer.acceptRefactoring', async () => {
       await acceptRefactoring(
+        context,
         refactoringDetailsViewProvider,
         metricsViewProvider,
         smellsCacheManager,
@@ -254,7 +438,11 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', async () => {
-      await rejectRefactoring(refactoringDetailsViewProvider, smellsViewProvider);
+      await rejectRefactoring(
+        context,
+        refactoringDetailsViewProvider,
+        smellsViewProvider,
+      );
     }),
 
     vscode.commands.registerCommand(
@@ -331,7 +519,11 @@ export function activate(context: vscode.ExtensionContext): void {
   const lineSelectManager = new LineSelectionManager(smellsCacheManager);
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((event) => {
-      lineSelectManager.commentLine(event.textEditor);
+      const textEditor = event.textEditor;
+      if (!textEditor.document.fileName.endsWith('.py')) {
+        return;
+      }
+      lineSelectManager.commentLine(textEditor);
     }),
   );
 
@@ -348,12 +540,23 @@ export function activate(context: vscode.ExtensionContext): void {
     );
   };
 
+  const lintActiveEditors = (): void => {
+    for (const editor of vscode.window.visibleTextEditors) {
+      const filePath = editor.document.uri.fsPath;
+      detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
+      ecoOutput.info(
+        `[WorkspaceListener] Smell linting is ON — auto-detecting smells for ${filePath}`,
+      );
+    }
+  };
+
   const toggleSmellLinting = (): void => {
     smellLintingEnabled = !smellLintingEnabled;
     updateSmellLintingContext();
     const msg = smellLintingEnabled
       ? 'Smell linting enabled'
       : 'Smell linting disabled';
+    lintActiveEditors();
     vscode.window.showInformationMessage(msg);
   };
 
@@ -367,6 +570,64 @@ export function activate(context: vscode.ExtensionContext): void {
       toggleSmellLinting,
     ),
   );
+
+  // === File View Change Listner ===
+  context.subscriptions.push(
+    vscode.window.onDidChangeVisibleTextEditors(() => {
+      fileHighlighter.updateHighlightsForVisibleEditors();
+
+      if (smellLintingEnabled) {
+        lintActiveEditors();
+      }
+    }),
+  );
+
+  const cleanPastSessionArtifacts = async (): Promise<void> => {
+    const pastData = context.workspaceState.get<RefactorArtifacts>(
+      envConfig.UNFINISHED_REFACTORING!,
+    );
+
+    if (pastData) {
+      const tempDir = pastData.refactoredData.tempDir;
+
+      try {
+        const tempDirExists = existsSync(tempDir);
+
+        if (tempDirExists) {
+          const userChoice = await vscode.window.showWarningMessage(
+            'A previous refactoring session was detected. Would you like to continue or discard it?',
+            { modal: true },
+            'Continue',
+            'Discard',
+          );
+
+          if (userChoice === 'Discard') {
+            await promises.rm(tempDir, { recursive: true, force: true });
+
+            context.workspaceState.update(
+              envConfig.UNFINISHED_REFACTORING!,
+              undefined,
+            );
+
+            closeAllTrackedDiffEditors();
+          } else if (userChoice === 'Continue') {
+            ecoOutput.info('Resuming previous refactoring session...');
+            startRefactorSession(
+              pastData.smell,
+              pastData.refactoredData,
+              refactoringDetailsViewProvider,
+            );
+            return;
+          }
+        }
+      } catch (error) {
+        ecoOutput.error(`Error handling past refactoring session: ${error}`);
+        context.workspaceState.update(envConfig.UNFINISHED_REFACTORING!, undefined);
+      }
+    }
+  };
+
+  cleanPastSessionArtifacts();
 
   ecoOutput.info('Eco-Optimizer extension activated successfully');
   console.log('Eco-Optimizer extension activated successfully');

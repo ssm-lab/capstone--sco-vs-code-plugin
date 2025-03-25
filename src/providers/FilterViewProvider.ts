@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
-import { FilterSmellConfig, getFilterSmells, saveSmells } from '../utils/smellsData';
+import {
+  FilterSmellConfig,
+  getFilterSmells,
+  loadSmells,
+  saveSmells,
+} from '../utils/smellsData';
 import { MetricsViewProvider } from './MetricsViewProvider';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from './SmellsViewProvider';
@@ -125,6 +130,20 @@ export class FilterViewProvider implements vscode.TreeDataProvider<vscode.TreeIt
       this.smells[key].enabled = enabled;
     });
     saveSmells(this.smells);
+    await this.invalidateCachedSmellsForAffectedFiles();
+    this._onDidChangeTreeData.fire();
+  }
+
+  async resetToDefaults(): Promise<void> {
+    const confirmed = await this.confirmFilterChange();
+    if (!confirmed) return;
+
+    loadSmells('default');
+
+    const defaultSmells = getFilterSmells();
+    this.smells = defaultSmells;
+    saveSmells(this.smells);
+
     await this.invalidateCachedSmellsForAffectedFiles();
     this._onDidChangeTreeData.fire();
   }

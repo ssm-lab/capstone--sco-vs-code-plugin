@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { dirname } from 'path';
 import { writeFileSync } from 'fs';
 
-import { MetricsDataItem } from '../providers/MetricsViewProvider';
-import { envConfig } from '../utils/envConfig';
+import { MetricsDataItem } from '../../providers/MetricsViewProvider';
+import { envConfig } from '../../utils/envConfig';
 
 export async function exportMetricsData(
   context: vscode.ExtensionContext,
@@ -18,7 +18,8 @@ export async function exportMetricsData(
   }
 
   const configuredWorkspacePath = context.workspaceState.get<string>(
-    'workspaceConfiguredPath',
+    envConfig,
+    WORKSPACE_CONFIGURED_PATH!,
   );
 
   if (!configuredWorkspacePath) {

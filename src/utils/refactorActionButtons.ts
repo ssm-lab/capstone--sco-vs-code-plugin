@@ -10,7 +10,7 @@ let rejectButton: vscode.StatusBarItem | undefined;
 export function initializeRefactorActionButtons(
   context: vscode.ExtensionContext,
 ): void {
-  ecoOutput.appendLine('Initializing refactor action buttons...');
+  ecoOutput.trace('Initializing refactor action buttons...');
 
   acceptButton = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
@@ -33,7 +33,7 @@ export function initializeRefactorActionButtons(
 
   context.subscriptions.push(acceptButton, rejectButton);
 
-  ecoOutput.appendLine('Status bar buttons created and registered.');
+  ecoOutput.trace('Status bar buttons created and registered.');
 }
 
 /**
@@ -41,13 +41,13 @@ export function initializeRefactorActionButtons(
  */
 export function showRefactorActionButtons(): void {
   if (!acceptButton || !rejectButton) {
-    ecoOutput.appendLine(
+    ecoOutput.trace(
       '❌ Tried to show refactor buttons but they are not initialized.',
     );
     return;
   }
 
-  ecoOutput.appendLine('Showing refactor action buttons...');
+  ecoOutput.trace('Showing refactor action buttons...');
   acceptButton.show();
   rejectButton.show();
   vscode.commands.executeCommand('setContext', 'refactoringInProgress', true);
@@ -58,13 +58,13 @@ export function showRefactorActionButtons(): void {
  */
 export function hideRefactorActionButtons(): void {
   if (!acceptButton || !rejectButton) {
-    ecoOutput.appendLine(
+    ecoOutput.trace(
       '❌ Tried to hide refactor buttons but they are not initialized.',
     );
     return;
   }
 
-  ecoOutput.appendLine('Hiding refactor action buttons...');
+  ecoOutput.replace('Hiding refactor action buttons...');
   acceptButton.hide();
   rejectButton.hide();
   vscode.commands.executeCommand('setContext', 'refactoringInProgress', false);

@@ -33,10 +33,16 @@ let enabledSmells: Record<string, DetectSmellConfig>;
 
 /**
  * Loads the full smells configuration from smells.json.
+ * @param version - The version of the smells configuration to load.
  * @returns A dictionary of smells with their respective configuration.
  */
-export function loadSmells(): void {
-  const filePath = path.join(__dirname, '..', 'data', 'smells.json');
+export function loadSmells(version: 'working' | 'default' = 'working'): void {
+  const filePath = path.join(
+    __dirname,
+    '..',
+    'data',
+    `${version}_smells_config.json`,
+  );
 
   if (!fs.existsSync(filePath)) {
     vscode.window.showErrorMessage(
@@ -48,7 +54,7 @@ export function loadSmells(): void {
     filterSmells = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     enabledSmells = parseSmells(filterSmells);
 
-    ecoOutput.appendLine('\nSmells loaded\n');
+    ecoOutput.info(`[smellsData.ts] Loaded smells configuration: ${version}`);
   } catch (error) {
     vscode.window.showErrorMessage(
       'Error loading smells.json. Please check the file format.',
@@ -64,11 +70,11 @@ export function loadSmells(): void {
 export function saveSmells(smells: Record<string, FilterSmellConfig>): void {
   filterSmells = smells;
 
-  const filePath = path.join(__dirname, '..', 'data', 'smells.json');
+  const filePath = path.join(__dirname, '..', 'data', 'working_smells_config.json');
+
+  enabledSmells = parseSmells(filterSmells);
   try {
     fs.writeFileSync(filePath, JSON.stringify(smells, null, 2));
-
-    enabledSmells = parseSmells(filterSmells);
   } catch (error) {
     vscode.window.showErrorMessage('Error saving smells.json.');
     console.error('ERROR: Failed to write smells.json', error);

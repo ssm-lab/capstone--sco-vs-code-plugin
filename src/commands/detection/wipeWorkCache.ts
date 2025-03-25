@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import { SmellsViewProvider } from '../providers/SmellsViewProvider';
+import { SmellsCacheManager } from '../../context/SmellsCacheManager';
+import { SmellsViewProvider } from '../../providers/SmellsViewProvider';
 
 /**
  * Clears the smells cache and refreshes the UI.

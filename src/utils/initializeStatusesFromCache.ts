@@ -3,6 +3,8 @@ import * as fs from 'fs/promises';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { ecoOutput } from '../extension';
+import { normalizePath } from './normalizePath';
+import { envConfig } from './envConfig';
 
 /**
  * Initializes file statuses and smells in the SmellsViewProvider from the smell cache.
@@ -13,35 +15,38 @@ export async function initializeStatusesFromCache(
   smellsCacheManager: SmellsCacheManager,
   smellsViewProvider: SmellsViewProvider,
 ): Promise<void> {
-  const configuredPath = context.workspaceState.get<string>(
-    'workspaceConfiguredPath',
+  ecoOutput.info('workspace key: ', envConfig.WORKSPACE_CONFIGURED_PATH);
+  let configuredPath = context.workspaceState.get<string>(
+    envConfig.WORKSPACE_CONFIGURED_PATH!,
   );
 
   if (!configuredPath) {
-    ecoOutput.appendLine(
+    ecoOutput.warn(
       '[CacheInit] No configured workspace path found - skipping cache initialization',
     );
     return;
   }
 
-  ecoOutput.appendLine(
+  configuredPath = normalizePath(configuredPath);
+
+  ecoOutput.info(
     `[CacheInit] Starting cache initialization for workspace: ${configuredPath}`,
   );
 
   const pathMap = smellsCacheManager.getAllFilePaths();
-  ecoOutput.appendLine(`[CacheInit] Found ${pathMap.length} files in cache`);
-  ecoOutput.appendLine(`[CacheInit] Found ${pathMap} files in cache`);
+  ecoOutput.trace(`[CacheInit] Found ${pathMap.length} files in cache`);
+  ecoOutput.trace(`[CacheInit] Found ${pathMap} files in cache`);
   let validFiles = 0;
   let removedFiles = 0;
   let filesWithSmells = 0;
   let cleanFiles = 0;
 
   for (const filePath of pathMap) {
-    ecoOutput.appendLine(`[CacheInit] Processing cache entry: ${filePath}`);
+    ecoOutput.trace(`[CacheInit] Processing cache entry: ${filePath}`);
 
     // Ignore files outside the configured workspace
     if (!filePath.startsWith(configuredPath)) {
-      ecoOutput.appendLine(
+      ecoOutput.trace(
         `[CacheInit] File outside workspace - removing from cache: ${filePath}`,
       );
       await smellsCacheManager.clearCachedSmellsForFile(filePath);
@@ -52,9 +57,9 @@ export async function initializeStatusesFromCache(
     // Verify file still exists
     try {
       await fs.access(filePath);
-      ecoOutput.appendLine(`[CacheInit] File verified: ${filePath}`);
+      ecoOutput.trace(`[CacheInit] File verified: ${filePath}`);
     } catch {
-      ecoOutput.appendLine(
+      ecoOutput.trace(
         `[CacheInit] File not found - removing from cache: ${filePath}`,
       );
       await smellsCacheManager.clearCachedSmellsForFile(filePath);
@@ -67,26 +72,26 @@ export async function initializeStatusesFromCache(
       validFiles++;
 
       if (smells.length > 0) {
-        ecoOutput.appendLine(
+        ecoOutput.trace(
           `[CacheInit] Found ${smells.length} smells for file: ${filePath}`,
         );
         smellsViewProvider.setStatus(filePath, 'passed');
         smellsViewProvider.setSmells(filePath, smells);
         filesWithSmells++;
       } else {
-        ecoOutput.appendLine(`[CacheInit] File has no smells: ${filePath}`);
+        ecoOutput.trace(`[CacheInit] File has no smells: ${filePath}`);
         smellsViewProvider.setStatus(filePath, 'no_issues');
         cleanFiles++;
       }
     } else {
-      ecoOutput.appendLine(
+      ecoOutput.trace(
         `[CacheInit] No cache data found for file (should not happen): ${filePath}`,
       );
     }
   }
 
   // Summary statistics
-  ecoOutput.appendLine(
+  ecoOutput.info(
     `[CacheInit] Cache initialization complete. ` +
       `Results: ${validFiles} valid files (${filesWithSmells} with smells, ${cleanFiles} clean), ` +
       `${removedFiles} files removed from cache`,

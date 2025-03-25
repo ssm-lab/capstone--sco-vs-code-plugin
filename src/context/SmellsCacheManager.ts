@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { createHash } from 'crypto';
 import { envConfig } from '../utils/envConfig';
 import { ecoOutput } from '../extension';
+import { normalizePath } from '../utils/normalizePath';
 
 /**
  * Manages caching of detected smells to avoid redundant backend calls.
@@ -48,7 +49,7 @@ export class SmellsCacheManager {
     const cache = this.getFullSmellCache();
     const pathMap = this.getHashToPathMap();
 
-    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const normalizedPath = normalizePath(filePath);
     const fileHash = this.generateFileHash(normalizedPath);
 
     // Augment smells with stable identifiers
@@ -72,7 +73,7 @@ export class SmellsCacheManager {
    * @returns Array of smells or undefined if not found
    */
   public getCachedSmells(filePath: string): Smell[] | undefined {
-    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const normalizedPath = normalizePath(filePath);
     const fileHash = this.generateFileHash(normalizedPath);
     const cache = this.getFullSmellCache();
     return cache[fileHash];
@@ -84,7 +85,7 @@ export class SmellsCacheManager {
    * @returns True if file has cached smells
    */
   public hasCachedSmells(filePath: string): boolean {
-    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const normalizedPath = normalizePath(filePath);
     const fileHash = this.generateFileHash(normalizedPath);
     const cache = this.getFullSmellCache();
     return cache[fileHash] !== undefined;
@@ -95,7 +96,7 @@ export class SmellsCacheManager {
    * @param filePath - File path to clear from cache
    */
   public async clearCachedSmellsForFile(filePath: string): Promise<void> {
-    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const normalizedPath = normalizePath(filePath);
     const fileHash = this.generateFileHash(normalizedPath);
     const cache = this.getFullSmellCache();
     const pathMap = this.getHashToPathMap();
@@ -115,7 +116,7 @@ export class SmellsCacheManager {
    */
   public async clearCachedSmellsByPath(filePath: string): Promise<void> {
     const pathMap = this.getHashToPathMap();
-    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const normalizedPath = normalizePath(filePath);
     const hash = Object.keys(pathMap).find((h) => pathMap[h] === normalizedPath);
     if (!hash) return;
 
@@ -180,10 +181,10 @@ export class SmellsCacheManager {
    */
   public hasFileInCache(filePath: string): boolean {
     const pathMap = this.getHashToPathMap();
-    const normalizedPath = vscode.Uri.file(filePath).fsPath;
+    const normalizedPath = normalizePath(filePath);
     const fileExistsInCache = Object.values(pathMap).includes(normalizedPath);
 
-    ecoOutput.appendLine(
+    ecoOutput.debug(
       `[SmellCacheManager] Path existence check for ${normalizedPath}: ` +
         `${fileExistsInCache ? 'EXISTS' : 'NOT FOUND'} in cache`,
     );

@@ -44,6 +44,10 @@ export class FileHighlighter {
    * @param filePath - The file path of the target file to update highlights for.
    */
   private updateHighlightsForFile(filePath: string): void {
+    if (!filePath.endsWith('.py')) {
+      return;
+    }
+
     const editor = vscode.window.visibleTextEditors.find(
       (e) => e.document.uri.fsPath === filePath,
     );
@@ -57,6 +61,9 @@ export class FileHighlighter {
    */
   public updateHighlightsForVisibleEditors(): void {
     vscode.window.visibleTextEditors.forEach((editor) => {
+      if (!editor.document.fileName.endsWith('.py')) {
+        return;
+      }
       this.highlightSmells(editor);
     });
   }

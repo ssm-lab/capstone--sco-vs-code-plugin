@@ -127,7 +127,11 @@ export async function updateWorkspace(
   workspacePath: string,
 ) {
   // Persist workspace path
-  await context.workspaceState.update('workspaceConfiguredPath', workspacePath);
+  await context.workspaceState.update(
+    envConfig,
+    WORKSPACE_CONFIGURED_PATH!,
+    workspacePath,
+  );
 
   // Update extension context for UI state management
   vscode.commands.executeCommand(

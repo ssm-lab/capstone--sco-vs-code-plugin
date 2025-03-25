@@ -92,3 +92,8 @@ declare global {
     }[];
   }
 }
+
+export interface RefactorArtifacts {
+  refactoredData: RefactoredData;
+  smell: Smell;
+}

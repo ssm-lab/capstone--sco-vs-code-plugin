@@ -1,20 +1,14 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { SmellsViewProvider } from '../providers/SmellsViewProvider';
-import { MetricsViewProvider } from '../providers/MetricsViewProvider';
-import { RefactoringDetailsViewProvider } from '../providers/RefactoringDetailsViewProvider';
-import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import { ecoOutput } from '../extension';
-import { hideRefactorActionButtons } from '../utils/refactorActionButtons';
-
-/**
- * Normalizes file paths for consistent comparison and caching
- * @param filePath - The file path to normalize
- * @returns Lowercase version of the path for case-insensitive comparison
- */
-function normalizePath(filePath: string): string {
-  return filePath.toLowerCase();
-}
+import { SmellsViewProvider } from '../../providers/SmellsViewProvider';
+import { MetricsViewProvider } from '../../providers/MetricsViewProvider';
+import { RefactoringDetailsViewProvider } from '../../providers/RefactoringDetailsViewProvider';
+import { SmellsCacheManager } from '../../context/SmellsCacheManager';
+import { ecoOutput } from '../../extension';
+import { hideRefactorActionButtons } from '../../utils/refactorActionButtons';
+import { detectSmellsFile } from '../detection/detectSmells';
+import { closeAllTrackedDiffEditors } from '../../utils/trackedDiffEditors';
+import { envConfig } from '../../utils/envConfig';
 
 /**
  * Handles acceptance and application of refactoring changes to the codebase.
@@ -31,6 +25,7 @@ function normalizePath(filePath: string): string {
  * @param context - VS Code extension context
  */
 export async function acceptRefactoring(
+  context: vscode.ExtensionContext,
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
   metricsDataProvider: MetricsViewProvider,
   smellsCacheManager: SmellsCacheManager,
@@ -41,15 +36,13 @@ export async function acceptRefactoring(
 
   // Validate refactoring data exists
   if (!targetFile || !affectedFiles) {
-    ecoOutput.appendLine(
-      '[refactorActions.ts] Error: No refactoring data available',
-    );
+    ecoOutput.error('[refactorActions.ts] Error: No refactoring data available');
     vscode.window.showErrorMessage('No refactoring data available.');
     return;
   }
 
   try {
-    ecoOutput.appendLine(
+    ecoOutput.info(
       `[refactorActions.ts] Applying refactoring to target file: ${targetFile.original}`,
     );
 
@@ -57,9 +50,7 @@ export async function acceptRefactoring(
     fs.copyFileSync(targetFile.refactored, targetFile.original);
     affectedFiles.forEach((file) => {
       fs.copyFileSync(file.refactored, file.original);
-      ecoOutput.appendLine(
-        `[refactorActions.ts] Updated affected file: ${file.original}`,
-      );
+      ecoOutput.info(`[refactorActions.ts] Updated affected file: ${file.original}`);
     });
 
     // Update metrics if energy savings data exists
@@ -72,41 +63,45 @@ export async function acceptRefactoring(
         refactoringDetailsViewProvider.energySaved,
         refactoringDetailsViewProvider.targetSmell.symbol,
       );
-      ecoOutput.appendLine('[refactorActions.ts] Updated energy savings metrics');
+      ecoOutput.info('[refactorActions.ts] Updated energy savings metrics');
     }
 
     // Invalidate cache for modified files
     await Promise.all([
-      smellsCacheManager.clearCachedSmellsForFile(
-        normalizePath(targetFile.original),
-      ),
+      smellsCacheManager.clearCachedSmellsForFile(targetFile.original),
       ...affectedFiles.map((file) =>
-        smellsCacheManager.clearCachedSmellsForFile(normalizePath(file.original)),
+        smellsCacheManager.clearCachedSmellsForFile(file.original),
       ),
     ]);
-    ecoOutput.appendLine(
-      '[refactorActions.ts] Cleared smell caches for modified files',
-    );
+    ecoOutput.trace('[refactorActions.ts] Cleared smell caches for modified files');
 
     // Update UI state
-    smellsViewProvider.setStatus(normalizePath(targetFile.original), 'outdated');
+    smellsViewProvider.setStatus(targetFile.original, 'outdated');
     affectedFiles.forEach((file) => {
-      smellsViewProvider.setStatus(normalizePath(file.original), 'outdated');
+      smellsViewProvider.setStatus(file.original, 'outdated');
     });
+
+    await detectSmellsFile(
+      targetFile.original,
+      smellsViewProvider,
+      smellsCacheManager,
+    );
 
     // Reset UI components
     refactoringDetailsViewProvider.resetRefactoringDetails();
-    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    closeAllTrackedDiffEditors();
     hideRefactorActionButtons();
     smellsViewProvider.refresh();
 
+    context.workspaceState.update(envConfig.UNFINISHED_REFACTORING!, undefined);
+
     vscode.window.showInformationMessage('Refactoring successfully applied');
-    ecoOutput.appendLine(
+    ecoOutput.info(
       '[refactorActions.ts] Refactoring changes completed successfully',
     );
   } catch (error) {
     const errorDetails = error instanceof Error ? error.message : 'Unknown error';
-    ecoOutput.appendLine(
+    ecoOutput.error(
       `[refactorActions.ts] Error applying refactoring: ${errorDetails}`,
     );
     vscode.window.showErrorMessage('Failed to apply refactoring. Please try again.');

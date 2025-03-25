@@ -7,6 +7,8 @@ export interface EnvConfig {
   SMELL_CACHE_KEY?: string;
   HASH_PATH_MAP_KEY?: string;
   WORKSPACE_METRICS_DATA?: string;
+  WORKSPACE_CONFIGURED_PATH?: string;
+  UNFINISHED_REFACTORING?: string;
 }
 
 export const envConfig: EnvConfig = {
@@ -14,4 +16,6 @@ export const envConfig: EnvConfig = {
   SMELL_CACHE_KEY: process.env.SMELL_CACHE_KEY,
   HASH_PATH_MAP_KEY: process.env.FILE_HASH_CACHE_KEY,
   WORKSPACE_METRICS_DATA: process.env.WORKSPACE_METRICS_DATA,
+  WORKSPACE_CONFIGURED_PATH: process.env.WORKSPACE_CONFIGURED_PATH,
+  UNFINISHED_REFACTORING: process.env.UNFINISHED_REFACTORING,
 };

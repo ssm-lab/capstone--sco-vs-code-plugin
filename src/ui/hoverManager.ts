@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
-import { getDescriptionByMessageId, getNameByMessageId } from '../utils/smellsData';
 
 /**
  * Displays smell information on hover when hovering over lines in Python files.
@@ -26,6 +25,9 @@ export class HoverManager implements vscode.HoverProvider {
     _token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.Hover> {
     const filePath = document.uri.fsPath;
+
+    if (!filePath.endsWith('.py')) return;
+
     const smells = this.smellsCacheManager.getCachedSmells(filePath);
     if (!smells || smells.length === 0) return;
 
@@ -37,25 +39,33 @@ export class HoverManager implements vscode.HoverProvider {
 
     if (smellsAtLine.length === 0) return;
 
-    const wrap = (text: string, width = 50): string =>
-      text.replace(new RegExp(`(.{1,${width}})(\\s+|$)`, 'g'), '$1\n').trim();
+    const escape = (text: string): string => {
+      return text.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&');
+    };
 
-    const hoverSections = smellsAtLine.map((smell) => {
-      const name =
-        getNameByMessageId(smell.messageId) ?? `Unknown Smell (${smell.messageId})`;
-      const description =
-        getDescriptionByMessageId(smell.messageId) ?? 'No description available.';
-      const message = smell.message ?? 'No message provided.';
-
-      return [
-        `🍂 **${name}**`,
-        `- \`${wrap(message)}\``,
-        `- _${wrap(description)}_`,
-      ].join('\n');
-    });
-
-    const markdown = new vscode.MarkdownString(hoverSections.join('\n\n---\n\n'));
+    const markdown = new vscode.MarkdownString();
     markdown.isTrusted = true;
+    markdown.supportHtml = true;
+    markdown.supportThemeIcons = true;
+
+    smellsAtLine.forEach((smell) => {
+      const messageLine = `${escape(smell.message)} (**${escape(smell.messageId)}**)`;
+      const divider = '\n\n---\n\n';
+      const refactorSmellCmd = `command:ecooptimizer.refactorSmell?${encodeURIComponent(JSON.stringify(smell))} "Fix this specific smell"`;
+      const refactorTypeCmd = `command:ecooptimizer.refactorAllSmellsOfType?${encodeURIComponent(
+        JSON.stringify({
+          fullPath: filePath,
+          smellType: smell.messageId,
+        }),
+      )} "Fix all similar smells"`;
+
+      markdown.appendMarkdown(messageLine);
+      markdown.appendMarkdown(divider);
+      markdown.appendMarkdown(`[$(tools) Refactor Smell](${refactorSmellCmd}) | `);
+      markdown.appendMarkdown(
+        `[$(tools) Refactor All of This Type](${refactorTypeCmd})`,
+      );
+    });
 
     return new vscode.Hover(markdown);
   }

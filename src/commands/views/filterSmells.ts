@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { FilterViewProvider } from '../providers/FilterViewProvider';
+import { FilterViewProvider } from '../../providers/FilterViewProvider';
 
 /**
  * Registers VS Code commands for managing smell filters.
@@ -10,7 +10,7 @@ import { FilterViewProvider } from '../providers/FilterViewProvider';
 export function registerFilterSmellCommands(
   context: vscode.ExtensionContext,
   filterSmellsProvider: FilterViewProvider,
-) {
+): void {
   /**
    * Toggles the state of a specific smell filter.
    */
@@ -68,6 +68,12 @@ export function registerFilterSmellCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand('ecooptimizer.deselectAllFilterSmells', () => {
       filterSmellsProvider.setAllSmellsEnabled(false);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('ecooptimizer.setFilterDefaults', () => {
+      filterSmellsProvider.resetToDefaults();
     }),
   );
 }

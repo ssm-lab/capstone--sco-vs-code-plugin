@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { envConfig } from '../utils/envConfig';
 
 /**
  * Resets the workspace configuration by clearing the selected workspace path.
@@ -16,7 +17,10 @@ export async function resetConfiguration(
   );
 
   if (confirm === 'Reset') {
-    await context.workspaceState.update('workspaceConfiguredPath', undefined);
+    await context.workspaceState.update(
+      envConfig.WORKSPACE_CONFIGURED_PATH!,
+      undefined,
+    );
 
     vscode.commands.executeCommand(
       'setContext',

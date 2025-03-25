@@ -13,10 +13,20 @@ export async function jumpToSmell(filePath: string, line: number): Promise<void>
     // Move cursor to the specified line
     const position = new vscode.Position(line, 0);
     editor.selection = new vscode.Selection(position, position);
-    editor.revealRange(
-      new vscode.Range(position, position),
-      vscode.TextEditorRevealType.InCenter,
-    );
+
+    const range = new vscode.Range(position, position);
+    editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+
+    const flashDecorationType = vscode.window.createTextEditorDecorationType({
+      backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
+      isWholeLine: true,
+    });
+
+    editor.setDecorations(flashDecorationType, [range]);
+
+    setTimeout(() => {
+      editor.setDecorations(flashDecorationType, []);
+    }, 500);
   } catch (error: any) {
     vscode.window.showErrorMessage(
       `Failed to jump to smell in ${filePath}: ${error.message}`,
