@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { envConfig } from '../utils/envConfig';
 
 /**
  * Initializes workspace configuration by prompting user to select a Python project folder.
@@ -8,7 +9,9 @@ import * as fs from 'fs';
  *
  * @param context - VS Code extension context containing workspace state management
  */
-export async function configureWorkspace(context: vscode.ExtensionContext) {
+export async function configureWorkspace(
+  context: vscode.ExtensionContext,
+): Promise<void> {
   await configurePythonFolder(context);
 }
 
@@ -67,7 +70,9 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
  *
  * @param context - Extension context for state persistence
  */
-async function configurePythonFolder(context: vscode.ExtensionContext) {
+async function configurePythonFolder(
+  context: vscode.ExtensionContext,
+): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
 
   if (!workspaceFolders?.length) {
@@ -125,11 +130,10 @@ async function configurePythonFolder(context: vscode.ExtensionContext) {
 export async function updateWorkspace(
   context: vscode.ExtensionContext,
   workspacePath: string,
-) {
+): Promise<void> {
   // Persist workspace path
   await context.workspaceState.update(
-    envConfig,
-    WORKSPACE_CONFIGURED_PATH!,
+    envConfig.WORKSPACE_CONFIGURED_PATH!,
     workspacePath,
   );
 

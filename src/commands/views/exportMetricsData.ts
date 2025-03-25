@@ -18,8 +18,7 @@ export async function exportMetricsData(
   }
 
   const configuredWorkspacePath = context.workspaceState.get<string>(
-    envConfig,
-    WORKSPACE_CONFIGURED_PATH!,
+    envConfig.WORKSPACE_CONFIGURED_PATH!,
   );
 
   if (!configuredWorkspacePath) {
