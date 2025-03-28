@@ -9,7 +9,7 @@ import { getEnabledSmells } from '../utils/smellsData';
  * lines to highlight and applies decorations to the editor accordingly.
  */
 export class FileHighlighter {
-  private static instance: FileHighlighter;
+  private static instance: FileHighlighter | undefined;
   private decorations: vscode.TextEditorDecorationType[] = [];
 
   private constructor(private smellsCacheManager: SmellsCacheManager) {
@@ -61,9 +61,7 @@ export class FileHighlighter {
    */
   public updateHighlightsForVisibleEditors(): void {
     vscode.window.visibleTextEditors.forEach((editor) => {
-      console.log('editor:', editor);
       if (!editor.document.fileName.endsWith('.py')) {
-        console.log('not a python file');
         return;
       }
       this.highlightSmells(editor);
@@ -85,17 +83,11 @@ export class FileHighlighter {
    * @param editor - The text editor to apply highlights to.
    */
   public highlightSmells(editor: vscode.TextEditor): void {
-    console.log('reseting decorations');
     this.resetHighlights();
-
-    console.log('highlighting smells');
-    console.log('cache manager:', this.smellsCacheManager);
 
     const smells = this.smellsCacheManager.getCachedSmells(
       editor.document.uri.fsPath,
     );
-
-    console.log('smells', smells);
 
     if (!smells) {
       return;
@@ -115,8 +107,6 @@ export class FileHighlighter {
     const activeSmells = new Set<string>(smells.map((smell) => smell.symbol));
 
     const enabledSmells = getEnabledSmells();
-
-    console.log(enabledSmells);
 
     activeSmells.forEach((smellType) => {
       const smellColour = smellColours[smellType];
