@@ -185,6 +185,7 @@ class RefactoringDetailItem extends vscode.TreeItem {
       );
     } else if (itemType === 'info') {
       this.iconPath = new vscode.ThemeIcon('info');
+      this.tooltip = this.description;
     }
 
     // Make files clickable to open diffs

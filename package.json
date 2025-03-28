@@ -77,7 +77,9 @@
       "!src/**/index.ts",
       "!test/mocks/*",
       "!src/extension.ts",
-      "!src/context/*"
+      "!src/context/*",
+      "!src/providers/*",
+      "!src/commands/showLogs.ts"
     ]
   },
   "lint-staged": {

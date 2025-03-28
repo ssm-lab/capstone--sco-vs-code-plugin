@@ -1,7 +1,7 @@
 // utils/trackedDiffEditors.ts
 import * as vscode from 'vscode';
 
-const trackedDiffs = new Set<string>();
+export const trackedDiffs = new Set<string>();
 
 export function registerDiffEditor(
   original: vscode.Uri,
