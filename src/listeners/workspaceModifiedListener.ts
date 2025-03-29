@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import path from 'path';
+import { basename } from 'path';
 
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
@@ -127,7 +127,7 @@ export class WorkspaceModifiedListener {
         `[WorkspaceListener] Invalidated cache for modified file: ${filePath}`,
       );
       vscode.window.showInformationMessage(
-        `Analysis data marked outdated for ${path.basename(filePath)}`,
+        `Analysis data marked outdated for ${basename(filePath)}`,
         { modal: false },
       );
 
@@ -171,7 +171,7 @@ export class WorkspaceModifiedListener {
 
     if (removed) {
       vscode.window.showInformationMessage(
-        `Removed analysis data for deleted file: ${path.basename(filePath)}`,
+        `Removed analysis data for deleted file: ${basename(filePath)}`,
         { modal: false },
       );
     }
