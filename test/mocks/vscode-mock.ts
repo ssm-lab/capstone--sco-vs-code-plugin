@@ -18,7 +18,7 @@ export const TextDocument = {
   getText: jest.fn(() => config.docText),
   fileName: config.filePath,
   languageId: 'python',
-  lineAt: jest.fn((line: number) => {
+  lineAt: jest.fn((_line: number) => {
     return {
       text: 'Mock line text',
     };
@@ -101,22 +101,18 @@ export enum FileType {
   File = 2,
 }
 
-export const fileStat = {
-  type: FileType.Directory,
-};
-
 interface Workspace {
   getConfiguration: jest.Mock;
   findFiles: jest.Mock;
   fs: {
     readFile: jest.Mock;
     writeFile: jest.Mock;
-    stat: typeof fileStat;
+    stat: jest.Mock;
   };
 }
 
 export const workspace: Workspace = {
-  getConfiguration: jest.fn((section?: string) => ({
+  getConfiguration: jest.fn((_section?: string) => ({
     get: jest.fn(() => config.configGet),
     update: jest.fn(),
   })),
@@ -124,7 +120,7 @@ export const workspace: Workspace = {
   fs: {
     readFile: jest.fn(),
     writeFile: jest.fn(),
-    stat: fileStat,
+    stat: jest.fn(),
   },
 };
 
@@ -216,8 +212,17 @@ export const Uri = {
     scheme: 'file',
     path,
     fsPath: path,
-    toString: () => path,
+    toString: (): string => path,
   })),
+  joinPath: jest.fn((start: string, end: string) => {
+    const newPath = start + end;
+    return {
+      scheme: 'file',
+      path: newPath,
+      fsPath: newPath,
+      toString: (): string => newPath,
+    };
+  }),
   parse: jest.fn(),
 };
 

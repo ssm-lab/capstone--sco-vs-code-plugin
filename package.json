@@ -1,5 +1,6 @@
 {
   "name": "ecooptimizer",
+  "publisher": "ecooptimizers",
   "displayName": "EcoOptimizer VS Code Plugin",
   "contributors": [
     "Sevhena Walker",
@@ -9,6 +10,10 @@
     "Nivetha Kuruparan"
   ],
   "description": "VS Code Plugin for EcoOptimizer Refactoring Tool",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ssm-lab/capstone--sco-vs-code-plugin"
+  },
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.92.0"
@@ -25,6 +30,7 @@
     "test": "./test"
   },
   "scripts": {
+    "deploy": "vsce publish --yarn",
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "test": "jest --verbose",
