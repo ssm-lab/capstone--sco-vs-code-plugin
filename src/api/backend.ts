@@ -1,4 +1,4 @@
-import path from 'path';
+import {basename} from 'path';
 import { envConfig } from '../utils/envConfig';
 import { serverStatus } from '../emitters/serverStatus';
 import { ServerStatusType } from '../emitters/serverStatus';
@@ -16,7 +16,7 @@ const BASE_URL = `http://${envConfig.SERVER_URL}`;
  */
 export async function checkServerStatus(): Promise<void> {
   try {
-    ecoOutput.trace('[backend.ts] Checking backend server health status...');
+    ecoOutput.info('[backend.ts] Checking backend server health status...');
     const response = await fetch(`${BASE_URL}/health`);
     
     if (response.ok) {
@@ -24,7 +24,7 @@ export async function checkServerStatus(): Promise<void> {
       ecoOutput.trace('[backend.ts] Backend server is healthy');
     } else {
       serverStatus.setStatus(ServerStatusType.DOWN);
-      ecoOutput.trace(`[backend.ts] Backend server unhealthy status: ${response.status}`);
+      ecoOutput.warn(`[backend.ts] Backend server unhealthy status: ${response.status}`);
     }
   } catch (error) {
     serverStatus.setStatus(ServerStatusType.DOWN);
@@ -62,6 +62,9 @@ export async function initLogs(log_dir: string): Promise<boolean> {
 
     if (!response.ok) {
       console.error(`Unable to initialize logging: ${JSON.stringify(response)}`);
+      ecoOutput.error(
+        `Unable to initialize logging: ${JSON.stringify(response)}`,
+      );
 
       return false;
     }
@@ -69,7 +72,7 @@ export async function initLogs(log_dir: string): Promise<boolean> {
     return true;
   } catch (error: any) {
     console.error(`Eco: Unable to initialize logging: ${error.message}`);
-    ecoOutput.warn(
+    ecoOutput.error(
       'Eco: Unable to reach the backend. Please check your connection.',
     );
     return false;
@@ -91,9 +94,15 @@ export async function fetchSmells(
   enabledSmells: Record<string, Record<string, number | string>>,
 ): Promise<{ smells: Smell[]; status: number }> {
   const url = `${BASE_URL}/smells`;
-  ecoOutput.info(`[backend.ts] Starting smell detection for: ${path.basename(filePath)}`);
+  const fileName = basename(filePath);
+  ecoOutput.info(`[backend.ts] Starting smell detection for: ${fileName}`);
 
   try {
+    ecoOutput.debug(`[backend.ts] Request payload for ${fileName}:`, {
+      file_path: filePath,
+      enabled_smells: enabledSmells
+    });
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -108,15 +117,47 @@ export async function fetchSmells(
     if (!response.ok) {
       const errorMsg = `Backend request failed (${response.status})`;
       ecoOutput.error(`[backend.ts] ${errorMsg}`);
+      try {
+        const errorBody = await response.json();
+        ecoOutput.error(`[backend.ts] Backend error details:`, errorBody);
+      } catch (e: any) {
+        ecoOutput.error(`[backend.ts] Could not parse error response`);
+      }
       throw new Error(errorMsg);
     }
 
     const smellsList = await response.json();
-    ecoOutput.info(`[backend.ts] Detected ${smellsList.length} smells in ${path.basename(filePath)}`);
+    
+    // Detailed logging of the response
+    ecoOutput.info(`[backend.ts] Detection complete for ${fileName}`);
+    ecoOutput.debug(`[backend.ts] Raw response headers for ${fileName}:`, Object.fromEntries(response.headers.entries()));
+    ecoOutput.debug(`[backend.ts] Full response for ${fileName}:`, {
+      status: response.status,
+      statusText: response.statusText,
+      body: smellsList
+    });
+    
+    // Detailed smell listing
+    ecoOutput.info(`[backend.ts] Detected ${smellsList.length} smells in ${fileName}`);
+    if (smellsList.length > 0) {
+      ecoOutput.debug(`[backend.ts] Complete smells list for ${fileName}:`, smellsList);
+      ecoOutput.debug(`[backend.ts] Verbose smell details for ${fileName}:`, 
+        smellsList.map((smell: Smell) => ({
+          type: smell.symbol,
+          location: `${smell.path}:${smell.occurences}`,
+          message: smell.message,
+          context: smell.messageId
+        }))
+      );
+    }
+
     return { smells: smellsList, status: response.status };
 
   } catch (error: any) {
-    ecoOutput.error(`[backend.ts] Smell detection failed: ${error.message}`);
+    ecoOutput.error(`[backend.ts] Smell detection failed for ${fileName}: ${error.message}`);
+    if (error instanceof Error && error.stack) {
+      ecoOutput.trace(`[backend.ts] Error stack info:`, error.stack);
+    }
     throw new Error(`Detection failed: ${error.message}`);
   }
 }

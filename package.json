@@ -79,7 +79,9 @@
       "!src/extension.ts",
       "!src/context/*",
       "!src/providers/*",
-      "!src/commands/showLogs.ts"
+      "!src/commands/showLogs.ts",
+      "!src/emitters/serverStatus.ts",
+      "!src/utils/envConfig.ts"
     ]
   },
   "lint-staged": {

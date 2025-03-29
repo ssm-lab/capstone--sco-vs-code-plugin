@@ -246,6 +246,7 @@ describe('FileHighlighter', () => {
         key === 'highlightStyle' ? 'underline' : undefined,
       );
 
+      fileHighlighter['getDecoration']('rgba(255,0,0,0.5)', 'underline');
       expect(vscode.window.createTextEditorDecorationType).toHaveBeenCalledWith({
         textDecoration: 'wavy rgba(255,0,0,0.5) underline 1px',
       });

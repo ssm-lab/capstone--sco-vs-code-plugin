@@ -1,7 +1,7 @@
 import { EnvConfig } from '../../src/utils/envConfig';
 
 const mockEnvConfig: EnvConfig = {
-  SERVER_URL: 'value1',
+  SERVER_URL: 'localhost:8000',
   SMELL_CACHE_KEY: 'value2',
   HASH_PATH_MAP_KEY: 'value3',
   WORKSPACE_METRICS_DATA: 'value4',

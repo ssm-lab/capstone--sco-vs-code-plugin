@@ -59,6 +59,7 @@ interface Window {
   activeTextEditor: any;
   visibleTextEditors: any[];
   withProgress: jest.Mock;
+  showInputBox: jest.Mock;
   showQuickPick: jest.Mock;
 }
 
@@ -93,6 +94,7 @@ export const window: Window = {
       report: jest.fn(),
     });
   }),
+  showInputBox: jest.fn((val) => {}),
   showQuickPick: jest.fn(),
 };
 
@@ -103,6 +105,8 @@ export enum FileType {
 
 interface Workspace {
   getConfiguration: jest.Mock;
+  createFileSystemWatcher: jest.Mock;
+  onDidSaveTextDocument: jest.Mock;
   findFiles: jest.Mock;
   fs: {
     readFile: jest.Mock;
@@ -116,6 +120,20 @@ export const workspace: Workspace = {
     get: jest.fn(() => config.configGet),
     update: jest.fn(),
   })),
+  createFileSystemWatcher: jest.fn(
+    () =>
+      ({
+        onDidCreate: jest.fn(),
+        onDidDelete: jest.fn(),
+        dispose: jest.fn(),
+      }) as unknown,
+  ),
+  onDidSaveTextDocument: jest.fn(
+    () =>
+      ({
+        dispose: jest.fn(),
+      }) as unknown,
+  ),
   findFiles: jest.fn(),
   fs: {
     readFile: jest.fn(),
@@ -198,7 +216,9 @@ window.withProgress = jest.fn(
 );
 
 export const commands = {
-  registerCommand: jest.fn(),
+  registerCommand: jest.fn((command: string, func: Function) => ({
+    dispose: jest.fn(),
+  })),
   executeCommand: jest.fn((command: string) => {
     if (command === 'setContext') {
       return Promise.resolve();
@@ -237,6 +257,13 @@ interface MockMarkdownString {
   appendMarkdown: jest.Mock;
   value: string;
   isTrusted: boolean;
+}
+
+export class RelativePattern {
+  constructor(
+    public path: string,
+    pattern: string,
+  ) {}
 }
 
 export const MarkdownString = jest.fn().mockImplementation(() => {
@@ -310,6 +337,7 @@ export interface Vscode {
   OverviewRulerLane: typeof OverviewRulerLane;
   ProgressLocation: typeof ProgressLocation;
   FileType: typeof FileType;
+  RelativePattern: typeof RelativePattern;
   Range: typeof Range;
   Position: typeof Position;
   Hover: typeof Hover;
@@ -331,6 +359,7 @@ const vscode: Vscode = {
   OverviewRulerLane,
   ProgressLocation,
   FileType,
+  RelativePattern,
   Range,
   Position,
   Hover,
