@@ -1,6 +1,12 @@
 import * as vscode from 'vscode';
 import path from 'path';
 
+// let port: number;
+
+// export function getApiPort(): number {
+//   return port;
+// }
+
 // === Output Channel ===
 export const ecoOutput = vscode.window.createOutputChannel('Eco-Optimizer', {
   log: true,
@@ -12,6 +18,9 @@ let smellLintingEnabled = false;
 export function isSmellLintingEnabled(): boolean {
   return smellLintingEnabled;
 }
+
+// === In-Built ===
+import { existsSync, promises } from 'fs';
 
 // === Core Utilities ===
 import { envConfig } from './utils/envConfig';
@@ -56,14 +65,33 @@ import {
 } from './utils/trackedDiffEditors';
 import { initializeRefactorActionButtons } from './utils/refactorActionButtons';
 import { LogManager } from './commands/showLogs';
-import { RefactorArtifacts } from './global';
-import { existsSync, promises } from 'fs';
+
+// === Backend Server ===
+// import { ServerProcess } from './lib/processManager';
+// import { DependencyManager } from './lib/dependencyManager';
 
 let backendLogManager: LogManager;
+// let server: ServerProcess;
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
   ecoOutput.info('Initializing Eco-Optimizer extension...');
   console.log('Initializing Eco-Optimizer extension...');
+
+  // === Install and Run Backend Server ====
+  // if (!(await DependencyManager.ensureDependencies(context))) {
+  //   vscode.window.showErrorMessage(
+  //     'Cannot run the extension without the ecooptimizer server. Deactivating extension.',
+  //   );
+  // }
+
+  // server = new ServerProcess(context);
+  // try {
+  //   port = await server.start();
+
+  //   console.log(`Server started on port ${port}`);
+  // } catch (error) {
+  //   vscode.window.showErrorMessage(`Failed to start server: ${error}`);
+  // }
 
   backendLogManager = new LogManager(context);
 
@@ -127,6 +155,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // === Register Commands ===
   context.subscriptions.push(
+    // vscode.commands.registerCommand('ecooptimizer.startServer', async () => {
+    //   port = await server.start();
+    // }),
+    // vscode.commands.registerCommand('ecooptimizer.stopServer', async () => {
+    //   server.dispose();
+    // }),
     vscode.commands.registerCommand('ecooptimizer.configureWorkspace', async () => {
       await configureWorkspace(context);
       smellsViewProvider.refresh();
@@ -629,6 +663,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
   cleanPastSessionArtifacts();
 
+  // if (!port) {
+  //   try {
+  //     port = await server.start();
+
+  //     console.log(`Server started on port ${port}`);
+  //   } catch (error) {
+  //     vscode.window.showErrorMessage(`Failed to start server: ${error}`);
+  //   }
+  // }
+
   ecoOutput.info('Eco-Optimizer extension activated successfully');
   console.log('Eco-Optimizer extension activated successfully');
 }
@@ -637,5 +681,7 @@ export function deactivate(): void {
   ecoOutput.info('Extension deactivated');
   console.log('Extension deactivated');
 
+  // server.dispose();
   backendLogManager.stopWatchingLogs();
+  ecoOutput.dispose();
 }

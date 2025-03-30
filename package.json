@@ -1,6 +1,6 @@
 {
   "name": "ecooptimizer",
-  "publisher": "ecooptimizers",
+  "publisher": "mac-ecooptimizers",
   "displayName": "EcoOptimizer VS Code Plugin",
   "contributors": [
     "Sevhena Walker",
@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/ssm-lab/capstone--sco-vs-code-plugin"
   },
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.92.0"
   },
@@ -22,7 +22,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:python"
+    "onLanguage:python",
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "directories": {
@@ -32,6 +33,7 @@
   "scripts": {
     "deploy": "vsce publish --yarn",
     "vscode:prepublish": "npm run package",
+    "postinstall": "node ./dist/install.js",
     "compile": "webpack",
     "test": "jest --verbose",
     "test:watch": "jest --watch --verbose",
@@ -39,8 +41,7 @@
     "package": "webpack --mode production --devtool hidden-source-map",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "lint": "eslint src",
-    "prepare": "husky"
+    "lint": "eslint src"
   },
   "jest": {
     "preset": "ts-jest",
@@ -91,6 +92,7 @@
     ]
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/jest": "^29.5.14",
     "@types/node": "20.x",
     "@types/vscode": "^1.92.0",
@@ -120,12 +122,16 @@
   },
   "dependencies": {
     "@types/dotenv": "^6.1.1",
+    "adm-zip": "^0.5.16",
     "bufferutil": "^4.0.9",
     "dotenv": "^16.4.7",
     "dotenv-webpack": "^8.1.0",
+    "follow-redirects": "^1.15.9",
+    "node-fetch": "^3.3.2",
     "utf-8-validate": "^6.0.5",
     "ws": "^8.18.0"
   },
+  "icon": "./assets/green_leaf.png",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -178,6 +184,16 @@
       }
     ],
     "commands": [
+      {
+        "command": "ecooptimizer.startServer",
+        "title": "Start EcoOptimizer Server",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.stopServer",
+        "title": "Stop EcoOptimizer Server",
+        "category": "Eco"
+      },
       {
         "command": "ecooptimizer.configureWorkspace",
         "title": "Configure Workspace",

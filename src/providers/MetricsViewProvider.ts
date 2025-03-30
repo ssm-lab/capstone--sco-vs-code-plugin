@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { basename } from 'path';
+import { basename, dirname } from 'path';
 import { buildPythonTree } from '../utils/TreeStructureBuilder';
 import { envConfig } from '../utils/envConfig';
 import { getFilterSmells } from '../utils/smellsData';
@@ -56,11 +56,21 @@ export interface MetricsDataItem {
   };
 }
 
+interface FolderMetrics {
+  totalCarbonSaved: number;
+  smellDistribution: Map<string, [string, number]>; // Map<acronym, [name, carbonSaved]>
+  children: {
+    files: Map<string, number>; // Map<filePath, carbonSaved>
+    folders: Map<string, FolderMetrics>; // Map<folderPath, FolderMetrics>
+  };
+}
+
 export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
     MetricTreeItem | undefined
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+  private folderMetricsCache: Map<string, FolderMetrics> = new Map();
 
   constructor(private context: vscode.ExtensionContext) {}
 
@@ -106,7 +116,10 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
           vscode.TreeItemCollapsibleState.None,
           'folder-stats',
         ),
-        ...folderMetrics.smellData.map((data) => this.createSmellItem(data)),
+        ...Array.from(folderMetrics.smellDistribution.entries()).map(
+          ([acronym, [name, carbonSaved]]) =>
+            this.createSmellItem({ acronym, name, carbonSaved }),
+        ),
       ].sort(compareTreeItems);
 
       const contents = treeNodes.map((node) => {
@@ -169,39 +182,65 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
   private async calculateFolderMetrics(
     folderPath: string,
     metricsData: { [path: string]: MetricsDataItem },
-  ): Promise<{
-    totalCarbonSaved: number;
-    smellData: { acronym: string; name: string; carbonSaved: number }[];
-  }> {
-    let totalCarbonSaved = 0;
-    const smellDistribution = new Map<string, [string, number]>();
+  ): Promise<FolderMetrics> {
+    // Check if we have cached metrics for this folder
+    const cachedMetrics = this.folderMetricsCache.get(folderPath);
+    if (cachedMetrics) {
+      return cachedMetrics;
+    }
+
+    const folderMetrics: FolderMetrics = {
+      totalCarbonSaved: 0,
+      smellDistribution: new Map(),
+      children: {
+        files: new Map(),
+        folders: new Map(),
+      },
+    };
 
     const treeNodes = buildPythonTree(folderPath);
-    const fileNodes = treeNodes.filter((node) => node.isFile);
 
-    for (const node of fileNodes) {
-      const fileMetrics = this.calculateFileMetrics(node.fullPath, metricsData);
-      totalCarbonSaved += fileMetrics.totalCarbonSaved;
+    for (const node of treeNodes) {
+      if (node.isFile) {
+        const fileMetrics = this.calculateFileMetrics(node.fullPath, metricsData);
+        folderMetrics.children.files.set(
+          node.fullPath,
+          fileMetrics.totalCarbonSaved,
+        );
+        folderMetrics.totalCarbonSaved += fileMetrics.totalCarbonSaved;
 
-      for (const smellData of fileMetrics.smellData) {
-        const current = smellDistribution.get(smellData.acronym)?.[1] || 0;
-        smellDistribution.set(smellData.acronym, [
-          smellData.name,
-          current + smellData.carbonSaved,
-        ]);
+        for (const smellData of fileMetrics.smellData) {
+          const current =
+            folderMetrics.smellDistribution.get(smellData.acronym)?.[1] || 0;
+          folderMetrics.smellDistribution.set(smellData.acronym, [
+            smellData.name,
+            current + smellData.carbonSaved,
+          ]);
+        }
+      } else {
+        const subFolderMetrics = await this.calculateFolderMetrics(
+          node.fullPath,
+          metricsData,
+        );
+        folderMetrics.children.folders.set(node.fullPath, subFolderMetrics);
+        folderMetrics.totalCarbonSaved += subFolderMetrics.totalCarbonSaved;
+
+        // Aggregate smell distribution from subfolder
+        subFolderMetrics.smellDistribution.forEach(
+          ([name, carbonSaved], acronym) => {
+            const current = folderMetrics.smellDistribution.get(acronym)?.[1] || 0;
+            folderMetrics.smellDistribution.set(acronym, [
+              name,
+              current + carbonSaved,
+            ]);
+          },
+        );
       }
     }
 
-    return {
-      totalCarbonSaved,
-      smellData: Array.from(smellDistribution.entries()).map(
-        ([acronym, [name, carbonSaved]]) => ({
-          acronym,
-          name,
-          carbonSaved,
-        }),
-      ),
-    };
+    // Cache the calculated metrics
+    this.folderMetricsCache.set(folderPath, folderMetrics);
+    return folderMetrics;
   }
 
   private calculateFileMetrics(
@@ -260,7 +299,29 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     metrics[normalizedPath].smellDistribution[smellSymbol] += carbonSaved;
 
     this.context.workspaceState.update(envConfig.WORKSPACE_METRICS_DATA!, metrics);
+
+    // Clear the cache for all parent folders of the updated file
+    this.clearCacheForFileParents(filePath);
     this.refresh();
+  }
+
+  private clearCacheForFileParents(filePath: string): void {
+    let configuredPath = this.context.workspaceState.get<string>(
+      envConfig.WORKSPACE_CONFIGURED_PATH!,
+    );
+
+    if (!configuredPath) {
+      return;
+    }
+    configuredPath = normalizePath(configuredPath);
+
+    let currentPath = dirname(filePath);
+    console.log('file affected:', filePath);
+
+    while (currentPath.includes(configuredPath)) {
+      this.folderMetricsCache.delete(currentPath);
+      currentPath = dirname(currentPath);
+    }
   }
 }
 

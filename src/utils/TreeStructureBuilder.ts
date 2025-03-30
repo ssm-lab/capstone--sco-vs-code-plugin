@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { normalizePath } from './normalizePath';
 
 /**
  * Options for configuring tree node appearance and behavior in the VS Code UI
@@ -42,7 +43,7 @@ export function buildPythonTree(rootPath: string): TreeNode[] {
     const entries = fs.readdirSync(rootPath);
 
     for (const entry of entries) {
-      const fullPath = path.join(rootPath, entry);
+      const fullPath = normalizePath(path.join(rootPath, entry));
       const stat = fs.statSync(fullPath);
 
       if (stat.isDirectory()) {
@@ -93,7 +94,7 @@ function containsPythonFiles(folderPath: string): boolean {
     const entries = fs.readdirSync(folderPath);
 
     for (const entry of entries) {
-      const fullPath = path.join(folderPath, entry);
+      const fullPath = normalizePath(path.join(folderPath, entry));
       const stat = fs.statSync(fullPath);
 
       if (stat.isFile() && entry.endsWith('.py')) {

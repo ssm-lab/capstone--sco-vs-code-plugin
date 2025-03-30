@@ -1,20 +1,20 @@
 const path = require('path');
-const nodeExternals = require('webpack-node-externals');
-const Dotenv = require('dotenv-webpack');
 
 module.exports = {
   target: 'node',
-  entry: './src/extension.ts',
+  entry: {
+    extension: './src/extension.ts',
+    install: './src/install.ts' // Separate entry point for install script
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'extension.js',
-    libraryTarget: 'commonjs2',
+    filename: '[name].js',
+    libraryTarget: 'commonjs2'
   },
   resolve: {
     extensions: ['.ts', '.js'],
   },
   externals: [
-    nodeExternals(),
     { vscode: 'commonjs vscode' },
   ],
   module: {
@@ -31,9 +31,4 @@ module.exports = {
   infrastructureLogging: {
     level: 'log' // enables logging required for problem matchers
   },
-  plugins: [
-    new Dotenv({
-      path: './.env',
-    }),
-  ],
 };

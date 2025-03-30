@@ -1,7 +1,3 @@
-import * as dotenv from 'dotenv';
-
-dotenv.config();
-
 export interface EnvConfig {
   SERVER_URL?: string;
   SMELL_CACHE_KEY?: string;
@@ -12,10 +8,10 @@ export interface EnvConfig {
 }
 
 export const envConfig: EnvConfig = {
-  SERVER_URL: process.env.SERVER_URL,
-  SMELL_CACHE_KEY: process.env.SMELL_CACHE_KEY,
-  HASH_PATH_MAP_KEY: process.env.FILE_HASH_CACHE_KEY,
-  WORKSPACE_METRICS_DATA: process.env.WORKSPACE_METRICS_DATA,
-  WORKSPACE_CONFIGURED_PATH: process.env.WORKSPACE_CONFIGURED_PATH,
-  UNFINISHED_REFACTORING: process.env.UNFINISHED_REFACTORING,
+  SERVER_URL: '127.0.0.1:8000',
+  SMELL_CACHE_KEY: 'smellCacheKey',
+  HASH_PATH_MAP_KEY: 'hashMapKey',
+  WORKSPACE_METRICS_DATA: 'workspaceMetrics',
+  WORKSPACE_CONFIGURED_PATH: 'workspacePath',
+  UNFINISHED_REFACTORING: 'pastRefactor',
 };

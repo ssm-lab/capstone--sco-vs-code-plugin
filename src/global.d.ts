@@ -91,9 +91,9 @@ declare global {
       refactored: string;
     }[];
   }
-}
 
-export interface RefactorArtifacts {
-  refactoredData: RefactoredData;
-  smell: Smell;
+  export interface RefactorArtifacts {
+    refactoredData: RefactoredData;
+    smell: Smell;
+  }
 }
