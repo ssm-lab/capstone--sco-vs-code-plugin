@@ -131,7 +131,7 @@
     "utf-8-validate": "^6.0.5",
     "ws": "^8.18.0"
   },
-  "icon": "./assets/eco_log.png",
+  "icon": "./assets/eco_logo.png",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
