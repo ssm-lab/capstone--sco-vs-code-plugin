@@ -131,7 +131,7 @@
     "utf-8-validate": "^6.0.5",
     "ws": "^8.18.0"
   },
-  "icon": "./assets/green_leaf.png",
+  "icon": "./assets/eco_log.png",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
