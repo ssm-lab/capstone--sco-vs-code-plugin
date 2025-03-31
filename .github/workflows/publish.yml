@@ -66,6 +66,6 @@ jobs:
           fi
 
           # Always test packaging
-          vsce verify-pat
+          vsce -p $VSCE_PAT
         env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT || '' }} # Optional PAT
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
