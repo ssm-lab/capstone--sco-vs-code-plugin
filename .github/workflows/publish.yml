@@ -31,7 +31,7 @@ jobs:
           echo "Current Version: $CURRENT_VERSION"
           echo "Previous Version: $PREVIOUS_VERSION"
 
-          if [[ "$CURRENT_VERSION" == "$PREVIOUS_VERSION" ]]; then
+          if [[ "$CURRENT_VERSION" == "$TAG_VERSION" ]]; then
             echo "::error::Version not updated in package.json"
             exit 1
           fi
