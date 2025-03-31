@@ -2,7 +2,7 @@ name: Publish Extension
 
 on:
   push:
-    branches: [test-publish-workflow]
+    branches: [main]
 
 jobs:
   publish:
