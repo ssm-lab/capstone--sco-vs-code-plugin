@@ -14,6 +14,13 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0 # Required for branch comparison
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install compare-versions
+
       - name: Get PR version
         id: pr_version
         run: |
@@ -31,20 +38,20 @@ jobs:
 
       - name: Validate version bump
         run: |
-          # Install compare-versions tool
-          npm install compare-versions
+          # Write a temporary Node.js script for version comparison
+          cat > compare-versions.mjs << 'EOF'
+          import compareVersions from 'compare-versions';
+          import fs from 'fs';
 
-          echo "PR Version: ${{ steps.pr_version.outputs.pr_version }}"
-          echo "Main Version: ${{ steps.main_version.outputs.main_version }}"
+          const mainVersion = process.argv[1];
+          const prVersion = process.argv[2];
 
-          if ! npx compare-versions "${{ steps.pr_version.outputs.pr_version }}" "${{ steps.main_version.outputs.main_version }}"; then
-            echo "::error::Version must be higher than main (${{ steps.main_version.outputs.main_version }})"
-            exit 1
-          fi
+          if (compareVersions(prVersion, mainVersion) < 1) {
+            console.error(`::error::Version ${prVersion} must be greater than ${mainVersion}`);
+            process.exit(1);
+          }
+          EOF
 
-          if [[ "${{ steps.pr_version.outputs.pr_version }}" == "${{ steps.main_version.outputs.main_version }}" ]]; then
-            echo "::error::Version unchanged from main"
-            exit 1
-          fi
+          node compare-versions.mjs ${{ steps.pr_version.outputs.main_version }} ${{ steps.pr_version.outputs.pr_version }}
 
           echo "✓ Version validated"
