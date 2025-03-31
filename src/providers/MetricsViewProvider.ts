@@ -6,6 +6,10 @@ import { envConfig } from '../utils/envConfig';
 import { getFilterSmells } from '../utils/smellsData';
 import { normalizePath } from '../utils/normalizePath';
 
+/**
+ * Custom TreeItem for displaying metrics in the VS Code explorer
+ * Handles different node types (folders, files, smells) with appropriate icons and behaviors
+ */
 class MetricTreeItem extends vscode.TreeItem {
   constructor(
     public readonly label: string,
@@ -17,7 +21,7 @@ class MetricTreeItem extends vscode.TreeItem {
   ) {
     super(label, collapsibleState);
 
-    // Set icon based on contextValue
+    // Set icon based on node type
     switch (this.contextValue) {
       case 'folder':
         this.iconPath = new vscode.ThemeIcon('folder');
@@ -33,12 +37,14 @@ class MetricTreeItem extends vscode.TreeItem {
         break;
     }
 
+    // Format carbon savings display
     this.description =
       carbonSaved !== undefined
         ? `Carbon Saved: ${formatNumber(carbonSaved)} kg`
         : '';
     this.tooltip = smellName || this.description;
 
+    // Make files clickable to open them
     if (resourceUri && contextValue === 'file') {
       this.command = {
         title: 'Open File',
@@ -49,6 +55,9 @@ class MetricTreeItem extends vscode.TreeItem {
   }
 }
 
+/**
+ * Interface for storing metrics data for individual files
+ */
 export interface MetricsDataItem {
   totalCarbonSaved: number;
   smellDistribution: {
@@ -56,6 +65,9 @@ export interface MetricsDataItem {
   };
 }
 
+/**
+ * Structure for aggregating metrics across folders
+ */
 interface FolderMetrics {
   totalCarbonSaved: number;
   smellDistribution: Map<string, [string, number]>; // Map<acronym, [name, carbonSaved]>
@@ -65,15 +77,24 @@ interface FolderMetrics {
   };
 }
 
+/**
+ * Provides a tree view of carbon savings metrics across the workspace
+ * Aggregates data by folder structure and smell types with caching for performance
+ */
 export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
     MetricTreeItem | undefined
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+  // Cache for folder metrics to avoid repeated calculations
   private folderMetricsCache: Map<string, FolderMetrics> = new Map();
 
   constructor(private context: vscode.ExtensionContext) {}
 
+  /**
+   * Triggers a refresh of the tree view
+   */
   refresh(): void {
     this._onDidChangeTreeData.fire(undefined);
   }
@@ -82,17 +103,24 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     return element;
   }
 
+  /**
+   * Builds the tree view hierarchy
+   * @param element The parent element or undefined for root items
+   * @returns Promise resolving to child tree items
+   */
   async getChildren(element?: MetricTreeItem): Promise<MetricTreeItem[]> {
     const metricsData = this.context.workspaceState.get<{
       [path: string]: MetricsDataItem;
     }>(envConfig.WORKSPACE_METRICS_DATA!, {});
 
+    // Root level items
     if (!element) {
       const configuredPath = this.context.workspaceState.get<string>(
         envConfig.WORKSPACE_CONFIGURED_PATH!,
       );
       if (!configuredPath) return [];
 
+      // Show either single file or folder contents at root
       const isDirectory =
         fs.existsSync(configuredPath) && fs.statSync(configuredPath).isDirectory();
       if (isDirectory) {
@@ -102,6 +130,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
       }
     }
 
+    // Folder contents
     if (element.contextValue === 'folder') {
       const folderPath = element.resourceUri!.fsPath;
       const folderMetrics = await this.calculateFolderMetrics(
@@ -110,6 +139,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
       );
       const treeNodes = buildPythonTree(folderPath);
 
+      // Create folder statistics section
       const folderStats = [
         new MetricTreeItem(
           `Total Carbon Saved: ${formatNumber(folderMetrics.totalCarbonSaved)} kg`,
@@ -122,6 +152,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
         ),
       ].sort(compareTreeItems);
 
+      // Create folder contents listing
       const contents = treeNodes.map((node) => {
         return node.isFile
           ? this.createFileItem(node.fullPath, metricsData)
@@ -131,6 +162,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
       return [...contents, ...folderStats];
     }
 
+    // File smell breakdown
     if (element.contextValue === 'file') {
       const filePath = element.resourceUri!.fsPath;
       const fileMetrics = this.calculateFileMetrics(filePath, metricsData);
@@ -140,6 +172,9 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     return [];
   }
 
+  /**
+   * Creates a folder tree item
+   */
   private createFolderItem(folderPath: string): MetricTreeItem {
     return new MetricTreeItem(
       basename(folderPath),
@@ -150,6 +185,9 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     );
   }
 
+  /**
+   * Creates a file tree item with carbon savings
+   */
   private createFileItem(
     filePath: string,
     metricsData: { [path: string]: MetricsDataItem },
@@ -164,6 +202,9 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     );
   }
 
+  /**
+   * Creates a smell breakdown item
+   */
   private createSmellItem(data: {
     acronym: string;
     name: string;
@@ -179,11 +220,15 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     );
   }
 
+  /**
+   * Calculates aggregated metrics for a folder and its contents
+   * Uses caching to optimize performance for large folder structures
+   */
   private async calculateFolderMetrics(
     folderPath: string,
     metricsData: { [path: string]: MetricsDataItem },
   ): Promise<FolderMetrics> {
-    // Check if we have cached metrics for this folder
+    // Return cached metrics if available
     const cachedMetrics = this.folderMetricsCache.get(folderPath);
     if (cachedMetrics) {
       return cachedMetrics;
@@ -198,10 +243,12 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
       },
     };
 
+    // Build directory tree structure
     const treeNodes = buildPythonTree(folderPath);
 
     for (const node of treeNodes) {
       if (node.isFile) {
+        // Aggregate file metrics
         const fileMetrics = this.calculateFileMetrics(node.fullPath, metricsData);
         folderMetrics.children.files.set(
           node.fullPath,
@@ -209,6 +256,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
         );
         folderMetrics.totalCarbonSaved += fileMetrics.totalCarbonSaved;
 
+        // Aggregate smell distribution from file
         for (const smellData of fileMetrics.smellData) {
           const current =
             folderMetrics.smellDistribution.get(smellData.acronym)?.[1] || 0;
@@ -218,6 +266,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
           ]);
         }
       } else {
+        // Recursively process subfolders
         const subFolderMetrics = await this.calculateFolderMetrics(
           node.fullPath,
           metricsData,
@@ -243,6 +292,9 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     return folderMetrics;
   }
 
+  /**
+   * Calculates metrics for a single file
+   */
   private calculateFileMetrics(
     filePath: string,
     metricsData: { [path: string]: MetricsDataItem },
@@ -256,6 +308,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
       smellDistribution: {},
     };
 
+    // Filter smell distribution to only include enabled smells
     const smellDistribution = Object.keys(smellConfigData).reduce(
       (acc, symbol) => {
         if (smellConfigData[symbol]) {
@@ -276,6 +329,9 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     };
   }
 
+  /**
+   * Updates metrics for a file when new analysis results are available
+   */
   updateMetrics(filePath: string, carbonSaved: number, smellSymbol: string): void {
     const metrics = this.context.workspaceState.get<{
       [path: string]: MetricsDataItem;
@@ -283,6 +339,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
 
     const normalizedPath = normalizePath(filePath);
 
+    // Initialize metrics if they don't exist
     if (!metrics[normalizedPath]) {
       metrics[normalizedPath] = {
         totalCarbonSaved: 0,
@@ -290,6 +347,7 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
       };
     }
 
+    // Update metrics
     metrics[normalizedPath].totalCarbonSaved =
       (metrics[normalizedPath].totalCarbonSaved || 0) + carbonSaved;
 
@@ -298,13 +356,17 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     }
     metrics[normalizedPath].smellDistribution[smellSymbol] += carbonSaved;
 
+    // Persist changes
     this.context.workspaceState.update(envConfig.WORKSPACE_METRICS_DATA!, metrics);
 
-    // Clear the cache for all parent folders of the updated file
+    // Clear cache for all parent folders
     this.clearCacheForFileParents(filePath);
     this.refresh();
   }
 
+  /**
+   * Clears cached metrics for all parent folders of a modified file
+   */
   private clearCacheForFileParents(filePath: string): void {
     let configuredPath = this.context.workspaceState.get<string>(
       envConfig.WORKSPACE_CONFIGURED_PATH!,
@@ -315,9 +377,8 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
     }
     configuredPath = normalizePath(configuredPath);
 
+    // Walk up the directory tree clearing cache
     let currentPath = dirname(filePath);
-    console.log('file affected:', filePath);
-
     while (currentPath.includes(configuredPath)) {
       this.folderMetricsCache.delete(currentPath);
       currentPath = dirname(currentPath);
@@ -325,7 +386,13 @@ export class MetricsViewProvider implements vscode.TreeDataProvider<MetricTreeIt
   }
 }
 
-// Helper functions
+// ===========================================================
+//                    HELPER FUNCTIONS
+// ===========================================================
+
+/**
+ * Priority for sorting tree items by type
+ */
 const contextPriority: { [key: string]: number } = {
   folder: 1,
   file: 2,
@@ -333,6 +400,9 @@ const contextPriority: { [key: string]: number } = {
   'folder-stats': 4,
 };
 
+/**
+ * Comparator for tree items (folders first, then files, then smells)
+ */
 function compareTreeItems(a: MetricTreeItem, b: MetricTreeItem): number {
   const priorityA = contextPriority[a.contextValue] || 0;
   const priorityB = contextPriority[b.contextValue] || 0;
@@ -340,6 +410,9 @@ function compareTreeItems(a: MetricTreeItem, b: MetricTreeItem): number {
   return a.label.localeCompare(b.label);
 }
 
+/**
+ * Formats numbers for display, using scientific notation for very small values
+ */
 function formatNumber(number: number, decimalPlaces: number = 2): string {
   const threshold = 0.001;
   return Math.abs(number) < threshold

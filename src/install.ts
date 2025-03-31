@@ -2,15 +2,25 @@ import * as path from 'path';
 import * as childProcess from 'child_process';
 import { access, unlink, writeFile } from 'fs/promises';
 
+// Constants for package management
 const PACKAGE_NAME = 'ecooptimizer';
 const PYPI_INDEX = 'https://pypi.org/simple';
 
+/**
+ * Configuration interface for Python environment setup
+ */
 interface InstallConfig {
   pythonPath: string;
   version: string;
   targetDir: string;
 }
 
+/**
+ * Ensures a valid Python virtual environment exists
+ * @param config Installation configuration
+ * @returns Path to the Python executable in the virtual environment
+ * @throws Error if environment setup fails
+ */
 async function ensurePythonEnvironment(config: InstallConfig): Promise<string> {
   const venvPath = path.join(config.targetDir, '.venv');
   const isWindows = process.platform === 'win32';
@@ -21,7 +31,7 @@ async function ensurePythonEnvironment(config: InstallConfig): Promise<string> {
   );
 
   try {
-    // 1. First verify Python is available
+    // 1. Verify Python is available and executable
     await new Promise<void>((resolve, reject) => {
       const pythonCheck = childProcess.spawn(config.pythonPath, ['--version']);
       pythonCheck.stderr?.on('data', (chunk) => console.error(chunk));
@@ -37,7 +47,7 @@ async function ensurePythonEnvironment(config: InstallConfig): Promise<string> {
       });
     });
 
-    // 2. Check if venv already exists
+    // 2. Check for existing virtual environment
     let venvExists = false;
     try {
       await access(venvPath);
@@ -50,6 +60,7 @@ async function ensurePythonEnvironment(config: InstallConfig): Promise<string> {
     if (!venvExists) {
       const tempFile = path.join(config.targetDir, 'create_venv_temp.py');
       try {
+        // Python script to create virtual environment
         const scriptContent = `
 import sys
 import venv
@@ -85,16 +96,17 @@ except Exception as e:
               const errorMessage =
                 errorMatch?.[1] || `Process exited with code ${code}`;
               console.error('Virtual environment creation failed:', errorMessage);
-              reject(new Error(errorMessage)); // Reject with the error message
+              reject(new Error(errorMessage));
             }
           });
 
           proc.on('error', (err) => {
             console.error('Process error:', err);
-            reject(err); // Reject with the process error
+            reject(err);
           });
         });
 
+        // Fallback check if venv was partially created
         if (!creationSuccess) {
           try {
             await access(pythonExecutable);
@@ -108,11 +120,12 @@ except Exception as e:
           }
         }
       } finally {
+        // Clean up temporary file
         await unlink(tempFile).catch(() => {});
       }
     }
 
-    // 3. Verify the venv Python exists
+    // 3. Final verification of virtual environment Python
     await access(pythonExecutable);
     return pythonExecutable;
   } catch (error: any) {
@@ -121,6 +134,13 @@ except Exception as e:
   }
 }
 
+/**
+ * Verifies installed package version matches expected version
+ * @param pythonPath Path to Python executable
+ * @param config Installation configuration
+ * @returns true if version matches
+ * @throws Error if version mismatch or package not found
+ */
 async function verifyPyPackage(
   pythonPath: string,
   config: InstallConfig,
@@ -140,10 +160,13 @@ async function verifyPyPackage(
   }
 
   console.log('Version match.');
-
   return true;
 }
 
+/**
+ * Installs package from PyPI into virtual environment
+ * @param config Installation configuration
+ */
 async function installFromPyPI(config: InstallConfig): Promise<void> {
   let pythonPath: string;
   try {
@@ -155,11 +178,13 @@ async function installFromPyPI(config: InstallConfig): Promise<void> {
   }
   const pipPath = pythonPath.replace('python', 'pip');
 
+  // Skip if already installed
   if (await verifyPyPackage(pythonPath, config)) {
     console.log('Package already installed.');
     return;
   }
 
+  // Update setuptools first
   console.log('Installing setup tools...');
   try {
     childProcess.execSync(`"${pipPath}" install --upgrade "setuptools>=45.0.0"`, {
@@ -169,6 +194,7 @@ async function installFromPyPI(config: InstallConfig): Promise<void> {
     console.warn('Could not update setuptools:', error);
   }
 
+  // Main package installation
   console.log('Installing ecooptimizer...');
   try {
     childProcess.execSync(
@@ -184,16 +210,21 @@ async function installFromPyPI(config: InstallConfig): Promise<void> {
   }
 }
 
+/**
+ * Finds a valid Python executable path
+ * @returns Path to Python executable
+ * @throws Error if no valid Python found
+ */
 async function findPythonPath(): Promise<string> {
-  // 1. Check explicitly set environment variable
+  // Check explicit environment variable first
   if (process.env.PYTHON_PATH && (await validatePython(process.env.PYTHON_PATH))) {
     return process.env.PYTHON_PATH;
   }
 
-  // 2. Common Python executable names (ordered by preference)
+  // Common Python executable names (ordered by preference)
   const candidates = ['python', 'python3.10', 'python3', 'py'];
 
-  // 3. Platform-specific locations
+  // Platform-specific locations
   if (process.platform === 'win32') {
     candidates.push(
       path.join(
@@ -211,7 +242,7 @@ async function findPythonPath(): Promise<string> {
     candidates.push('/usr/local/bin/python3'); // Homebrew default
   }
 
-  // Check common Python management tools
+  // Check environment-specific paths
   if (process.env.CONDA_PREFIX) {
     candidates.push(path.join(process.env.CONDA_PREFIX, 'bin', 'python'));
   }
@@ -220,7 +251,7 @@ async function findPythonPath(): Promise<string> {
     candidates.push(path.join(process.env.VIRTUAL_ENV, 'bin', 'python'));
   }
 
-  // 4. Test each candidate
+  // Test each candidate
   for (const candidate of candidates) {
     try {
       if (await validatePython(candidate)) {
@@ -234,15 +265,18 @@ async function findPythonPath(): Promise<string> {
   throw new Error('No valid Python installation found');
 }
 
+/**
+ * Validates Python executable meets requirements
+ * @param pythonPath Path to Python executable
+ * @returns true if valid Python 3.9+ installation
+ */
 async function validatePython(pythonPath: string): Promise<boolean> {
   try {
-    // Check Python exists and has required version (3.9+)
     const versionOutput = childProcess
       .execSync(`"${pythonPath}" --version`)
       .toString()
       .trim();
 
-    // Parse version (e.g., "Python 3.10.6")
     const versionMatch = versionOutput.match(/Python (\d+)\.(\d+)/);
     if (!versionMatch) return false;
 
@@ -250,14 +284,13 @@ async function validatePython(pythonPath: string): Promise<boolean> {
     const minor = parseInt(versionMatch[2]);
 
     console.log('Python version:', major, minor);
-
     return major === 3 && minor >= 9; // Require Python 3.9+
   } catch {
     return false;
   }
 }
 
-// Updated main execution block
+// Main execution block when run directly
 if (require.main === module) {
   (async (): Promise<void> => {
     try {

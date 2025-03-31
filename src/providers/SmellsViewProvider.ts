@@ -6,9 +6,15 @@ import { getAcronymByMessageId } from '../utils/smellsData';
 import { normalizePath } from '../utils/normalizePath';
 import { envConfig } from '../utils/envConfig';
 
+/**
+ * Provides a tree view for displaying code smells in the workspace.
+ * Shows files and their detected smells in a hierarchical structure,
+ * with status indicators and navigation capabilities.
+ */
 export class SmellsViewProvider
   implements vscode.TreeDataProvider<TreeItem | SmellTreeItem>
 {
+  // Event emitter for tree view updates
   private _onDidChangeTreeData: vscode.EventEmitter<
     TreeItem | SmellTreeItem | undefined | void
   > = new vscode.EventEmitter<TreeItem | SmellTreeItem | undefined | void>();
@@ -16,30 +22,51 @@ export class SmellsViewProvider
     TreeItem | SmellTreeItem | undefined | void
   > = this._onDidChangeTreeData.event;
 
+  // Tracks analysis status and smells for each file
   private fileStatuses: Map<string, string> = new Map();
   private fileSmells: Map<string, Smell[]> = new Map();
 
   constructor(private context: vscode.ExtensionContext) {}
 
+  /**
+   * Triggers a refresh of the tree view
+   */
   refresh(): void {
     this._onDidChangeTreeData.fire();
   }
 
+  /**
+   * Updates the analysis status for a file
+   * @param filePath Path to the file
+   * @param status New status ('queued', 'passed', 'failed', etc.)
+   */
   setStatus(filePath: string, status: string): void {
-    this.fileStatuses.set(normalizePath(filePath), status);
+    const normalizedPath = normalizePath(filePath);
+    this.fileStatuses.set(normalizedPath, status);
 
+    // Clear smells if status is outdated
     if (status === 'outdated') {
-      this.fileSmells.delete(filePath);
+      this.fileSmells.delete(normalizedPath);
     }
 
     this._onDidChangeTreeData.fire();
   }
 
+  /**
+   * Sets the detected smells for a file
+   * @param filePath Path to the file
+   * @param smells Array of detected smells
+   */
   setSmells(filePath: string, smells: Smell[]): void {
     this.fileSmells.set(filePath, smells);
     this._onDidChangeTreeData.fire();
   }
 
+  /**
+   * Removes a file from the tree view
+   * @param filePath Path to the file to remove
+   * @returns Whether the file was found and removed
+   */
   public removeFile(filePath: string): boolean {
     const normalizedPath = normalizePath(filePath);
     const exists = this.fileStatuses.has(normalizedPath);
@@ -50,6 +77,9 @@ export class SmellsViewProvider
     return exists;
   }
 
+  /**
+   * Clears all file statuses and smells from the view
+   */
   public clearAllStatuses(): void {
     this.fileStatuses.clear();
     this.fileSmells.clear();
@@ -60,6 +90,11 @@ export class SmellsViewProvider
     return element;
   }
 
+  /**
+   * Builds the tree view hierarchy
+   * @param element The parent element or undefined for root items
+   * @returns Promise resolving to child tree items
+   */
   async getChildren(
     element?: TreeItem | SmellTreeItem,
   ): Promise<(TreeItem | SmellTreeItem)[]> {
@@ -70,12 +105,12 @@ export class SmellsViewProvider
       return [];
     }
 
-    // Smell nodes never have children
+    // Smell nodes are leaf nodes - no children
     if (element instanceof SmellTreeItem) {
       return [];
     }
 
-    // If file node, show smells
+    // If this is a file node, show its smells
     if (
       element?.contextValue === 'file' ||
       element?.contextValue === 'file_with_smells'
@@ -84,27 +119,32 @@ export class SmellsViewProvider
       return smells.map((smell) => new SmellTreeItem(smell));
     }
 
-    // If root element (first load)
+    // Root element - show either single file or folder contents
     if (!element) {
       const stat = fs.statSync(rootPath);
       if (stat.isFile()) {
         return [this.createTreeItem(rootPath, true)];
       } else if (stat.isDirectory()) {
-        return [this.createTreeItem(rootPath, false)]; // 👈 Show the root folder as the top node
+        return [this.createTreeItem(rootPath, false)]; // Show root folder as top node
       }
     }
 
-    // Folder node – get its children
+    // Folder node - build its contents
     const currentPath = element?.resourceUri?.fsPath;
     if (!currentPath) return [];
 
     const childNodes = buildPythonTree(currentPath);
-
     return childNodes.map(({ fullPath, isFile }) =>
       this.createTreeItem(fullPath, isFile),
     );
   }
 
+  /**
+   * Creates a tree item for a file or folder
+   * @param filePath Path to the file/folder
+   * @param isFile Whether this is a file (false for folders)
+   * @returns Configured TreeItem instance
+   */
   private createTreeItem(filePath: string, isFile: boolean): TreeItem {
     const label = path.basename(filePath);
     const status =
@@ -112,6 +152,9 @@ export class SmellsViewProvider
     const icon = isFile ? getStatusIcon(status) : new vscode.ThemeIcon('folder');
     const tooltip = isFile ? getStatusMessage(status) : undefined;
 
+    // Determine collapsible state:
+    // - Folders are always collapsible
+    // - Files are collapsible only if they have smells
     const collapsibleState = isFile
       ? this.fileSmells.has(filePath) && this.fileSmells.get(filePath)!.length > 0
         ? vscode.TreeItemCollapsibleState.Collapsed
@@ -123,7 +166,7 @@ export class SmellsViewProvider
     item.iconPath = icon;
     item.tooltip = tooltip;
 
-    // Override contextValue if file has smells
+    // Mark files with smells with special context
     if (
       isFile &&
       this.fileSmells.has(filePath) &&
@@ -132,6 +175,7 @@ export class SmellsViewProvider
       item.contextValue = 'file_with_smells';
     }
 
+    // Show outdated status in description
     if (status === 'outdated') {
       item.description = 'outdated';
     }
@@ -140,6 +184,9 @@ export class SmellsViewProvider
   }
 }
 
+/**
+ * Tree item representing a file or folder in the smells view
+ */
 export class TreeItem extends vscode.TreeItem {
   constructor(
     label: string,
@@ -151,6 +198,7 @@ export class TreeItem extends vscode.TreeItem {
     this.resourceUri = vscode.Uri.file(fullPath);
     this.contextValue = contextValue;
 
+    // Make files clickable to open them
     if (contextValue === 'file' || contextValue === 'file_with_smells') {
       this.command = {
         title: 'Open File',
@@ -161,8 +209,12 @@ export class TreeItem extends vscode.TreeItem {
   }
 }
 
+/**
+ * Tree item representing a detected code smell
+ */
 export class SmellTreeItem extends vscode.TreeItem {
   constructor(public readonly smell: Smell) {
+    // Format label with acronym and line numbers
     const acronym = getAcronymByMessageId(smell.messageId) ?? smell.messageId;
     const lines = smell.occurences
       ?.map((occ) => occ.line)
@@ -177,6 +229,7 @@ export class SmellTreeItem extends vscode.TreeItem {
     this.contextValue = 'smell';
     this.iconPath = new vscode.ThemeIcon('snake');
 
+    // Set up command to jump to the first occurrence
     const firstLine = smell.occurences?.[0]?.line;
     if (smell.path && typeof firstLine === 'number') {
       this.command = {
@@ -188,6 +241,11 @@ export class SmellTreeItem extends vscode.TreeItem {
   }
 }
 
+/**
+ * Gets the appropriate icon for a file's analysis status
+ * @param status Analysis status string
+ * @returns ThemeIcon with appropriate icon and color
+ */
 export function getStatusIcon(status: string): vscode.ThemeIcon {
   switch (status) {
     case 'queued':
@@ -218,9 +276,9 @@ export function getStatusIcon(status: string): vscode.ThemeIcon {
 }
 
 /**
- * Retrieves the status message corresponding to the smell analysis state.
- * @param status - The analysis status.
- * @returns A descriptive status message.
+ * Gets a human-readable message for an analysis status
+ * @param status Analysis status string
+ * @returns Descriptive status message
  */
 export function getStatusMessage(status: string): string {
   switch (status) {

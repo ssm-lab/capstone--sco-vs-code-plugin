@@ -12,6 +12,10 @@ import { ecoOutput } from '../../extension';
 /**
  * Performs code smell analysis on a single Python file with comprehensive state management.
  * Only shows user notifications for critical events requiring attention.
+ *
+ * @param filePath - Absolute path to the Python file to analyze
+ * @param smellsViewProvider - Provider for updating the UI with results
+ * @param smellsCacheManager - Manager for cached smell results
  */
 export async function detectSmellsFile(
   filePath: string,
@@ -26,6 +30,7 @@ export async function detectSmellsFile(
 
   if (!shouldProceed) return;
 
+  // Transform enabled smells into backend-compatible format
   const enabledSmells = getEnabledSmells();
   const enabledSmellsForBackend = Object.fromEntries(
     Object.entries(enabledSmells).map(([key, value]) => [key, value.options]),
@@ -35,6 +40,7 @@ export async function detectSmellsFile(
     ecoOutput.info(`[detection.ts] Analyzing: ${path.basename(filePath)}`);
     const { smells, status } = await fetchSmells(filePath, enabledSmellsForBackend);
 
+    // Handle backend response
     if (status === 200) {
       if (smells.length > 0) {
         ecoOutput.info(`[detection.ts] Detected ${smells.length} smells`);
@@ -65,12 +71,15 @@ export async function detectSmellsFile(
  * - Using cached results (info)
  * - Server is down (warning)
  * - No smells configured (warning)
+ *
+ * @returns boolean indicating whether analysis should proceed
  */
 async function precheckAndMarkQueued(
   filePath: string,
   smellsViewProvider: SmellsViewProvider,
   smellsCacheManager: SmellsCacheManager,
 ): Promise<boolean> {
+  // Validate file scheme and extension
   const fileUri = vscode.Uri.file(filePath);
   if (fileUri.scheme !== 'file') {
     return false;
@@ -80,6 +89,7 @@ async function precheckAndMarkQueued(
     return false;
   }
 
+  // Check for cached results
   if (smellsCacheManager.hasCachedSmells(filePath)) {
     const cached = smellsCacheManager.getCachedSmells(filePath);
     ecoOutput.info(
@@ -95,6 +105,7 @@ async function precheckAndMarkQueued(
     return false;
   }
 
+  // Check server availability
   if (serverStatus.getStatus() === ServerStatusType.DOWN) {
     const msg = 'Backend server unavailable - using cached results where available';
     ecoOutput.warn(`[detection.ts] ${msg}`);
@@ -103,6 +114,7 @@ async function precheckAndMarkQueued(
     return false;
   }
 
+  // Verify at least one smell detector is enabled
   const enabledSmells = getEnabledSmells();
   if (Object.keys(enabledSmells).length === 0) {
     const msg = 'No smell detectors enabled in settings';
@@ -118,6 +130,10 @@ async function precheckAndMarkQueued(
 /**
  * Recursively analyzes Python files in a directory with progress indication.
  * Shows a progress notification for the folder scan operation.
+ *
+ * @param folderPath - Absolute path to the folder to analyze
+ * @param smellsViewProvider - Provider for updating the UI with results
+ * @param smellsCacheManager - Manager for cached smell results
  */
 export async function detectSmellsFolder(
   folderPath: string,
@@ -133,6 +149,7 @@ export async function detectSmellsFolder(
     async () => {
       const pythonFiles: string[] = [];
 
+      // Recursive directory walker for Python files
       function walk(dir: string): void {
         try {
           const entries = fs.readdirSync(dir);
@@ -167,6 +184,7 @@ export async function detectSmellsFolder(
         `Analyzing ${pythonFiles.length} Python files...`,
       );
 
+      // Process each found Python file
       for (const file of pythonFiles) {
         await detectSmellsFile(file, smellsViewProvider, smellsCacheManager);
       }

@@ -61,8 +61,6 @@ class ServerStatus extends EventEmitter {
 
       // Notify subscribers
       this.emit('change', newStatus);
-    } else if (this.status === ServerStatusType.DOWN) {
-      vscode.commands.executeCommand('ecooptimizer.startServer');
     }
   }
 }

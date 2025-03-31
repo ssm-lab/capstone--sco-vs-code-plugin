@@ -18,7 +18,7 @@ export async function configureWorkspace(
 /**
  * Recursively identifies Python project folders by scanning for:
  * - Python files (*.py)
- * - __init__.py package markers
+ * - \_\_init\_\_.py package markers
  * Maintains a hierarchical understanding of Python projects in the workspace.
  *
  * @param folderPath - Absolute filesystem path to scan

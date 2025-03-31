@@ -8,7 +8,10 @@ import { envConfig } from './envConfig';
 
 /**
  * Initializes file statuses and smells in the SmellsViewProvider from the smell cache.
- * Also validates that cached files are part of the current workspace.
+
+ * @param context The extension context containing workspace configuration
+ * @param smellsCacheManager The cache manager instance
+ * @param smellsViewProvider The view provider to update with cached data
  */
 export async function initializeStatusesFromCache(
   context: vscode.ExtensionContext,
@@ -16,6 +19,8 @@ export async function initializeStatusesFromCache(
   smellsViewProvider: SmellsViewProvider,
 ): Promise<void> {
   ecoOutput.info('workspace key: ', envConfig.WORKSPACE_CONFIGURED_PATH);
+
+  // Get configured workspace path from extension state
   let configuredPath = context.workspaceState.get<string>(
     envConfig.WORKSPACE_CONFIGURED_PATH!,
   );
@@ -28,23 +33,25 @@ export async function initializeStatusesFromCache(
   }
 
   configuredPath = normalizePath(configuredPath);
-
   ecoOutput.info(
     `[CacheInit] Starting cache initialization for workspace: ${configuredPath}`,
   );
 
+  // Get all cached file paths and initialize counters
   const pathMap = smellsCacheManager.getAllFilePaths();
   ecoOutput.trace(`[CacheInit] Found ${pathMap.length} files in cache`);
   ecoOutput.trace(`[CacheInit] Found ${pathMap} files in cache`);
+
   let validFiles = 0;
   let removedFiles = 0;
   let filesWithSmells = 0;
   let cleanFiles = 0;
 
+  // Process each cached file
   for (const filePath of pathMap) {
     ecoOutput.trace(`[CacheInit] Processing cache entry: ${filePath}`);
 
-    // Ignore files outside the configured workspace
+    // Skip files outside the current workspace
     if (!filePath.startsWith(configuredPath)) {
       ecoOutput.trace(
         `[CacheInit] File outside workspace - removing from cache: ${filePath}`,
@@ -54,7 +61,7 @@ export async function initializeStatusesFromCache(
       continue;
     }
 
-    // Verify file still exists
+    // Verify file exists on disk
     try {
       await fs.access(filePath);
       ecoOutput.trace(`[CacheInit] File verified: ${filePath}`);
@@ -67,10 +74,12 @@ export async function initializeStatusesFromCache(
       continue;
     }
 
+    // Get cached smells for valid files
     const smells = smellsCacheManager.getCachedSmells(filePath);
     if (smells !== undefined) {
       validFiles++;
 
+      // Update view provider based on smell data
       if (smells.length > 0) {
         ecoOutput.trace(
           `[CacheInit] Found ${smells.length} smells for file: ${filePath}`,
@@ -90,7 +99,7 @@ export async function initializeStatusesFromCache(
     }
   }
 
-  // Summary statistics
+  // Log summary statistics
   ecoOutput.info(
     `[CacheInit] Cache initialization complete. ` +
       `Results: ${validFiles} valid files (${filesWithSmells} with smells, ${cleanFiles} clean), ` +
