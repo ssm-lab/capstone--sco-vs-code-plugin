@@ -42,8 +42,8 @@ jobs:
           cat > compare-versions.mjs << 'EOF'
           import { compareVersions } from 'compare-versions';
 
-          const mainVersion = process.argv[1];
-          const prVersion = process.argv[2];
+          const mainVersion = process.argv[2];
+          const prVersion = process.argv[3];
 
           console.log("Main version:", mainVersion)
           console.log("PR version:", prVersion)
