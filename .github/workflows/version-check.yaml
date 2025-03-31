@@ -51,6 +51,6 @@ jobs:
           }
           EOF
 
-          node compare-versions.mjs "${{ steps.pr_version.outputs.main_version }}" "${{ steps.pr_version.outputs.pr_version }}"
+          node compare-versions.mjs "${{ steps.main_version.outputs.main_version }}" "${{ steps.pr_version.outputs.pr_version }}"
 
           echo "✓ Version validated"
