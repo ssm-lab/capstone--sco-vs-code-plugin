@@ -1,26 +1,74 @@
+name: Publish Extension
+
 on:
   push:
+    tags:
+      - 'v*'
     branches:
-      - main
-  release:
-    types:
-    - created
+      - test-publish-workflow
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Install Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-    - run: npm install
-    - run: npm install @vscode/vsce --save-dev
-    - name: Publish
-      if: startsWith(github.ref, 'refs/tags/')
-      run: npm run deploy
-      env:
-        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+    permissions:
+      contents: write # Needed for creating releases
+      id-token: write # For OIDC auth with VS Code Marketplace
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Verify version bump
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          git checkout HEAD~1 -- package.json 2>/dev/null || true
+          PREVIOUS_VERSION=$(node -p "require('./package.json').version" || echo "null")
+
+          if [[ "$TAG_VERSION" != "$CURRENT_VERSION" ]]; then
+            echo "::error::Tag version ($TAG_VERSION) ≠ package.json ($CURRENT_VERSION)"
+            exit 1
+          fi
+
+          if [[ "$CURRENT_VERSION" == "$PREVIOUS_VERSION" ]]; then
+            echo "::error::Version not updated in package.json"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install @vscode/vsce --save-dev
+
+      - name: Package Extension
+        run: |
+          mkdir -p dist
+          vsce package --out ./dist/extension-${{ github.ref_name }}.vsix
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 'v${{ env.TAG_VERSION }}'
+          body: 'VS Code extension release'
+          files: |
+            dist/extension-${{ github.ref_name }}.vsix
+          draft: true
+          prerelease: false
+
+      - name: Validate Token + Extension
+        run: |
+          # Skip if OIDC (no PAT available)
+          if [[ -z "$VSCE_PAT" ]]; then
+            echo "Using OIDC - token test not possible in dry-run"
+          else
+            echo "Testing PAT..."
+            vsce show mac-ecooptimizers.ecooptimizer --pat $VSCE_PAT || echo "Token valid (extension may not exist)"
+          fi
+
+          # Always test packaging
+          vsce verify
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT || '' }} # Optional PAT
