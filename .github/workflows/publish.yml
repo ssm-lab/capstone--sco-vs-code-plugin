@@ -27,6 +27,10 @@ jobs:
           git checkout HEAD~1 -- package.json 2>/dev/null || true
           PREVIOUS_VERSION=$(node -p "require('./package.json').version" || echo "null")
 
+          echo "Tag Version: $TAG_VERSION"
+          echo "Current Version: $CURRENT_VERSION"
+          echo "Previous Version: $PREVIOUS_VERSION"
+
           if [[ "$CURRENT_VERSION" == "$PREVIOUS_VERSION" ]]; then
             echo "::error::Version not updated in package.json"
             exit 1
