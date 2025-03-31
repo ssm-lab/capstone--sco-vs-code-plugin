@@ -53,7 +53,7 @@
     "moduleDirectories": [
       "node_modules",
       "src",
-      "tests/__mocks__"
+      "test/__mocks__"
     ],
     "roots": [
       "<rootDir>/src",
