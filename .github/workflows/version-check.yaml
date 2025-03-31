@@ -45,6 +45,9 @@ jobs:
           const mainVersion = process.argv[1];
           const prVersion = process.argv[2];
 
+          console.log("Main version:", mainVersion)
+          console.log("PR version:", prVersion)
+
           if (compareVersions(prVersion, mainVersion) < 1) {
             console.error(`::error::Version ${prVersion} must be greater than ${mainVersion}`);
             process.exit(1);
