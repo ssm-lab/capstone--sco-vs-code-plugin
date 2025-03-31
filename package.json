@@ -47,10 +47,12 @@
       "./test/setup.ts"
     ],
     "moduleNameMapper": {
-      "^vscode$": "<rootDir>/test/mocks/vscode-mock.ts"
+      "^vscode$": "<rootDir>/test/mocks/vscode-mock.ts",
+      "^@/(.*)$": "<rootDir>/src/$1"
     },
     "moduleDirectories": [
       "node_modules",
+      "src",
       "tests/__mocks__"
     ],
     "roots": [
