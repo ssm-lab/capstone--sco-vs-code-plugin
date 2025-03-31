@@ -79,7 +79,9 @@
       "!src/providers/*",
       "!src/commands/showLogs.ts",
       "!src/emitters/serverStatus.ts",
-      "!src/utils/envConfig.ts"
+      "!src/utils/envConfig.ts",
+      "!src/lib/*",
+      "!src/install.ts"
     ]
   },
   "lint-staged": {
@@ -119,12 +121,9 @@
   },
   "dependencies": {
     "@types/dotenv": "^6.1.1",
-    "adm-zip": "^0.5.16",
     "bufferutil": "^4.0.9",
     "dotenv": "^16.4.7",
     "dotenv-webpack": "^8.1.0",
-    "follow-redirects": "^1.15.9",
-    "node-fetch": "^3.3.2",
     "utf-8-validate": "^6.0.5",
     "ws": "^8.18.0"
   },
