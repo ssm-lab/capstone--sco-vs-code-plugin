@@ -40,8 +40,7 @@ jobs:
         run: |
           # Write a temporary Node.js script for version comparison
           cat > compare-versions.mjs << 'EOF'
-          import compareVersions from 'compare-versions';
-          import fs from 'fs';
+          import { compareVersions } from 'compare-versions';
 
           const mainVersion = process.argv[1];
           const prVersion = process.argv[2];
