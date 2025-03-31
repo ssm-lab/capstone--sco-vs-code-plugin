@@ -1,0 +1,59 @@
+name: PR Version Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate_version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0 # Required for branch comparison
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install compare-versions
+
+      - name: Get PR version
+        id: pr_version
+        run: |
+          PR_VERSION=$(node -p "require('./package.json').version")
+          echo "pr_version=$PR_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Fetch main branch
+        run: git fetch origin main
+
+      - name: Get main's version
+        id: main_version
+        run: |
+          MAIN_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0)).version")
+          echo "main_version=$MAIN_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Validate version bump
+        run: |
+          # Write a temporary Node.js script for version comparison
+          cat > compare-versions.mjs << 'EOF'
+          import { compareVersions } from 'compare-versions';
+
+          const mainVersion = process.argv[2];
+          const prVersion = process.argv[3];
+
+          console.log("Main version:", mainVersion)
+          console.log("PR version:", prVersion)
+
+          if (compareVersions(prVersion, mainVersion) < 1) {
+            console.error(`::error::Version ${prVersion} must be greater than ${mainVersion}`);
+            process.exit(1);
+          }
+          EOF
+
+          node compare-versions.mjs "${{ steps.main_version.outputs.main_version }}" "${{ steps.pr_version.outputs.pr_version }}"
+
+          echo "✓ Version validated"
