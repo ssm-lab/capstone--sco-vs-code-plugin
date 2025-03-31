@@ -66,6 +66,6 @@ jobs:
           fi
 
           # Always test packaging
-          vsce publish -p $VSCE_PAT
+          vsce publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
