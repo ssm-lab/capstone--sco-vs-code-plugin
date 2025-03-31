@@ -8,7 +8,6 @@
 		"DOM.Iterable"
 	  ],
 	  "sourceMap": true,
-	  "rootDirs": ["./src", "./test"],
 	  "outDir": "dist",
 	  "strict": true,
 	  "typeRoots": ["./node_modules/@types", "./types"],
