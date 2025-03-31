@@ -47,8 +47,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          name: 'v${{ env.TAG_VERSION }}'
+          tag_name: ${{ github.ref }}
+          name: ${{ github.ref_name }}
           body: 'VS Code extension release'
           files: |
             dist/extension-${{ github.ref_name }}.vsix
@@ -62,10 +62,10 @@ jobs:
             echo "Using OIDC - token test not possible in dry-run"
           else
             echo "Testing PAT..."
-            vsce show mac-ecooptimizers.ecooptimizer --pat $VSCE_PAT || echo "Token valid (extension may not exist)"
+            vsce show mac-ecooptimizers.ecooptimizer || echo "Token valid (extension may not exist)"
           fi
 
           # Always test packaging
-          vsce verify
+          vsce verify-pat
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT || '' }} # Optional PAT
