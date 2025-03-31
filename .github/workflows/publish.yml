@@ -43,6 +43,7 @@ jobs:
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.version.outputs.tag_name }}
           name: ${{ steps.version.outputs.tag_name }}
           body: 'Release notes'
           files: |
