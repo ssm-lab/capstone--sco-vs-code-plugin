@@ -1,115 +1,89 @@
 import * as vscode from 'vscode';
-import {
-  refactorSelectedSmell,
-  refactorAllSmellsOfType,
-} from '../commands/refactorSmell';
-import { ContextManager } from '../context/contextManager';
+import { SmellsCacheManager } from '../context/SmellsCacheManager';
 
-export class HoverManager {
-  private static instance: HoverManager;
-  private smells: Smell[];
-  public hoverContent: vscode.MarkdownString;
-  private vscodeContext: vscode.ExtensionContext;
+/**
+ * Provides hover information for detected code smells in Python files.
+ * Shows smell details and quick actions when hovering over affected lines.
+ */
+export class HoverManager implements vscode.HoverProvider {
+  constructor(private smellsCacheManager: SmellsCacheManager) {}
 
-  static getInstance(contextManager: ContextManager, smells: Smell[]): HoverManager {
-    if (!HoverManager.instance) {
-      HoverManager.instance = new HoverManager(contextManager, smells);
-    } else {
-      HoverManager.instance.updateSmells(smells);
-    }
-    return HoverManager.instance;
+  /**
+   * Registers the hover provider with VS Code
+   * @param context The extension context for managing disposables
+   */
+  public register(context: vscode.ExtensionContext): void {
+    const selector: vscode.DocumentSelector = {
+      language: 'python',
+      scheme: 'file', // Only show for local files, not untitled documents
+    };
+    const disposable = vscode.languages.registerHoverProvider(selector, this);
+    context.subscriptions.push(disposable);
   }
 
-  public constructor(
-    private contextManager: ContextManager,
-    smells: Smell[],
-  ) {
-    this.smells = smells || [];
-    this.vscodeContext = contextManager.context;
-    this.hoverContent = this.registerHoverProvider() ?? new vscode.MarkdownString();
-    this.registerCommands();
-  }
-
-  public updateSmells(smells: Smell[]): void {
-    this.smells = smells || [];
-  }
-
-  // Register hover provider for Python files
-  public registerHoverProvider(): void {
-    this.vscodeContext.subscriptions.push(
-      vscode.languages.registerHoverProvider(
-        { scheme: 'file', language: 'python' },
-        {
-          provideHover: (document, position, _token) => {
-            const hoverContent = this.getHoverContent(document, position);
-            return hoverContent ? new vscode.Hover(hoverContent) : null;
-          },
-        },
-      ),
-    );
-  }
-
-  // hover content for detected smells
-  getHoverContent(
+  /**
+   * Generates hover content when hovering over lines with detected smells
+   * @param document The active text document
+   * @param position The cursor position where hover was triggered
+   * @returns Hover content or undefined if no smells found
+   */
+  public provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
-  ): vscode.MarkdownString | null {
-    const lineNumber = position.line + 1; // convert to 1-based index
-    console.log('line number: ' + position.line);
-    // filter to find the smells on current line
-    const smellsOnLine = this.smells.filter((smell) =>
-      smell.occurences.some(
-        (occurrence) =>
-          occurrence.line === lineNumber ||
-          (occurrence.endLine &&
-            lineNumber >= occurrence.line &&
-            lineNumber <= occurrence.endLine),
-      ),
+    _token: vscode.CancellationToken,
+  ): vscode.ProviderResult<vscode.Hover> {
+    const filePath = document.uri.fsPath;
+
+    if (!filePath.endsWith('.py')) return;
+
+    const smells = this.smellsCacheManager.getCachedSmells(filePath);
+    if (!smells || smells.length === 0) return;
+
+    // Convert VS Code position to 1-based line number
+    const lineNumber = position.line + 1;
+
+    // Find smells that occur on this line
+    const smellsAtLine = smells.filter((smell) =>
+      smell.occurences.some((occ) => occ.line === lineNumber),
     );
 
-    console.log('smells: ' + smellsOnLine);
+    if (smellsAtLine.length === 0) return;
 
-    if (smellsOnLine.length === 0) {
-      return null;
-    }
+    // Helper to escape markdown special characters
+    const escape = (text: string): string => {
+      return text.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&');
+    };
 
-    const hoverContent = new vscode.MarkdownString();
-    hoverContent.isTrusted = true; // Allow command links
+    // Build markdown content with smell info and actions
+    const markdown = new vscode.MarkdownString();
+    markdown.isTrusted = true; // Allow command URIs
+    markdown.supportHtml = true;
+    markdown.supportThemeIcons = true;
 
-    smellsOnLine.forEach((smell) => {
-      hoverContent.appendMarkdown(
-        `**${smell.symbol}:** ${smell.message}\t\t` +
-          `[Refactor](command:extension.refactorThisSmell?${encodeURIComponent(
-            JSON.stringify(smell),
-          )})\t\t` +
-          `---[Refactor all smells of this type...](command:extension.refactorAllSmellsOfType?${encodeURIComponent(
-            JSON.stringify(smell),
-          )})\n\n`,
+    // Add each smell's info and actions
+    smellsAtLine.forEach((smell) => {
+      // Basic smell info
+      const messageLine = `${escape(smell.message)} (**${escape(smell.messageId)}**)`;
+      const divider = '\n\n---\n\n'; // Visual separator
+
+      // Command URIs for quick actions
+      const refactorSmellCmd = `command:ecooptimizer.refactorSmell?${encodeURIComponent(JSON.stringify(smell))} "Fix this specific smell"`;
+      const refactorTypeCmd = `command:ecooptimizer.refactorAllSmellsOfType?${encodeURIComponent(
+        JSON.stringify({
+          fullPath: filePath,
+          smellType: smell.messageId,
+        }),
+      )} "Fix all similar smells"`;
+
+      // Build the hover content
+      markdown.appendMarkdown(messageLine);
+      markdown.appendMarkdown(divider);
+      markdown.appendMarkdown(`[$(tools) Refactor Smell](${refactorSmellCmd}) | `);
+      markdown.appendMarkdown(
+        `[$(tools) Refactor All of This Type](${refactorTypeCmd})`,
       );
-      console.log(hoverContent);
     });
 
-    return hoverContent;
-  }
-
-  // Register commands for refactor actions
-  public registerCommands(): void {
-    this.vscodeContext.subscriptions.push(
-      vscode.commands.registerCommand(
-        'extension.refactorThisSmell',
-        async (smell: Smell) => {
-          const contextManager = new ContextManager(this.vscodeContext);
-          await refactorSelectedSmell(contextManager, smell);
-        },
-      ),
-      // clicking "Refactor All Smells of this Type..."
-      vscode.commands.registerCommand(
-        'extension.refactorAllSmellsOfType',
-        async (smell: Smell) => {
-          const contextManager = new ContextManager(this.vscodeContext);
-          await refactorAllSmellsOfType(contextManager, smell.messageId);
-        },
-      ),
-    );
+    return new vscode.Hover(markdown);
   }
 }

@@ -1,149 +1,221 @@
-// test/line-selection-manager.test.ts
+import * as vscode from 'vscode';
 import { LineSelectionManager } from '../../src/ui/lineSelectionManager';
-import { ContextManager } from '../../src/context/contextManager';
-import vscode from 'vscode';
+import { SmellsCacheManager } from '../../src/context/SmellsCacheManager';
 
-jest.mock('vscode');
-
-jest.mock('../../src/utils/hashDocs', () => ({
-  hashContent: jest.fn(() => 'mockHash'),
-}));
+jest.mock('vscode', () => {
+  const actualVscode = jest.requireActual('vscode');
+  return {
+    ...actualVscode,
+    window: {
+      ...actualVscode.window,
+      createTextEditorDecorationType: jest.fn(),
+      activeTextEditor: undefined,
+    },
+    ThemeColor: jest.fn((colorName: string) => ({ id: colorName })),
+  };
+});
 
 describe('LineSelectionManager', () => {
-  let contextManagerMock: ContextManager;
+  let manager: LineSelectionManager;
+  let mockSmellsCacheManager: jest.Mocked<SmellsCacheManager>;
   let mockEditor: vscode.TextEditor;
-  let lineSelectionManager: LineSelectionManager;
+  let mockDocument: vscode.TextDocument;
+  let mockDecorationType: vscode.TextEditorDecorationType;
+
+  // Helper function to create a mock smell
+  const createMockSmell = (symbol: string, line: number) => ({
+    type: 'performance',
+    symbol,
+    message: 'Test smell',
+    messageId: 'test-smell',
+    confidence: 'HIGH',
+    path: '/test/file.js',
+    module: 'test',
+    occurences: [
+      {
+        line,
+        column: 1,
+        endLine: line,
+        endColumn: 10,
+      },
+    ],
+    additionalInfo: {},
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    contextManagerMock = {
-      getWorkspaceData: jest.fn(() => ({
-        '/test/file.py': {
-          hash: 'mockHash',
-          smells: [
-            { symbol: 'PERF-001', occurences: [{ line: 5 }] },
-            { symbol: 'SEC-002', occurences: [{ line: 5 }] },
-          ],
-        },
-      })),
-    } as unknown as ContextManager;
+    mockSmellsCacheManager = {
+      onSmellsUpdated: jest.fn(),
+      getCachedSmells: jest.fn(),
+    } as unknown as jest.Mocked<SmellsCacheManager>;
+
+    mockDocument = {
+      fileName: '/test/file.js',
+      lineAt: jest.fn().mockReturnValue({
+        text: 'const test = true;',
+        trimEnd: jest.fn().mockReturnValue('const test = true;'),
+      }),
+      uri: {
+        fsPath: '/test/file.js',
+      },
+    } as unknown as vscode.TextDocument;
 
     mockEditor = {
-      document: {
-        fileName: '/test/file.py',
-        getText: jest.fn(() => 'mock content'),
-        lineAt: jest.fn(() => ({ text: 'mock line content' })),
-      },
+      document: mockDocument,
       selection: {
-        start: { line: 4 }, // 0-based index, maps to line 5
         isSingleLine: true,
-      } as any,
+        start: { line: 5 },
+      },
       setDecorations: jest.fn(),
     } as unknown as vscode.TextEditor;
 
-    lineSelectionManager = new LineSelectionManager(contextManagerMock);
-  });
+    mockDecorationType = {
+      dispose: jest.fn(),
+    } as unknown as vscode.TextEditorDecorationType;
 
-  it('should remove last comment if decoration exists', () => {
-    const disposeMock = jest.fn();
-    (lineSelectionManager as any).decoration = { dispose: disposeMock };
-
-    lineSelectionManager.removeLastComment();
-    expect(disposeMock).toHaveBeenCalled();
-  });
-
-  it('should not proceed if no editor is provided', () => {
-    expect(() => lineSelectionManager.commentLine(null as any)).not.toThrow();
-  });
-
-  it('should not add comment if no smells detected for file', () => {
-    (contextManagerMock.getWorkspaceData as jest.Mock).mockReturnValue({});
-    lineSelectionManager.commentLine(mockEditor);
-    expect(mockEditor.setDecorations).not.toHaveBeenCalled();
-  });
-
-  it('should not add comment if document hash does not match', () => {
-    (contextManagerMock.getWorkspaceData as jest.Mock).mockReturnValue({
-      '/test/file.py': { hash: 'differentHash', smells: [] },
-    });
-    lineSelectionManager.commentLine(mockEditor);
-    expect(mockEditor.setDecorations).not.toHaveBeenCalled();
-  });
-
-  it('should not add comment for multi-line selections', () => {
-    // Set up multi-line selection
-    (mockEditor.selection as any).isSingleLine = false;
-
-    lineSelectionManager.commentLine(mockEditor);
-
-    expect(mockEditor.setDecorations).not.toHaveBeenCalled();
-  });
-
-  it('should not add comment when no smells exist at line', () => {
-    // Mock smells array with no matching line
-    (contextManagerMock.getWorkspaceData as jest.Mock).mockReturnValue({
-      '/test/file.py': {
-        hash: 'mockHash',
-        smells: [
-          { symbol: 'PERF-001', occurences: [{ line: 6 }] }, // Different line
-          { symbol: 'SEC-002', occurences: [{ line: 7 }] },
-        ],
-      },
-    });
-
-    lineSelectionManager.commentLine(mockEditor);
-
-    expect(mockEditor.setDecorations).not.toHaveBeenCalled();
-  });
-
-  it('should display single smell comment without count', () => {
-    // Mock single smell at line
-    (contextManagerMock.getWorkspaceData as jest.Mock).mockReturnValue({
-      '/test/file.py': {
-        hash: 'mockHash',
-        smells: [{ symbol: 'PERF-001', occurences: [{ line: 5 }] }],
-      },
-    });
-
-    lineSelectionManager.commentLine(mockEditor);
-
-    expect(vscode.window.createTextEditorDecorationType).toHaveBeenCalledWith(
-      expect.objectContaining({
-        after: expect.objectContaining({
-          contentText: '🍂 Smell: PERF-001',
-        }),
-      }),
+    (vscode.window.createTextEditorDecorationType as jest.Mock).mockReturnValue(
+      mockDecorationType,
     );
+
+    (vscode.window.activeTextEditor as unknown) = mockEditor;
+
+    manager = new LineSelectionManager(mockSmellsCacheManager);
   });
 
-  it('should add a single-line comment if a smell is found', () => {
-    lineSelectionManager.commentLine(mockEditor);
-
-    expect(mockEditor.setDecorations).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.any(Array),
-    );
-  });
-
-  it('should display a combined comment if multiple smells exist', () => {
-    lineSelectionManager.commentLine(mockEditor);
-
-    // Verify the decoration type was created with correct options
-    expect(vscode.window.createTextEditorDecorationType).toHaveBeenCalledWith({
-      isWholeLine: true,
-      after: {
-        contentText: expect.stringContaining('🍂 Smell: PERF-001 | (+1)'),
-        color: 'rgb(153, 211, 212)',
-        margin: '0 0 0 10px',
-        textDecoration: 'none',
-      },
+  describe('constructor', () => {
+    it('should initialize with empty decoration and null lastDecoratedLine', () => {
+      expect((manager as any).decoration).toBeNull();
+      expect((manager as any).lastDecoratedLine).toBeNull();
     });
 
-    // Verify decorations were applied to correct range
-    expect(mockEditor.setDecorations).toHaveBeenCalledWith(
-      expect.any(Object), // The decoration type instance
-      [new vscode.Range(4, 0, 4, 0)], // Expected range
-    );
+    it('should register smellsUpdated callback', () => {
+      expect(mockSmellsCacheManager.onSmellsUpdated).toHaveBeenCalled();
+    });
+  });
+
+  describe('removeLastComment', () => {
+    it('should dispose decoration if it exists', () => {
+      (manager as any).decoration = mockDecorationType;
+      (manager as any).lastDecoratedLine = 5;
+
+      manager.removeLastComment();
+
+      expect(mockDecorationType.dispose).toHaveBeenCalled();
+      expect((manager as any).decoration).toBeNull();
+      expect((manager as any).lastDecoratedLine).toBeNull();
+    });
+
+    it('should do nothing if no decoration exists', () => {
+      manager.removeLastComment();
+      expect(mockDecorationType.dispose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('commentLine', () => {
+    it('should do nothing if no editor is provided', () => {
+      manager.commentLine(null as any);
+      expect(vscode.window.createTextEditorDecorationType).not.toHaveBeenCalled();
+    });
+
+    it('should do nothing if selection is multi-line', () => {
+      (mockEditor.selection as any).isSingleLine = false;
+      manager.commentLine(mockEditor);
+      expect(vscode.window.createTextEditorDecorationType).not.toHaveBeenCalled();
+    });
+
+    it('should remove last comment if no smells are cached', () => {
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue(undefined);
+      const removeSpy = jest.spyOn(manager, 'removeLastComment');
+
+      manager.commentLine(mockEditor);
+
+      expect(removeSpy).toHaveBeenCalled();
+      expect(vscode.window.createTextEditorDecorationType).not.toHaveBeenCalled();
+    });
+
+    it('should do nothing if no smells exist at selected line', () => {
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue([
+        createMockSmell('LongMethod', 10), // Different line
+      ]);
+
+      manager.commentLine(mockEditor);
+
+      expect(vscode.window.createTextEditorDecorationType).not.toHaveBeenCalled();
+    });
+
+    it('should create decoration for single smell at line', () => {
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue([
+        createMockSmell('LongMethod', 6), // line + 1
+      ]);
+
+      manager.commentLine(mockEditor);
+
+      expect(vscode.window.createTextEditorDecorationType).toHaveBeenCalled();
+      expect(mockEditor.setDecorations).toHaveBeenCalledWith(
+        mockDecorationType,
+        expect.any(Array),
+      );
+      expect((manager as any).lastDecoratedLine).toBe(5);
+
+      const decorationConfig = (
+        vscode.window.createTextEditorDecorationType as jest.Mock
+      ).mock.calls[0][0];
+      expect(decorationConfig.after.contentText).toBe('🍂 Smell: LongMethod');
+    });
+
+    it('should create decoration with count for multiple smells at line', () => {
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue([
+        createMockSmell('LongMethod', 6),
+        createMockSmell('ComplexCondition', 6),
+      ]);
+
+      manager.commentLine(mockEditor);
+
+      const decorationConfig = (
+        vscode.window.createTextEditorDecorationType as jest.Mock
+      ).mock.calls[0][0];
+      expect(decorationConfig.after.contentText).toContain(
+        '🍂 Smell: LongMethod | (+1)',
+      );
+    });
+
+    it('should not create decoration if same line is already decorated', () => {
+      (manager as any).lastDecoratedLine = 5;
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue([
+        createMockSmell('LongMethod', 6),
+      ]);
+
+      manager.commentLine(mockEditor);
+
+      expect(vscode.window.createTextEditorDecorationType).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('smellsUpdated callback', () => {
+    let smellsUpdatedCallback: (targetFilePath: string) => void;
+
+    beforeEach(() => {
+      smellsUpdatedCallback = (mockSmellsCacheManager.onSmellsUpdated as jest.Mock)
+        .mock.calls[0][0];
+    });
+
+    it('should remove comment when cache is cleared for all files', () => {
+      const removeSpy = jest.spyOn(manager, 'removeLastComment');
+      smellsUpdatedCallback('all');
+      expect(removeSpy).toHaveBeenCalled();
+    });
+
+    it('should remove comment when cache is cleared for current file', () => {
+      const removeSpy = jest.spyOn(manager, 'removeLastComment');
+      smellsUpdatedCallback('/test/file.js');
+      expect(removeSpy).toHaveBeenCalled();
+    });
+
+    it('should not remove comment when cache is cleared for different file', () => {
+      const removeSpy = jest.spyOn(manager, 'removeLastComment');
+      smellsUpdatedCallback('/other/file.js');
+      expect(removeSpy).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,202 +1,190 @@
-// test/hover-manager.test.ts
-// import vscode from '../mocks/vscode-mock';
+import * as vscode from 'vscode';
 import { HoverManager } from '../../src/ui/hoverManager';
-import { ContextManager } from '../../src/context/contextManager';
-import { Smell, Occurrence } from '../../src/types';
-import vscode from 'vscode';
+import { SmellsCacheManager } from '../../src/context/SmellsCacheManager';
 
-jest.mock('vscode');
+// Create a simple mock Uri implementation
+const mockUri = (path: string): vscode.Uri => ({
+  scheme: 'file',
+  authority: '',
+  path,
+  fsPath: path,
+  query: '',
+  fragment: '',
+  with: jest.fn(),
+  toString: jest.fn(() => path),
+  toJSON: jest.fn(() => ({ path })),
+});
 
-jest.mock('../../src/commands/refactorSmell', () => ({
-  refactorSelectedSmell: jest.fn(),
-  refactorAllSmellsOfType: jest.fn(),
-}));
+// Mock the vscode module with all required components
+jest.mock('vscode', () => {
+  const actualVscode = jest.requireActual('vscode');
 
-// Mock the vscode module using our custom mock
-// jest.mock('vscode', () => vscode);
+  // Mock MarkdownString implementation
+  const mockMarkdownString = {
+    isTrusted: true,
+    supportHtml: true,
+    supportThemeIcons: true,
+    appendMarkdown: jest.fn(),
+  };
+
+  return {
+    ...actualVscode,
+    languages: {
+      registerHoverProvider: jest.fn(),
+    },
+    MarkdownString: jest.fn(() => mockMarkdownString),
+    Hover: jest.fn(),
+    Position: jest.fn(),
+    Uri: {
+      file: jest.fn((path) => mockUri(path)),
+      parse: jest.fn((path) => mockUri(path)),
+    },
+  };
+});
 
 describe('HoverManager', () => {
-  let contextManagerMock: ContextManager;
-  let mockSmells: Smell[];
+  let hoverManager: HoverManager;
+  let mockSmellsCacheManager: jest.Mocked<SmellsCacheManager>;
+  let mockContext: vscode.ExtensionContext;
+  let mockDocument: vscode.TextDocument;
+  let mockPosition: vscode.Position;
 
-  const mockOccurrence: Occurrence = {
-    line: 5,
-    endLine: 7,
-    column: 1,
-    endColumn: 10,
-  };
+  const createMockSmell = (messageId: string, line: number) => ({
+    type: 'performance',
+    symbol: 'test-smell',
+    message: 'Test smell message',
+    messageId,
+    confidence: 'HIGH',
+    path: '/test/file.py',
+    module: 'test',
+    occurences: [
+      {
+        line,
+        column: 1,
+        endLine: line,
+        endColumn: 10,
+      },
+    ],
+    additionalInfo: {},
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    contextManagerMock = {
-      context: {
-        subscriptions: [],
-      },
-      getContext: () => ({ subscriptions: [] }),
-    } as unknown as ContextManager;
+    mockSmellsCacheManager = {
+      getCachedSmells: jest.fn(),
+    } as unknown as jest.Mocked<SmellsCacheManager>;
 
-    mockSmells = [
-      {
-        type: 'performance',
-        symbol: 'CRS-001',
-        message: 'Cached repeated calls',
-        messageId: 'cached-repeated-calls',
-        confidence: 'HIGH',
-        path: '/test/file.py',
-        module: 'test_module',
-        occurences: [mockOccurrence],
-        additionalInfo: {},
-      },
-    ];
-  });
+    mockContext = {
+      subscriptions: [],
+    } as unknown as vscode.ExtensionContext;
 
-  it('should register hover provider for Python files', () => {
-    new HoverManager(contextManagerMock, mockSmells);
-
-    expect(vscode.languages.registerHoverProvider).toHaveBeenCalledWith(
-      { scheme: 'file', language: 'python' },
-      expect.objectContaining({
-        provideHover: expect.any(Function),
-      }),
-    );
-  });
-
-  it('should subscribe hover provider correctly', () => {
-    const spy = jest.spyOn(contextManagerMock.context.subscriptions, 'push');
-    new HoverManager(contextManagerMock, mockSmells);
-    expect(spy).toHaveBeenCalledWith(expect.anything());
-  });
-
-  it('should return null for hover content if there are no smells', () => {
-    const manager = new HoverManager(contextManagerMock, []);
-    const document = { fileName: '/test/file.py', getText: jest.fn() } as any;
-    const position = { line: 4 } as any;
-    expect(manager.getHoverContent(document, position)).toBeNull();
-  });
-
-  it('should update smells when getInstance is called again', () => {
-    const initialSmells = [
-      {
-        type: 'performance',
-        symbol: 'CRS-001',
-        message: 'Cached repeated calls',
-        messageId: 'cached-repeated-calls',
-        confidence: 'HIGH',
-        path: '/test/file.py',
-        module: 'test_module',
-        occurences: [mockOccurrence],
-        additionalInfo: {},
-      },
-    ];
-
-    const newSmells = [
-      {
-        type: 'memory',
-        symbol: 'MEM-002',
-        message: 'Memory leak detected',
-        messageId: 'memory-leak',
-        confidence: 'MEDIUM',
-        path: '/test/file2.py',
-        module: 'test_module_2',
-        occurences: [mockOccurrence],
-        additionalInfo: {},
-      },
-    ];
-
-    const manager1 = HoverManager.getInstance(contextManagerMock, initialSmells);
-    expect(manager1['smells']).toEqual(initialSmells);
-
-    const manager2 = HoverManager.getInstance(contextManagerMock, newSmells);
-    expect(manager2['smells']).toEqual(newSmells);
-    expect(manager1).toBe(manager2); // Ensuring it's the same instance
-  });
-
-  it('should update smells correctly', () => {
-    const manager = new HoverManager(contextManagerMock, mockSmells);
-    const newSmells: Smell[] = [
-      {
-        type: 'security',
-        symbol: 'SEC-003',
-        message: 'Unsafe API usage',
-        messageId: 'unsafe-api',
-        confidence: 'HIGH',
-        path: '/test/file3.py',
-        module: 'security_module',
-        occurences: [mockOccurrence],
-        additionalInfo: {},
-      },
-    ];
-
-    manager.updateSmells(newSmells);
-    expect(manager['smells']).toEqual(newSmells);
-  });
-
-  it('should generate valid hover content', () => {
-    const manager = new HoverManager(contextManagerMock, mockSmells);
-    const document = {
+    mockDocument = {
+      uri: vscode.Uri.file('/test/file.py'),
       fileName: '/test/file.py',
-      getText: jest.fn(),
-    } as any;
+      lineAt: jest.fn(),
+    } as unknown as vscode.TextDocument;
 
-    const position = {
-      line: 4, // 0-based line number (will become line 5 in 1-based)
+    mockPosition = {
+      line: 5,
       character: 0,
-      isBefore: jest.fn(),
-      isBeforeOrEqual: jest.fn(),
-      isAfter: jest.fn(),
-      isAfterOrEqual: jest.fn(),
-      translate: jest.fn(),
-      with: jest.fn(),
-      compareTo: jest.fn(),
-      isEqual: jest.fn(),
-    } as any; // Simplified type assertion since we don't need full Position type
+    } as unknown as vscode.Position;
 
-    // Mock document text for line range
-    document.getText.mockReturnValue('mock code content');
-    const content = manager.getHoverContent(document, position);
-
-    expect(content?.value).toBeDefined(); // Check value exists
-    expect(content?.value).toContain('CRS-001');
-    expect(content?.value).toContain('Cached repeated calls');
-    expect(content?.isTrusted).toBe(true);
-
-    // Verify basic structure for each smell
-    expect(content?.value).toContain('**CRS-001:** Cached repeated calls');
-    expect(content?.value).toContain(
-      '[Refactor](command:extension.refactorThisSmell?',
-    );
-    expect(content?.value).toContain(
-      '[Refactor all smells of this type...](command:extension.refactorAllSmellsOfType?',
-    );
-    // Verify command parameters are properly encoded
-    const expectedSmellParam = encodeURIComponent(JSON.stringify(mockSmells[0]));
-    expect(content?.value).toContain(
-      `command:extension.refactorThisSmell?${expectedSmellParam}`,
-    );
-    expect(content?.value).toContain(
-      `command:extension.refactorAllSmellsOfType?${expectedSmellParam}`,
-    );
-
-    // Verify formatting between elements
-    expect(content?.value).toContain('\t\t'); // Verify tab separation
-    expect(content?.value).toContain('\n\n'); // Verify line breaks between smells
-
-    // // Verify empty case
-    // expect(manager.getHoverContent(document, invalidPosition)).toBeNull();
+    hoverManager = new HoverManager(mockSmellsCacheManager);
   });
 
-  it('should register refactor commands', () => {
-    new HoverManager(contextManagerMock, mockSmells);
+  describe('register', () => {
+    it('should register hover provider for Python files', () => {
+      hoverManager.register(mockContext);
 
-    expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
-      'extension.refactorThisSmell',
-      expect.any(Function),
-    );
+      expect(vscode.languages.registerHoverProvider).toHaveBeenCalledWith(
+        { language: 'python', scheme: 'file' },
+        hoverManager,
+      );
+      expect(mockContext.subscriptions).toHaveLength(1);
+    });
+  });
 
-    expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
-      'extension.refactorAllSmellsOfType',
-      expect.any(Function),
-    );
+  describe('provideHover', () => {
+    it('should return undefined for non-Python files', () => {
+      const jsDocument = {
+        uri: vscode.Uri.file('/test/file.js'),
+        fileName: '/test/file.js',
+      } as vscode.TextDocument;
+
+      const result = hoverManager.provideHover(
+        jsDocument,
+        mockPosition,
+        {} as vscode.CancellationToken,
+      );
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when no smells are cached', () => {
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue(undefined);
+      const result = hoverManager.provideHover(
+        mockDocument,
+        mockPosition,
+        {} as vscode.CancellationToken,
+      );
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when no smells at line', () => {
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue([
+        createMockSmell('test-smell', 10), // Different line
+      ]);
+      const result = hoverManager.provideHover(
+        mockDocument,
+        mockPosition,
+        {} as vscode.CancellationToken,
+      );
+      expect(result).toBeUndefined();
+    });
+
+    it('should create hover for single smell at line', () => {
+      const mockSmell = createMockSmell('test-smell', 6); // line + 1
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue([mockSmell]);
+
+      const result = hoverManager.provideHover(
+        mockDocument,
+        mockPosition,
+        {} as vscode.CancellationToken,
+      );
+
+      expect(vscode.MarkdownString).toHaveBeenCalled();
+      expect(vscode.Hover).toHaveBeenCalled();
+
+      // Get the mock MarkdownString instance
+      const markdownInstance = (vscode.MarkdownString as jest.Mock).mock.results[0]
+        .value;
+      expect(markdownInstance.appendMarkdown).toHaveBeenCalledWith(
+        expect.stringContaining('Test smell message'),
+      );
+      expect(markdownInstance.appendMarkdown).toHaveBeenCalledWith(
+        expect.stringContaining('command:ecooptimizer.refactorSmell'),
+      );
+    });
+
+    it('should escape special characters in messages', () => {
+      const mockSmell = {
+        ...createMockSmell('test-smell', 6),
+        message: 'Message with *stars* and _underscores_',
+        messageId: 'id_with*stars*',
+      };
+      mockSmellsCacheManager.getCachedSmells.mockReturnValue([mockSmell]);
+
+      hoverManager.provideHover(
+        mockDocument,
+        mockPosition,
+        {} as vscode.CancellationToken,
+      );
+
+      const markdownInstance = (vscode.MarkdownString as jest.Mock).mock.results[0]
+        .value;
+      expect(markdownInstance.appendMarkdown).toHaveBeenCalledWith(
+        expect.stringContaining('Message with \\*stars\\* and \\_underscores\\_'),
+      );
+    });
   });
 });
