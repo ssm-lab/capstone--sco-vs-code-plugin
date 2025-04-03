@@ -56,3 +56,4 @@ jobs:
           vsce publish -p $VSCE_PAT
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          
