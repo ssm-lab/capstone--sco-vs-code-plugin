@@ -82,6 +82,9 @@
       "!src/commands/showLogs.ts",
       "!src/emitters/serverStatus.ts",
       "!src/utils/envConfig.ts",
+      "!src/utils/TreeStructureBuilder.ts",
+      "!src/commands/views/jumpToSmell.ts",
+      "!src/commands/views/openFile.ts",
       "!src/lib/*",
       "!src/install.ts"
     ]
