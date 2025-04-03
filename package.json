@@ -1,8 +1,20 @@
 {
-  "name": "ecooptimizer-vs-code-plugin",
-  "displayName": "ecooptimizer-vs-code-plugin",
-  "description": "VS Code Plugin for Ecooptimizer Refactoring Tool",
-  "version": "0.0.1",
+  "name": "ecooptimizer",
+  "publisher": "mac-ecooptimizers",
+  "displayName": "EcoOptimizer VS Code Plugin",
+  "contributors": [
+    "Sevhena Walker",
+    "Tanveer Brar",
+    "Ayushi Amin",
+    "Mya Hussain",
+    "Nivetha Kuruparan"
+  ],
+  "description": "VS Code Plugin for EcoOptimizer Refactoring Tool",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ssm-lab/capstone--sco-vs-code-plugin"
+  },
+  "version": "0.2.3",
   "engines": {
     "vscode": "^1.92.0"
   },
@@ -10,53 +22,465 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:python"
+    "onLanguage:python",
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
+  "directories": {
+    "src": "./src",
+    "test": "./test"
+  },
+  "scripts": {
+    "deploy": "vsce publish --yarn",
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "test": "jest --verbose",
+    "test:watch": "jest --watch --verbose",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "lint": "eslint src"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "./test/setup.ts"
+    ],
+    "moduleNameMapper": {
+      "^vscode$": "<rootDir>/test/mocks/vscode-mock.ts",
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "moduleDirectories": [
+      "node_modules",
+      "src",
+      "test/__mocks__"
+    ],
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/test"
+    ],
+    "collectCoverage": true,
+    "coverageReporters": [
+      "text",
+      "html",
+      "lcov"
+    ],
+    "coverageDirectory": "<rootDir>/coverage/",
+    "coverageThreshold": {
+      "global": {
+        "statements": 80
+      }
+    },
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/**/*.d.ts",
+      "!src/**/index.ts",
+      "!test/mocks/*",
+      "!src/extension.ts",
+      "!src/context/*",
+      "!src/providers/*",
+      "!src/commands/showLogs.ts",
+      "!src/emitters/serverStatus.ts",
+      "!src/utils/envConfig.ts",
+      "!src/utils/TreeStructureBuilder.ts",
+      "!src/commands/views/jumpToSmell.ts",
+      "!src/commands/views/openFile.ts",
+      "!src/lib/*",
+      "!src/install.ts"
+    ]
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/jest": "^29.5.14",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.92.0",
+    "@types/ws": "^8.5.14",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "css-loader": "^7.1.2",
+    "eslint": "^9.21.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "jest-silent-reporter": "^0.6.0",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.2",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "style-loader": "^4.0.0",
+    "ts-jest": "^29.2.6",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.7.2",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-node-externals": "^3.0.0"
+  },
+  "dependencies": {
+    "@types/dotenv": "^6.1.1",
+    "bufferutil": "^4.0.9",
+    "dotenv": "^16.4.7",
+    "dotenv-webpack": "^8.1.0",
+    "utf-8-validate": "^6.0.5",
+    "ws": "^8.18.0"
+  },
+  "icon": "./assets/eco_logo.png",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ecooptimizer",
+          "title": "Eco",
+          "icon": "assets/eco-icon.png"
+        }
+      ]
+    },
+    "views": {
+      "ecooptimizer": [
+        {
+          "id": "ecooptimizer.refactorView",
+          "name": "Refactoring Details",
+          "icon": "assets/eco-icon.png"
+        },
+        {
+          "id": "ecooptimizer.smellsView",
+          "name": "Code Smells",
+          "icon": "assets/eco-icon.png"
+        },
+        {
+          "id": "ecooptimizer.metricsView",
+          "name": "Carbon Metrics",
+          "icon": "assets/eco-icon.png"
+        },
+        {
+          "id": "ecooptimizer.filterView",
+          "name": "Filter Smells",
+          "icon": "assets/eco-icon.png"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "ecooptimizer.refactorView",
+        "contents": "Refactoring is currently not in progress. Try selecting a smell in the Code Smells view to start refactoring.",
+        "when": "!refactoringInProgress"
+      },
+      {
+        "view": "ecooptimizer.smellsView",
+        "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
+        "when": "!workspaceState.workspaceConfigured"
+      },
+      {
+        "view": "ecooptimizer.metricsView",
+        "contents": "No energy savings to declare. Configure your workspace to start saving energy!\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
+        "when": "!workspaceState.workspaceConfigured"
+      }
+    ],
     "commands": [
       {
-        "command": "ecooptimizer-vs-code-plugin.detectSmells",
-        "title": "Detect Smells",
+        "command": "ecooptimizer.startServer",
+        "title": "Start EcoOptimizer Server",
         "category": "Eco"
       },
       {
-        "command": "ecooptimizer-vs-code-plugin.refactorSmell",
-        "title": "Refactor Smell",
+        "command": "ecooptimizer.stopServer",
+        "title": "Stop EcoOptimizer Server",
         "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.configureWorkspace",
+        "title": "Configure Workspace",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.resetConfiguration",
+        "title": "Reset Configuration",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.wipeWorkCache",
+        "title": "Clear Smells Cache",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.toggleSmellFilter",
+        "title": "Toggle Smell",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.editSmellFilterOption",
+        "title": "Edit Option",
+        "icon": "$(edit)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.selectAllFilterSmells",
+        "title": "Select All Smells",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.deselectAllFilterSmells",
+        "title": "Deselect All Smells",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.setFilterDefaults",
+        "title": "Set Filter Defaults",
+        "category": "Eco",
+        "when": "view == ecooptimizer.filterView && !refactoringInProgress"
+      },
+      {
+        "command": "ecooptimizer.detectSmellsFolder",
+        "title": "Detect Smells for All Files",
+        "icon": "$(search)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.detectSmellsFile",
+        "title": "Detect Smells",
+        "icon": "$(search)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.refactorAllSmellsOfType",
+        "title": "Refactor Smells By Type",
+        "icon": "$(tools)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.refactorSmell",
+        "title": "Refactor Smell",
+        "icon": "$(tools)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.acceptRefactoring",
+        "title": "Accept Refactoring",
+        "category": "Eco",
+        "icon": "$(check)"
+      },
+      {
+        "command": "ecooptimizer.rejectRefactoring",
+        "title": "Reject Refactoring",
+        "category": "Eco",
+        "icon": "$(close)"
+      },
+      {
+        "command": "ecooptimizer.exportMetricsData",
+        "title": "Export Metrics Data as JSON",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.clearMetricsData",
+        "title": "Clear Metrics Data",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.metricsView.refresh",
+        "title": "Refresh Metrics Data",
+        "icon": "$(sync)",
+        "category": "Eco"
+      },
+      {
+        "command": "ecooptimizer.toggleSmellLintingOn",
+        "title": "Toggle Smell Linting",
+        "category": "Eco",
+        "icon": {
+          "light": "assets/darkgreen_leaf.png",
+          "dark": "assets/green_leaf.png"
+        }
+      },
+      {
+        "command": "ecooptimizer.toggleSmellLintingOff",
+        "title": "Toggle Smell Linting",
+        "category": "Eco",
+        "icon": {
+          "light": "assets/white_leaf.png",
+          "dark": "assets/black_leaf.png"
+        }
       }
     ],
-    "keybindings": [
-    {
-      "command": "ecooptimizer-vs-code-plugin.refactorSmell",
-      "key": "ctrl+shift+r",
-      "when": "editorTextFocus && resourceExtname == '.py'"
+    "menus": {
+      "view/title": [
+        {
+          "command": "ecooptimizer.resetConfiguration",
+          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured && !refactoringInProgress",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.wipeWorkCache",
+          "when": "view == ecooptimizer.smellsView && workspaceState.workspaceConfigured && !refactoringInProgress",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.selectAllFilterSmells",
+          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.deselectAllFilterSmells",
+          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.setFilterDefaults",
+          "when": "view == ecooptimizer.filterView && !refactoringInProgress",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.exportMetricsData",
+          "when": "view == ecooptimizer.metricsView",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.clearMetricsData",
+          "when": "view == ecooptimizer.metricsView",
+          "group": "resource"
+        },
+        {
+          "command": "ecooptimizer.metricsView.refresh",
+          "when": "view == ecooptimizer.metricsView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "ecooptimizer.editSmellFilterOption",
+          "when": "viewItem == smellOption && !refactoringInProgress",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.detectSmellsFolder",
+          "when": "view == ecooptimizer.smellsView && viewItem == directory && !refactoringInProgress",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.detectSmellsFile",
+          "when": "view == ecooptimizer.smellsView && (viewItem == file || viewItem == file_with_smells) && !refactoringInProgress",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.refactorAllSmellsOfType",
+          "when": "view == ecooptimizer.smellsView && viewItem == file_with_smells && !refactoringInProgress",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.refactorSmell",
+          "when": "view == ecooptimizer.smellsView && viewItem == smell && !refactoringInProgress",
+          "group": "inline"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "ecooptimizer.toggleSmellLintingOn",
+          "when": "workspaceState.workspaceConfigured && editorLangId == python && ecooptimizer.smellLintingEnabled",
+          "group": "navigation"
+        },
+        {
+          "command": "ecooptimizer.toggleSmellLintingOff",
+          "when": "workspaceState.workspaceConfigured && editorLangId == python && !ecooptimizer.smellLintingEnabled",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "EcoOptimizer",
+      "properties": {
+        "ecooptimizer.detection.smellsColours": {
+          "order": 1,
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Configure highlight colours for smells.",
+          "default": {
+            "long-element-chain": "lightblue",
+            "too-many-arguments": "lightcoral",
+            "long-lambda-expression": "mediumpurple",
+            "long-message-chain": "lightpink",
+            "cached-repeated-calls": "lightgreen",
+            "string-concat-loop": "lightsalmon",
+            "no-self-use": "lightcyan",
+            "use-a-generator": "yellow"
+          },
+          "properties": {
+            "long-element-chain": {
+              "type": "string",
+              "default": "lightblue",
+              "description": "Colour (css syntax) for highlighting long element chains."
+            },
+            "too-many-arguments": {
+              "type": "string",
+              "default": "lightcoral",
+              "description": "Colour (css syntax) for highlighting functions with too many arguments."
+            },
+            "long-lambda-expression": {
+              "type": "string",
+              "default": "mediumpurple",
+              "description": "Colour (css syntax) for highlighting long lambda expressions."
+            },
+            "long-message-chain": {
+              "type": "string",
+              "default": "lightpink",
+              "description": "Colour (css syntax) for highlighting long message chains."
+            },
+            "cached-repeated-calls": {
+              "type": "string",
+              "default": "lightgreen",
+              "description": "Colour (css syntax) for highlighting cached repeated calls."
+            },
+            "string-concat-loop": {
+              "type": "string",
+              "default": "lightsalmon",
+              "description": "Colour (css syntax) for highlighting string concatenation in loops."
+            },
+            "no-self-use": {
+              "type": "string",
+              "default": "lightcyan",
+              "description": "Colour (css syntax) for highlighting methods with no self-use."
+            },
+            "use-a-generator": {
+              "type": "string",
+              "default": "yellow",
+              "description": "Colour (css syntax) for highlighting places where a generator could be used."
+            }
+          }
+        },
+        "ecooptimizer.detection.useSingleColour": {
+          "order": 2,
+          "type": "boolean",
+          "default": false,
+          "description": "Use a single colour for all smells. If enabled, the colour defined below will be used."
+        },
+        "ecooptimizer.detection.singleHighlightColour": {
+          "order": 3,
+          "type": "string",
+          "default": "yellow",
+          "markdownDescription": "Colour (css syntax) to use for all smells if **Use Single Colour** is enabled."
+        },
+        "ecooptimizer.detection.highlightStyle": {
+          "order": 0,
+          "type": "string",
+          "enum": [
+            "underline",
+            "flashlight",
+            "border-arrow"
+          ],
+          "markdownEnumDescriptions": [
+            "Your average wavy line",
+            "No pixel left untouched",
+            "Basically how it sounds"
+          ],
+          "default": "underline",
+          "description": "Choose a highlight style for all smells."
+        }
+      }
     }
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "webpack",
-    "watch": "webpack --watch",
-    "package": "webpack --mode production --devtool hidden-source-map",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.92.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@typescript-eslint/eslint-plugin": "^8.17.0",
-    "@typescript-eslint/parser": "^8.17.0",
-    "eslint": "^9.16.0",
-    "typescript": "^5.7.2",
-    "ts-loader": "^9.5.1",
-    "webpack": "^5.95.0",
-    "webpack-cli": "^5.1.4",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
   }
 }

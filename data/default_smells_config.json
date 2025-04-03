@@ -1,0 +1,101 @@
+{
+  "use-a-generator": {
+    "message_id": "R1729",
+    "name": "Use A Generator (UGEN)",
+    "acronym": "UGEN",
+    "enabled": true,
+    "smell_description": "Using generators instead of lists reduces memory consumption and avoids unnecessary allocations, leading to more efficient CPU and energy use.",
+    "analyzer_options": {}
+  },
+  "too-many-arguments": {
+    "message_id": "R0913",
+    "name": "Too Many Arguments (LPL)",
+    "acronym": "LPL",
+    "enabled": true,
+    "smell_description": "Functions with many arguments are harder to optimize and often require more memory and call overhead, increasing CPU load and energy usage.",
+    "analyzer_options": {
+      "max_args": {
+        "label": "Number of Arguments",
+        "description": "Detecting functions with this many arguments.",
+        "value": 6
+      }
+    }
+  },
+  "no-self-use": {
+    "message_id": "R6301",
+    "name": "No Self Use (NSU)",
+    "acronym": "NSU",
+    "enabled": true,
+    "smell_description": "Methods that don't use 'self' can be static, reducing object overhead and avoiding unnecessary memory binding at runtime.",
+    "analyzer_options": {}
+  },
+  "long-lambda-expression": {
+    "message_id": "LLE001",
+    "name": "Long Lambda Expression (LLE)",
+    "acronym": "LLE",
+    "enabled": true,
+    "smell_description": "Complex lambdas are harder for the interpreter to optimize and may lead to repeated evaluations, which can increase CPU usage and energy draw.",
+    "analyzer_options": {
+      "threshold_length": {
+        "label": "Lambda Length",
+        "description": "Detects lambda expressions exceeding this length.",
+        "value": 9
+      },
+      "threshold_count": {
+        "label": "Repetition Count",
+        "description": "Flags patterns that repeat at least this many times.",
+        "value": 5
+      }
+    }
+  },
+  "long-message-chain": {
+    "message_id": "LMC001",
+    "name": "Long Message Chain (LMC)",
+    "acronym": "LMC",
+    "enabled": true,
+    "smell_description": "Deeply nested calls create performance bottlenecks due to increased dereferencing and lookup time, which adds to CPU cycles and energy usage.",
+    "analyzer_options": {
+      "threshold": {
+        "label": "Threshold",
+        "description": "Defines a threshold for triggering this smell.",
+        "value": 9
+      }
+    }
+  },
+  "long-element-chain": {
+    "message_id": "LEC001",
+    "name": "Long Element Chain (LEC)",
+    "acronym": "LEC",
+    "enabled": true,
+    "smell_description": "Chained element access can be inefficient in large structures, increasing access time and CPU effort, thereby consuming more energy.",
+    "analyzer_options": {
+      "threshold": {
+        "label": "Threshold",
+        "description": "Defines a threshold for triggering this smell.",
+        "value": 3
+      }
+    }
+  },
+  "cached-repeated-calls": {
+    "message_id": "CRC001",
+    "name": "Cached Repeated Calls (CRC)",
+    "acronym": "CRC",
+    "enabled": true,
+    "smell_description": "Failing to cache repeated expensive calls leads to redundant computation, which wastes CPU cycles and drains energy needlessly.",
+    "analyzer_options": {
+      "threshold": {
+        "label": "Cache Threshold",
+        "description": "Number of times a function must repeat before caching.",
+        "value": 2
+      }
+    }
+  },
+  "string-concat-loop": {
+    "message_id": "SCL001",
+    "name": "String Concatenation in Loops (SCL)",
+    "acronym": "SCL",
+    "enabled": true,
+    "smell_description": "String concatenation in loops creates new objects each time, increasing memory churn and CPU workload, which leads to higher energy consumption.",
+    "analyzer_options": {}
+  }
+}
