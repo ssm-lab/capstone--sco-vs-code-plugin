@@ -50,6 +50,12 @@ Watch EcoOptimizers in action:
 
 EcoOptimizers is open-source! Help improve the extension by contributing to our GitHub repository: [GitHub Repository](https://github.com/ssm-lab/capstone--source-code-optimizer)
 
+## Additional Info
+
+It's natural to be curious.
+
+Check out our [wiki](https://github.com/ssm-lab/capstone--sco-vs-code-plugin/wiki) for more detailed documentation and guides.
+
 ---
 
 🚀 Start writing cleaner, more efficient Python code today with EcoOptimizers!
