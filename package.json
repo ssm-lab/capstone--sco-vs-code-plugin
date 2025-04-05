@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/ssm-lab/capstone--sco-vs-code-plugin"
   },
-  "version": "0.2.3",
+  "version": "0.2.4",
   "engines": {
     "vscode": "^1.92.0"
   },
@@ -175,12 +175,12 @@
       },
       {
         "view": "ecooptimizer.smellsView",
-        "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
+        "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://github.com/ssm-lab/capstone--sco-vs-code-plugin/wiki) to learn how to use Eco-Optimizer.",
         "when": "!workspaceState.workspaceConfigured"
       },
       {
         "view": "ecooptimizer.metricsView",
-        "contents": "No energy savings to declare. Configure your workspace to start saving energy!\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
+        "contents": "No energy savings to declare. Configure your workspace to start saving energy!\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://github.com/ssm-lab/capstone--sco-vs-code-plugin/wiki) to learn how to use Eco-Optimizer.",
         "when": "!workspaceState.workspaceConfigured"
       }
     ],
