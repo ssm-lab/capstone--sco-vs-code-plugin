@@ -7,6 +7,7 @@ import { WorkspaceModifiedListener } from '../../src/listeners/workspaceModified
 import { SmellsCacheManager } from '../../src/context/SmellsCacheManager';
 import { SmellsViewProvider } from '../../src/providers/SmellsViewProvider';
 import { MetricsViewProvider } from '../../src/providers/MetricsViewProvider';
+import { DashboardViewProvider } from '../../src/providers/DashboardViewProvider';
 import { ecoOutput } from '../../src/extension';
 import { detectSmellsFile } from '../../src/commands/detection/detectSmells';
 
@@ -23,6 +24,7 @@ describe('WorkspaceModifiedListener', () => {
   let mockSmellsCacheManager: jest.Mocked<SmellsCacheManager>;
   let mockSmellsViewProvider: jest.Mocked<SmellsViewProvider>;
   let mockMetricsViewProvider: jest.Mocked<MetricsViewProvider>;
+  let mockDashboardViewProvider: jest.Mocked<DashboardViewProvider>;
   let listener: WorkspaceModifiedListener;
 
   beforeEach(() => {
@@ -51,6 +53,10 @@ describe('WorkspaceModifiedListener', () => {
     mockMetricsViewProvider = {
       refresh: jest.fn(),
     } as unknown as jest.Mocked<MetricsViewProvider>;
+
+    mockDashboardViewProvider = {
+      refresh: jest.fn(),
+    } as unknown as jest.Mocked<DashboardViewProvider>;
   });
 
   describe('Initialization', () => {
@@ -61,6 +67,7 @@ describe('WorkspaceModifiedListener', () => {
         mockSmellsCacheManager,
         mockSmellsViewProvider,
         mockMetricsViewProvider,
+        mockDashboardViewProvider,
       );
       expect(ecoOutput.trace).toHaveBeenCalledWith(
         '[WorkspaceListener] No workspace configured - skipping file watcher',
@@ -74,6 +81,7 @@ describe('WorkspaceModifiedListener', () => {
         mockSmellsCacheManager,
         mockSmellsViewProvider,
         mockMetricsViewProvider,
+        mockDashboardViewProvider,
       );
 
       console.log((ecoOutput.trace as jest.Mock).mock);
@@ -92,6 +100,7 @@ describe('WorkspaceModifiedListener', () => {
         mockSmellsCacheManager,
         mockSmellsViewProvider,
         mockMetricsViewProvider,
+        mockDashboardViewProvider,
       );
     });
 
@@ -147,6 +156,7 @@ describe('WorkspaceModifiedListener', () => {
         mockSmellsCacheManager,
         mockSmellsViewProvider,
         mockMetricsViewProvider,
+        mockDashboardViewProvider,
       );
     });
 
@@ -203,6 +213,7 @@ describe('WorkspaceModifiedListener', () => {
         mockSmellsCacheManager,
         mockSmellsViewProvider,
         mockMetricsViewProvider,
+        mockDashboardViewProvider,
       );
 
       // Trigger save event
@@ -232,6 +243,7 @@ describe('WorkspaceModifiedListener', () => {
         mockSmellsCacheManager,
         mockSmellsViewProvider,
         mockMetricsViewProvider,
+        mockDashboardViewProvider,
       );
 
       // Trigger save event
@@ -255,6 +267,7 @@ describe('WorkspaceModifiedListener', () => {
         mockSmellsCacheManager,
         mockSmellsViewProvider,
         mockMetricsViewProvider,
+        mockDashboardViewProvider,
       );
 
       listener.dispose();

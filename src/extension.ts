@@ -38,6 +38,7 @@ import {
 import { MetricsViewProvider } from './providers/MetricsViewProvider';
 import { FilterViewProvider } from './providers/FilterViewProvider';
 import { RefactoringDetailsViewProvider } from './providers/RefactoringDetailsViewProvider';
+import { DashboardViewProvider } from './providers/DashboardViewProvider';
 
 // === Commands ===
 import { configureWorkspace } from './commands/configureWorkspace';
@@ -116,19 +117,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     smellsViewProvider,
   );
   const refactoringDetailsViewProvider = new RefactoringDetailsViewProvider();
+  const dashboardViewProvider = new DashboardViewProvider(context, smellsCacheManager);
 
   initializeStatusesFromCache(context, smellsCacheManager, smellsViewProvider);
 
   // === Register Tree Views ===
   context.subscriptions.push(
-    vscode.window.createTreeView('ecooptimizer.smellsView', {
-      treeDataProvider: smellsViewProvider,
-    }),
-    vscode.window.createTreeView('ecooptimizer.metricsView', {
-      treeDataProvider: metricsViewProvider,
+    vscode.window.createTreeView('ecooptimizer.dashboardView', {
+      treeDataProvider: dashboardViewProvider,
       showCollapseAll: true,
     }),
-    vscode.window.createTreeView('ecooptimizer.filterView', {
+    vscode.window.createTreeView('ecooptimizer.smellsView', {
+      treeDataProvider: smellsViewProvider,
+          }),
+      vscode.window.createTreeView('ecooptimizer.filterView', {
       treeDataProvider: filterSmellsProvider,
       showCollapseAll: true,
     }),
@@ -165,6 +167,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await configureWorkspace(context);
       smellsViewProvider.refresh();
       metricsViewProvider.refresh();
+      dashboardViewProvider.refresh();
     }),
 
     vscode.commands.registerCommand('ecooptimizer.resetConfiguration', async () => {
@@ -174,6 +177,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         smellsViewProvider.clearAllStatuses();
         smellsViewProvider.refresh();
         metricsViewProvider.refresh();
+        dashboardViewProvider.refresh();
         vscode.window.showInformationMessage(
           'Workspace configuration and analysis data have been reset.',
         );
@@ -469,6 +473,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         smellsCacheManager,
         smellsViewProvider,
       );
+      dashboardViewProvider.refresh();
     }),
 
     vscode.commands.registerCommand('ecooptimizer.rejectRefactoring', async () => {
@@ -504,32 +509,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     vscode.commands.registerCommand('ecooptimizer.exportMetricsData', () => {
       exportMetricsData(context);
-    }),
+          }),
 
-    vscode.commands.registerCommand('ecooptimizer.metricsView.refresh', () => {
-      metricsViewProvider.refresh();
-    }),
-
-    vscode.commands.registerCommand('ecooptimizer.clearMetricsData', () => {
-      vscode.window
-        .showWarningMessage(
-          'Clear all metrics data? This cannot be undone unless you have exported it.',
-          { modal: true },
-          'Clear',
-          'Cancel',
-        )
-        .then((selection) => {
-          if (selection === 'Clear') {
-            context.workspaceState.update(
-              envConfig.WORKSPACE_METRICS_DATA!,
-              undefined,
-            );
-            metricsViewProvider.refresh();
-            vscode.window.showInformationMessage('Metrics data cleared.');
-          }
-        });
-    }),
-  );
+      vscode.commands.registerCommand('ecooptimizer.dashboardView.refresh', () => {
+      dashboardViewProvider.refresh();
+          }),
+    );
 
   // === Register Filter UI Commands ===
   registerFilterSmellCommands(context, filterSmellsProvider);
@@ -541,6 +526,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       smellsCacheManager,
       smellsViewProvider,
       metricsViewProvider,
+      dashboardViewProvider,
     ),
   );
 

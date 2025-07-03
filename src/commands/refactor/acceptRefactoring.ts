@@ -61,8 +61,8 @@ export async function acceptRefactoring(
     ) {
       metricsDataProvider.updateMetrics(
         targetFile.original,
-        refactoringDetailsViewProvider.energySaved,
         refactoringDetailsViewProvider.targetSmell.symbol,
+        refactoringDetailsViewProvider.energySaved,
       );
       ecoOutput.info('[refactorActions.ts] Updated energy savings metrics');
     }
