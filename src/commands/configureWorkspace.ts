@@ -34,6 +34,9 @@ function findPythonFoldersRecursively(folderPath: string): string[] {
     // Validate current folder contains Python artifacts
     if (
       files.includes('__init__.py') ||
+      files.includes('setup.py') ||
+      files.includes('pyproject.toml') ||
+      files.includes('requirements.txt') ||
       files.some((file) => file.endsWith('.py'))
     ) {
       hasPythonFiles = true;

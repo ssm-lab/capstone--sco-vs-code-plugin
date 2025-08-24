@@ -58,7 +58,7 @@
       "threshold": {
         "label": "Threshold",
         "description": "Defines a threshold for triggering this smell.",
-        "value": 9
+        "value": 3
       }
     }
   },
@@ -66,7 +66,7 @@
     "message_id": "LEC001",
     "name": "Long Element Chain (LEC)",
     "acronym": "LEC",
-    "enabled": true,
+    "enabled": false,
     "smell_description": "Chained element access can be inefficient in large structures, increasing access time and CPU effort, thereby consuming more energy.",
     "analyzer_options": {
       "threshold": {
@@ -80,7 +80,7 @@
     "message_id": "CRC001",
     "name": "Cached Repeated Calls (CRC)",
     "acronym": "CRC",
-    "enabled": true,
+    "enabled": false,
     "smell_description": "Failing to cache repeated expensive calls leads to redundant computation, which wastes CPU cycles and drains energy needlessly.",
     "analyzer_options": {
       "threshold": {

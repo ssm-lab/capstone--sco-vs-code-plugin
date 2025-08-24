@@ -18,6 +18,7 @@ import { ecoOutput } from '../../extension';
  * @param smellsCacheManager - Manager for cached smell results
  */
 export async function detectSmellsFile(
+  projectRoot: string,
   filePath: string,
   smellsViewProvider: SmellsViewProvider,
   smellsCacheManager: SmellsCacheManager,
@@ -38,7 +39,11 @@ export async function detectSmellsFile(
 
   try {
     ecoOutput.info(`[detection.ts] Analyzing: ${path.basename(filePath)}`);
-    const { smells, status } = await fetchSmells(filePath, enabledSmellsForBackend);
+    const { smells, status } = await fetchSmells(
+      projectRoot,
+      filePath,
+      enabledSmellsForBackend,
+    );
 
     // Handle backend response
     if (status === 200) {
@@ -136,6 +141,7 @@ async function precheckAndMarkQueued(
  * @param smellsCacheManager - Manager for cached smell results
  */
 export async function detectSmellsFolder(
+  projectRoot: string,
   folderPath: string,
   smellsViewProvider: SmellsViewProvider,
   smellsCacheManager: SmellsCacheManager,
@@ -186,7 +192,12 @@ export async function detectSmellsFolder(
 
       // Process each found Python file
       for (const file of pythonFiles) {
-        await detectSmellsFile(file, smellsViewProvider, smellsCacheManager);
+        await detectSmellsFile(
+          projectRoot,
+          file,
+          smellsViewProvider,
+          smellsCacheManager,
+        );
       }
     },
   );

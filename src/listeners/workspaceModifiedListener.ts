@@ -4,6 +4,7 @@ import { basename } from 'path';
 import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { SmellsViewProvider } from '../providers/SmellsViewProvider';
 import { MetricsViewProvider } from '../providers/MetricsViewProvider';
+import { DashboardViewProvider } from '../providers/DashboardViewProvider';
 import { ecoOutput, isSmellLintingEnabled } from '../extension';
 import { detectSmellsFile } from '../commands/detection/detectSmells';
 import { envConfig } from '../utils/envConfig';
@@ -24,6 +25,7 @@ export class WorkspaceModifiedListener {
     private smellsCacheManager: SmellsCacheManager,
     private smellsViewProvider: SmellsViewProvider,
     private metricsViewProvider: MetricsViewProvider,
+    private dashboardViewProvider: DashboardViewProvider,
   ) {
     this.initializeFileWatcher();
     this.initializeSaveListener();
@@ -90,6 +92,9 @@ export class WorkspaceModifiedListener {
             `[WorkspaceListener] Smell linting is ON — auto-detecting smells for ${document.uri.fsPath}`,
           );
           detectSmellsFile(
+            this.context.workspaceState.get<string>(
+              envConfig.WORKSPACE_CONFIGURED_PATH!,
+            )!,
             document.uri.fsPath,
             this.smellsViewProvider,
             this.smellsCacheManager,
@@ -185,6 +190,7 @@ export class WorkspaceModifiedListener {
   private refreshViews(): void {
     this.smellsViewProvider.refresh();
     this.metricsViewProvider.refresh();
+    this.dashboardViewProvider.refresh();
     ecoOutput.trace('[WorkspaceListener] Refreshed all views');
   }
 

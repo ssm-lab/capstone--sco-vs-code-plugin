@@ -90,6 +90,7 @@ export async function initLogs(log_dir: string): Promise<boolean> {
  * - Response contains invalid data format
  */
 export async function fetchSmells(
+  projectRoot: string,
   filePath: string,
   enabledSmells: Record<string, Record<string, number | string>>,
 ): Promise<{ smells: Smell[]; status: number }> {
@@ -99,6 +100,7 @@ export async function fetchSmells(
 
   try {
     ecoOutput.debug(`[backend.ts] Request payload for ${fileName}:`, {
+      project_root: projectRoot,
       file_path: filePath,
       enabled_smells: enabledSmells
     });
@@ -109,6 +111,7 @@ export async function fetchSmells(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        project_root: projectRoot,
         file_path: filePath,
         enabled_smells: enabledSmells,
       }),
@@ -185,7 +188,7 @@ export async function backendRefactorSmell(
   }
 
   ecoOutput.info(`[backend.ts] Starting refactoring for smell: ${smell.symbol}`);
-  console.log('Starting refactoring for smell:', smell);
+  console.log('Starting refactoring for smell:', smell, "in workspace:", workspacePath);
 
   try {
     const response = await fetch(url, {
@@ -223,12 +226,11 @@ export async function backendRefactorSmell(
  * @returns A promise resolving to the refactored data or throwing an error if unsuccessful.
  */
 export async function backendRefactorSmellType(
-  smell: Smell,
-  workspacePath: string
+  workspacePath: string,
+  smellType: string,
+  filePath: string,
 ): Promise<RefactoredData> {
   const url = `${BASE_URL}/refactor-by-type`;
-  const filePath = smell.path;
-  const smellType = smell.symbol;
 
   // Validate workspace configuration
   if (!workspacePath) {
@@ -242,7 +244,7 @@ export async function backendRefactorSmellType(
   const payload = {
     sourceDir: workspacePath,
     smellType,
-    firstSmell: smell,
+    targetFile: filePath,
   };
 
   try {
@@ -261,7 +263,59 @@ export async function backendRefactorSmellType(
     }
 
     const result = await response.json();
-    ecoOutput.info(`[backend.ts] Refactoring successful for ${smell.symbol}`);
+    ecoOutput.info(`[backend.ts] Refactoring successful for ${smellType}`);
+    return result;
+    
+  } catch (error: any) {
+    ecoOutput.error(`[backend.ts] Refactoring error: ${error.message}`);
+    throw new Error(`Refactoring failed: ${error.message}`);
+  }
+}
+
+/**
+ * Sends a request to the backend to refactor all smells of a type.
+ *
+ * @param smell - The smell to refactor.
+ * @param workspacePath - The path to the workspace.
+ * @returns A promise resolving to the refactored data or throwing an error if unsuccessful.
+ */
+export async function backendRefactorSmellAll(
+  workspacePath: string,
+  filePath: string,
+): Promise<RefactoredData> {
+  const url = `${BASE_URL}/refactor-all`;
+
+  // Validate workspace configuration
+  if (!workspacePath) {
+    ecoOutput.error('[backend.ts] Refactoring aborted: No workspace path');
+    throw new Error('No workspace path provided');
+  }
+
+  ecoOutput.info(`[backend.ts] Starting refactoring for all smells in "${filePath}"`);
+
+  // Prepare the payload for the backend
+  const payload = {
+    sourceDir: workspacePath,
+    targetFile: filePath,
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      ecoOutput.error(`[backend.ts] Refactoring failed: ${errorData.detail || 'Unknown error'}`);
+      throw new Error(errorData.detail || 'Refactoring failed');
+    }
+
+    const result = await response.json();
+    ecoOutput.info(`[backend.ts] Refactoring successful for all smells`);
     return result;
     
   } catch (error: any) {

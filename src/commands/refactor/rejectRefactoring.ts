@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 
 import { RefactoringDetailsViewProvider } from '../../providers/RefactoringDetailsViewProvider';
 import { hideRefactorActionButtons } from '../../utils/refactorActionButtons';
@@ -31,6 +32,18 @@ export async function rejectRefactoring(
       smellsViewProvider.setStatus(originalPath, 'passed');
       ecoOutput.trace(`[refactorActions.ts] Reset status for ${originalPath}`);
     }
+
+    const ecoRoot = context.workspaceState.get<string>(
+      envConfig.WORKSPACE_CONFIGURED_PATH!,
+    )!;
+
+    const tempUpdatedEnergySmells = vscode.Uri.joinPath(
+      vscode.Uri.file(ecoRoot),
+      '__ecocache__',
+      'energy_smells.temp.json',
+    ).fsPath;
+
+    fs.unlinkSync(tempUpdatedEnergySmells);
 
     // Clean up UI components
     await closeAllTrackedDiffEditors();
