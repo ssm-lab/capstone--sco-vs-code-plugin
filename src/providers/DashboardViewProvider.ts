@@ -5,21 +5,21 @@ import { SmellsCacheManager } from '../context/SmellsCacheManager';
 import { MetricsDataItem } from './MetricsViewProvider';
 
 /**
- * Static mapping of carbon savings per smell type (in kg CO2). 
+ * Static mapping of carbon savings per smell type (in kg CO2).
  * TODO: This is a placeholder and should be replaced with actual values once empirical data is available.
  */
 const CARBON_SAVINGS_MAPPING: Record<string, number> = {
-  // Pylint smells 
-  'use-a-generator': 0.0025,  
-  'too-many-arguments': 0.0015,  
-  'no-self-use': 0.0010, 
-  
-  // Custom smells 
-  'long-lambda-expression': 0.0020,  
-  'long-message-chain': 0.0030,  
-  'long-element-chain': 0.0025,  
-  'cached-repeated-calls': 0.0050,  
-  'string-concat-loop': 0.0040,  
+  // Pylint smells
+  'use-a-generator': 0.0025,
+  'too-many-arguments': 0.0015,
+  'no-self-use': 0.001,
+
+  // Custom smells
+  'long-lambda-expression': 0.002,
+  'long-message-chain': 0.003,
+  'long-element-chain': 0.0025,
+  'cached-repeated-calls': 0.005,
+  'string-concat-loop': 0.004,
 };
 
 /**
@@ -43,16 +43,28 @@ class DashboardTreeItem extends vscode.TreeItem {
     } else {
       switch (this.contextValue) {
         case 'overview':
-          this.iconPath = new vscode.ThemeIcon('dashboard', new vscode.ThemeColor('charts.blue'));
+          this.iconPath = new vscode.ThemeIcon(
+            'dashboard',
+            new vscode.ThemeColor('charts.blue'),
+          );
           break;
         case 'achievements':
-          this.iconPath = new vscode.ThemeIcon('history', new vscode.ThemeColor('charts.green'));
+          this.iconPath = new vscode.ThemeIcon(
+            'history',
+            new vscode.ThemeColor('charts.green'),
+          );
           break;
         case 'opportunities':
-          this.iconPath = new vscode.ThemeIcon('target', new vscode.ThemeColor('charts.orange'));
+          this.iconPath = new vscode.ThemeIcon(
+            'target',
+            new vscode.ThemeColor('charts.orange'),
+          );
           break;
         case 'energy-guide':
-          this.iconPath = new vscode.ThemeIcon('book', new vscode.ThemeColor('charts.purple'));
+          this.iconPath = new vscode.ThemeIcon(
+            'book',
+            new vscode.ThemeColor('charts.purple'),
+          );
           break;
         case 'high-impact-header':
         case 'medium-impact-header':
@@ -90,8 +102,8 @@ class DashboardTreeItem extends vscode.TreeItem {
     if (this.label.startsWith('Potential Carbon Emission Reduction:')) {
       return `Available carbon savings from unrefactored code smells`;
     }
-    
-    return "";
+
+    return '';
   }
 }
 
@@ -122,8 +134,12 @@ interface DashboardStats {
 /**
  * Provides a dashboard view of refactoring statistics and carbon savings
  */
-export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardTreeItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<DashboardTreeItem | undefined>();
+export class DashboardViewProvider
+  implements vscode.TreeDataProvider<DashboardTreeItem>
+{
+  private _onDidChangeTreeData = new vscode.EventEmitter<
+    DashboardTreeItem | undefined
+  >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   constructor(
@@ -206,7 +222,7 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
         'settings-gear',
         new vscode.ThemeColor('charts.blue'),
       );
-      
+
       configureItem.command = {
         title: 'Configure Workspace',
         command: 'ecooptimizer.configureWorkspace',
@@ -406,17 +422,17 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
     }
 
     // Group by impact level
-    const highImpactOpportunities = stats.topOpportunities.filter(opp => {
+    const highImpactOpportunities = stats.topOpportunities.filter((opp) => {
       const energyPerSmell = CARBON_SAVINGS_MAPPING[opp.symbol] || 0;
       return energyPerSmell >= 0.004;
     });
 
-    const mediumImpactOpportunities = stats.topOpportunities.filter(opp => {
+    const mediumImpactOpportunities = stats.topOpportunities.filter((opp) => {
       const energyPerSmell = CARBON_SAVINGS_MAPPING[opp.symbol] || 0;
       return energyPerSmell >= 0.002 && energyPerSmell < 0.004;
     });
 
-    const lowImpactOpportunities = stats.topOpportunities.filter(opp => {
+    const lowImpactOpportunities = stats.topOpportunities.filter((opp) => {
       const energyPerSmell = CARBON_SAVINGS_MAPPING[opp.symbol] || 0;
       return energyPerSmell < 0.002;
     });
@@ -473,7 +489,7 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
     const stats = this.calculateDashboardStats();
     const items: DashboardTreeItem[] = [];
 
-    const highImpactOpportunities = stats.topOpportunities.filter(opp => {
+    const highImpactOpportunities = stats.topOpportunities.filter((opp) => {
       const energyPerSmell = CARBON_SAVINGS_MAPPING[opp.symbol] || 0;
       return energyPerSmell >= 0.004;
     });
@@ -502,7 +518,7 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
     const stats = this.calculateDashboardStats();
     const items: DashboardTreeItem[] = [];
 
-    const mediumImpactOpportunities = stats.topOpportunities.filter(opp => {
+    const mediumImpactOpportunities = stats.topOpportunities.filter((opp) => {
       const energyPerSmell = CARBON_SAVINGS_MAPPING[opp.symbol] || 0;
       return energyPerSmell >= 0.002 && energyPerSmell < 0.004;
     });
@@ -531,7 +547,7 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
     const stats = this.calculateDashboardStats();
     const items: DashboardTreeItem[] = [];
 
-    const lowImpactOpportunities = stats.topOpportunities.filter(opp => {
+    const lowImpactOpportunities = stats.topOpportunities.filter((opp) => {
       const energyPerSmell = CARBON_SAVINGS_MAPPING[opp.symbol] || 0;
       return energyPerSmell < 0.002;
     });
@@ -567,7 +583,9 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
 
     // Group by impact level
     const highImpact = sortedSmells.filter(([, energy]) => energy >= 0.004);
-    const mediumImpact = sortedSmells.filter(([, energy]) => energy >= 0.002 && energy < 0.004);
+    const mediumImpact = sortedSmells.filter(
+      ([, energy]) => energy >= 0.002 && energy < 0.004,
+    );
     const lowImpact = sortedSmells.filter(([, energy]) => energy < 0.002);
 
     // High impact section
@@ -659,7 +677,9 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
       .filter(([symbol]) => smellConfigData[symbol])
       .sort(([, a], [, b]) => b - a);
 
-    const mediumImpact = sortedSmells.filter(([, energy]) => energy >= 0.002 && energy < 0.004);
+    const mediumImpact = sortedSmells.filter(
+      ([, energy]) => energy >= 0.002 && energy < 0.004,
+    );
 
     mediumImpact.forEach(([symbol, energySaving]) => {
       const config = smellConfigData[symbol];
@@ -727,12 +747,15 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
     const pathMap = this.smellsCacheManager.getHashToPathMap();
 
     // Calculate achievements from metrics data
-    const achievementMap = new Map<string, {
-      name: string;
-      acronym: string;
-      refactorings: number;
-      energySaved: number;
-    }>();
+    const achievementMap = new Map<
+      string,
+      {
+        name: string;
+        acronym: string;
+        refactorings: number;
+        energySaved: number;
+      }
+    >();
 
     let totalRefactorings = 0;
     let totalEnergySaved = 0;
@@ -740,8 +763,10 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
     Object.entries(metricsData).forEach(([filePath, fileData]) => {
       Object.entries(fileData.smellDistribution).forEach(([symbol, energySaved]) => {
         if (energySaved > 0 && smellConfigData[symbol]) {
-          const refactorCount = Math.round(energySaved / (CARBON_SAVINGS_MAPPING[symbol] || 0.001));
-          
+          const refactorCount = Math.round(
+            energySaved / (CARBON_SAVINGS_MAPPING[symbol] || 0.001),
+          );
+
           if (!achievementMap.has(symbol)) {
             achievementMap.set(symbol, {
               name: smellConfigData[symbol].name,
@@ -750,7 +775,7 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
               energySaved: 0,
             });
           }
-          
+
           const achievement = achievementMap.get(symbol)!;
           achievement.refactorings += refactorCount;
           achievement.energySaved += energySaved;
@@ -761,12 +786,15 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
     });
 
     // Calculate opportunities from detected smells
-    const opportunityMap = new Map<string, {
-      name: string;
-      acronym: string;
-      detectedCount: number;
-      potentialSavings: number;
-    }>();
+    const opportunityMap = new Map<
+      string,
+      {
+        name: string;
+        acronym: string;
+        detectedCount: number;
+        potentialSavings: number;
+      }
+    >();
 
     let detectedSmells = 0;
     let potentialSavings = 0;
@@ -777,7 +805,7 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
         smells.forEach((smell) => {
           if (smellConfigData[smell.symbol]) {
             const energyPerSmell = CARBON_SAVINGS_MAPPING[smell.symbol] || 0;
-            
+
             if (!opportunityMap.has(smell.symbol)) {
               opportunityMap.set(smell.symbol, {
                 name: smellConfigData[smell.symbol].name,
@@ -786,7 +814,7 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
                 potentialSavings: 0,
               });
             }
-            
+
             const opportunity = opportunityMap.get(smell.symbol)!;
             opportunity.detectedCount += 1;
             opportunity.potentialSavings += energyPerSmell;
@@ -824,4 +852,4 @@ export class DashboardViewProvider implements vscode.TreeDataProvider<DashboardT
     if (number < 0.0001) return '< 0.0001';
     return number.toFixed(decimalPlaces);
   }
-} 
+}

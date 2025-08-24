@@ -117,7 +117,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     smellsViewProvider,
   );
   const refactoringDetailsViewProvider = new RefactoringDetailsViewProvider();
-  const dashboardViewProvider = new DashboardViewProvider(context, smellsCacheManager);
+  const dashboardViewProvider = new DashboardViewProvider(
+    context,
+    smellsCacheManager,
+  );
 
   initializeStatusesFromCache(context, smellsCacheManager, smellsViewProvider);
 
@@ -129,8 +132,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.window.createTreeView('ecooptimizer.smellsView', {
       treeDataProvider: smellsViewProvider,
-          }),
-      vscode.window.createTreeView('ecooptimizer.filterView', {
+    }),
+    vscode.window.createTreeView('ecooptimizer.filterView', {
       treeDataProvider: filterSmellsProvider,
       showCollapseAll: true,
     }),
@@ -274,7 +277,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             return;
           }
         }
-        detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
+        detectSmellsFile(
+          context.workspaceState.get<string>(envConfig.WORKSPACE_CONFIGURED_PATH!)!,
+          filePath,
+          smellsViewProvider,
+          smellsCacheManager,
+        );
       },
     ),
 
@@ -368,7 +376,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           }
           folderPath = folderItem.resourceUri!.fsPath;
         }
-        detectSmellsFolder(folderPath, smellsViewProvider, smellsCacheManager);
+        detectSmellsFolder(
+          context.workspaceState.get<string>(envConfig.WORKSPACE_CONFIGURED_PATH!)!,
+          folderPath,
+          smellsViewProvider,
+          smellsCacheManager,
+        );
       },
     ),
 
@@ -385,7 +398,45 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           vscode.window.showErrorMessage('No code smell detected for this item.');
           return;
         }
-        refactor(smellsViewProvider, refactoringDetailsViewProvider, smell, context);
+        refactor(smellsViewProvider, refactoringDetailsViewProvider, context, smell);
+      },
+    ),
+
+    vscode.commands.registerCommand(
+      'ecooptimizer.refactorAllSmells',
+      async (item: TreeItem | { fullPath: string; smellType: string }) => {
+        let filePath = item.fullPath;
+        if (!filePath) {
+          vscode.window.showWarningMessage(
+            'Unable to get file path for smell refactoring.',
+          );
+          return;
+        }
+
+        const cachedSmells = smellsCacheManager.getCachedSmells(filePath);
+        if (!cachedSmells || cachedSmells.length === 0) {
+          vscode.window.showInformationMessage('No smells detected in this file.');
+          return;
+        }
+
+        ecoOutput.info(`🟡 Found ${cachedSmells.length} smells in ${filePath}`);
+
+        const uniqueMessageIds = new Set<string>();
+        for (const smell of cachedSmells) {
+          uniqueMessageIds.add(smell.messageId);
+        }
+
+        ecoOutput.info(`🔁 Triggering refactorAllSmells in: ${filePath}`);
+
+        const firstSmell = cachedSmells[0];
+
+        await refactor(
+          smellsViewProvider,
+          refactoringDetailsViewProvider,
+          context,
+          firstSmell,
+          'all', // isRefactorAllOfType
+        );
       },
     ),
 
@@ -458,9 +509,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await refactor(
           smellsViewProvider,
           refactoringDetailsViewProvider,
-          firstSmell,
           context,
-          true, // isRefactorAllOfType
+          firstSmell,
+          'type', // isRefactorAllOfType
         );
       },
     ),
@@ -509,12 +560,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     vscode.commands.registerCommand('ecooptimizer.exportMetricsData', () => {
       exportMetricsData(context);
-          }),
+    }),
 
-      vscode.commands.registerCommand('ecooptimizer.dashboardView.refresh', () => {
+    vscode.commands.registerCommand('ecooptimizer.dashboardView.refresh', () => {
       dashboardViewProvider.refresh();
-          }),
-    );
+    }),
+  );
 
   // === Register Filter UI Commands ===
   registerFilterSmellCommands(context, filterSmellsProvider);
@@ -563,7 +614,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const lintActiveEditors = (): void => {
     for (const editor of vscode.window.visibleTextEditors) {
       const filePath = editor.document.uri.fsPath;
-      detectSmellsFile(filePath, smellsViewProvider, smellsCacheManager);
+      detectSmellsFile(
+        context.workspaceState.get<string>(envConfig.WORKSPACE_CONFIGURED_PATH!)!,
+        filePath,
+        smellsViewProvider,
+        smellsCacheManager,
+      );
       ecoOutput.info(
         `[WorkspaceListener] Smell linting is ON — auto-detecting smells for ${filePath}`,
       );

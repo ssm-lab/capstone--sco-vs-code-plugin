@@ -92,6 +92,9 @@ export class WorkspaceModifiedListener {
             `[WorkspaceListener] Smell linting is ON — auto-detecting smells for ${document.uri.fsPath}`,
           );
           detectSmellsFile(
+            this.context.workspaceState.get<string>(
+              envConfig.WORKSPACE_CONFIGURED_PATH!,
+            )!,
             document.uri.fsPath,
             this.smellsViewProvider,
             this.smellsCacheManager,

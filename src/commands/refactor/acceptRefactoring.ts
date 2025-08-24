@@ -54,6 +54,26 @@ export async function acceptRefactoring(
       ecoOutput.info(`[refactorActions.ts] Updated affected file: ${file.original}`);
     });
 
+    const ecoRoot = context.workspaceState.get<string>(
+      envConfig.WORKSPACE_CONFIGURED_PATH!,
+    )!;
+
+    const tempUpdatedEnergySmells = vscode.Uri.joinPath(
+      vscode.Uri.file(ecoRoot),
+      '__ecocache__',
+      'energy_smells.temp.json',
+    ).fsPath;
+
+    const updatedEnergySmells = vscode.Uri.joinPath(
+      vscode.Uri.file(ecoRoot),
+      '__ecocache__',
+      'energy_smells.updated.json',
+    ).fsPath;
+
+    fs.copyFileSync(tempUpdatedEnergySmells, updatedEnergySmells);
+    fs.unlinkSync(tempUpdatedEnergySmells);
+    ecoOutput.debug('[refactorActions.ts] Updated energy smells data');
+
     // Update metrics if energy savings data exists
     if (
       refactoringDetailsViewProvider.energySaved &&
@@ -83,6 +103,7 @@ export async function acceptRefactoring(
     });
 
     await detectSmellsFile(
+      context.workspaceState.get<string>(envConfig.WORKSPACE_CONFIGURED_PATH!)!,
       targetFile.original,
       smellsViewProvider,
       smellsCacheManager,

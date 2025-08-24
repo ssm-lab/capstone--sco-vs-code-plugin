@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { backendRefactorSmell, backendRefactorSmellType } from '../../api/backend';
+import {
+  backendRefactorSmell,
+  backendRefactorSmellAll,
+  backendRefactorSmellType,
+} from '../../api/backend';
 import { SmellsViewProvider } from '../../providers/SmellsViewProvider';
 import { RefactoringDetailsViewProvider } from '../../providers/RefactoringDetailsViewProvider';
 import { ecoOutput } from '../../extension';
@@ -27,14 +31,26 @@ import { envConfig } from '../../utils/envConfig';
 export async function refactor(
   smellsViewProvider: SmellsViewProvider,
   refactoringDetailsViewProvider: RefactoringDetailsViewProvider,
-  smell: Smell,
   context: vscode.ExtensionContext,
-  isRefactorAllOfType: boolean = false,
+  smell: Smell,
+  refactorAction: string = 'single',
 ): Promise<void> {
   // Log and notify refactoring initiation
-  const action = isRefactorAllOfType
-    ? 'Refactoring all smells of type'
-    : 'Refactoring';
+  let action: string;
+  switch (refactorAction) {
+    case 'single':
+      action = 'Refactoring';
+      break;
+    case 'type':
+      action = 'Refactoring all smells of type';
+      break;
+    case 'all':
+      action = 'Refactoring all smells';
+      break;
+    default:
+      action = 'Refactoring';
+  }
+
   ecoOutput.info(`[refactor.ts] ${action} ${smell.symbol} in ${smell.path}`);
   vscode.window.showInformationMessage(`${action} ${smell.symbol}...`);
 
@@ -66,13 +82,38 @@ export async function refactor(
   try {
     // Execute backend refactoring
     ecoOutput.trace(`[refactor.ts] Sending ${action} request...`);
-    const refactoredData = isRefactorAllOfType
-      ? await backendRefactorSmellType(smell, workspacePath)
-      : await backendRefactorSmell(smell, workspacePath);
+    let refactoredData: RefactoredData;
+    if (refactorAction === 'single') {
+      if (smell === undefined) {
+        ecoOutput.error(
+          '[refactor.ts] Refactoring aborted: No smell provided for single refactor action',
+        );
+        vscode.window.showErrorMessage(
+          'Unable to refactor this file right now, please try again later',
+        );
+        return;
+      }
+      refactoredData = await backendRefactorSmell(smell, workspacePath);
+    } else if (refactorAction === 'type')
+      refactoredData = await backendRefactorSmellType(
+        workspacePath,
+        smell.symbol,
+        smell.path,
+      );
+    else if (refactorAction === 'all')
+      refactoredData = await backendRefactorSmellAll(workspacePath, smell.path);
+    else {
+      ecoOutput.error(
+        '[refactor.ts] Refactoring aborted: Invalid refactoring action',
+      );
+      vscode.window.showErrorMessage(
+        'Unable to refactor this file right now, please try again later',
+      );
+      return;
+    }
 
     ecoOutput.info(
-      `[refactor.ts] Refactoring completed for ${path.basename(smell.path)}. ` +
-        `Energy saved: ${refactoredData.energySaved ?? 'N/A'} kg CO2`,
+      `[refactor.ts] Refactoring completed for ${path.basename(smell.path)}. `,
     );
 
     await context.workspaceState.update(envConfig.UNFINISHED_REFACTORING!, {

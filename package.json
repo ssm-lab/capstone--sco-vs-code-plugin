@@ -160,7 +160,6 @@
           "name": "Code Smells",
           "icon": "assets/eco-icon.png"
         },
-
         {
           "id": "ecooptimizer.filterView",
           "name": "Filter Smells",
@@ -179,7 +178,6 @@
         "contents": "No code smells detected yet. Configure your workspace to start analysis.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://code.visualstudio.com/api) to learn how to use Eco-Optimizer.",
         "when": "!workspaceState.workspaceConfigured"
       },
-      
       {
         "view": "ecooptimizer.dashboardView",
         "contents": "Welcome to the Energy Dashboard! Configure your workspace to start tracking refactoring statistics and energy savings.\n\n[Configure Workspace](command:ecooptimizer.configureWorkspace)\n\n[Read the docs](https://github.com/ssm-lab/capstone--sco-vs-code-plugin/wiki) to learn how to use Eco-Optimizer.",
@@ -258,6 +256,12 @@
         "category": "Eco"
       },
       {
+        "command": "ecooptimizer.refactorAllSmells",
+        "title": "Refactor All Smells",
+        "icon": "$(wrench)",
+        "category": "Eco"
+      },
+      {
         "command": "ecooptimizer.refactorSmell",
         "title": "Refactor Smell",
         "icon": "$(tools)",
@@ -280,7 +284,6 @@
         "title": "Export Metrics Data as JSON",
         "category": "Eco"
       },
-      
       {
         "command": "ecooptimizer.dashboardView.refresh",
         "title": "Refresh Dashboard",
@@ -333,11 +336,11 @@
           "when": "view == ecooptimizer.filterView && !refactoringInProgress",
           "group": "resource"
         },
-                 {
-           "command": "ecooptimizer.exportMetricsData",
-           "when": "view == ecooptimizer.dashboardView",
-           "group": "resource"
-         },
+        {
+          "command": "ecooptimizer.exportMetricsData",
+          "when": "view == ecooptimizer.dashboardView",
+          "group": "resource"
+        },
         {
           "command": "ecooptimizer.dashboardView.refresh",
           "when": "view == ecooptimizer.dashboardView",
@@ -362,6 +365,11 @@
         },
         {
           "command": "ecooptimizer.refactorAllSmellsOfType",
+          "when": "view == ecooptimizer.smellsView && viewItem == file_with_smells && !refactoringInProgress",
+          "group": "inline"
+        },
+        {
+          "command": "ecooptimizer.refactorAllSmells",
           "when": "view == ecooptimizer.smellsView && viewItem == file_with_smells && !refactoringInProgress",
           "group": "inline"
         },
